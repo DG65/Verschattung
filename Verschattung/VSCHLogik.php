@@ -82,6 +82,10 @@ final class VSCHLogik
             $z['kandidat'] = null;
             return ['ziel' => 'offen', 'lamelle' => null, 'grund' => VSCHText::t('Weather protection: %s', (string)($u['wetter']['grund'] ?? '')), 'z' => ['wir' => true] + $z];
         }
+        // WarnHub hat genau dieses Gerät gesichert (Vertrag protection 1.0): nicht bewegen, auch Rollläden nicht
+        if (($u['schutz'] ?? null) !== null) {
+            return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Secured by WarnHub: %s', (string)$u['schutz']), 'z' => $z];
+        }
         if ($wetter === 'festhalten' && $typ !== 'rollladen') {
             return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Not moving: %s', (string)($u['wetter']['grund'] ?? '')), 'z' => $z];
         }
@@ -195,6 +199,46 @@ final class VSCHLogik
             }
         }
         return ['art' => '', 'grund' => ''];
+    }
+
+    /**
+     * WarnHub-Schutzaktionen (WHUB_GetProtectionState, Vertrag protection 1.x) für ein Gerät auswerten.
+     * $aktionen = 'actions' des Vertrags, $vids = Variablen des Geräts (Position, Lamelle), $inst = deren Instanz,
+     * $merk = [Aktionsindex => letzter Zeitpunkt „aktiv“] (wird fortgeschrieben), $halte = Haltezeit nach Ende (s).
+     * Rückgabe: Grund (string) solange gesperrt, sonst null.
+     */
+    public static function schutz(array $aktionen, array $vids, int $inst, array &$merk, int $now, int $halte): ?string
+    {
+        $grund = null;
+        foreach ($aktionen as $a) {
+            if (!($a['enabled'] ?? true)) {
+                continue;
+            }
+            $ziel = (int)($a['targetVariableID'] ?? 0);
+            $zielInst = (int)($a['targetInstanceID'] ?? 0);
+            if (!in_array($ziel, $vids, true) && !($inst > 0 && $zielInst === $inst)) {
+                continue;
+            }
+            $k = (string)($a['index'] ?? $ziel);
+            $ep = (array)($a['activeEpisodes'][0] ?? ($a['lastTrigger'] ?? []));
+            $name = (string)($ep['event'] ?? ($a['name'] ?? ''));
+            if ($a['active'] ?? false) {
+                $merk[$k] = $now;
+                $grund = $name;
+                continue;
+            }
+            $r = $a['autoRestore'] ?? null;
+            if (is_array($r) && ($r['dueAt'] === null || (int)$r['dueAt'] > $now)) {
+                $grund = $grund ?? VSCHText::t('%s, WarnHub resets it', $name); // WarnHub stellt selbst zurück
+                continue;
+            }
+            if (isset($merk[$k]) && $now - (int)$merk[$k] < $halte) {
+                $grund = $grund ?? VSCHText::t('%s, waiting %d min', $name, (int)ceil(($halte - ($now - (int)$merk[$k])) / 60));
+                continue;
+            }
+            unset($merk[$k]);
+        }
+        return $grund;
     }
 
     public static function zahl(float $v): string

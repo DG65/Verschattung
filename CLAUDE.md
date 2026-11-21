@@ -10,8 +10,9 @@ Bedienskizze (von Dietmar abgenickt 21.11.2026): https://claude.ai/artifact/K89w
 - Store-Regel: „Haus erkennen" und „Geräte hinzufügen" schreiben nur per `UpdateFormField` ins offene Formular. Abgeleitete Geodaten in Attributen.
 - Übersetzung: englische Quelltexte, Deutsch in `.tools/locale-de.json`; daraus `Verschattung/locale.json` erzeugen
   (`php -r` Einzeiler im README des Prüfstands bzw. siehe unten). Feste Texte außerhalb von `'caption' =>` mit `self::fest()` markieren.
-- WarnHub: nur `WHUB_GetActiveWarnings` (Vertrag 1.0) und `IPS_GetProperty(…, 'SchutzaktionVorlaufMinuten')`. `WHUB_GetProtectionState()` erst
-  nach der Vertragsbeschreibung der WarnHub-Sitzung einbauen, Felder nicht raten.
+- WarnHub: `WHUB_GetActiveWarnings` (Vertrag 1.0, nur feste Standorte), `IPS_GetProperty(…, 'SchutzaktionVorlaufMinuten')` und ab WarnHub 1.22.0
+  `WHUB_GetProtectionState` (Vertrag protection 1.0, Beschreibung im WarnHub-README). Abgleich über targetVariableID oder targetInstanceID;
+  `VSCHLogik::schutz()` hält das Gerät still (alle Typen), Wetter-Einfahren geht vor. Andere Hauptversion wird ignoriert.
 - Vor jedem Commit: `php .tools/test-verschattung.php` (Rückgabe 0). Live-Probe der Geodaten: `php .tools/geo-live.php [BW BE …]`.
 - Nicht live geprüft (Stand 0.1.0): alles in Symcon. Insbesondere Formular-Darstellung (Image-Breite, Suchknopf im Popup,
   Listen in onClick), Echo-Erkennung echter Aktoren (Z-Wave, Shelly), Lamellenrichtung, WarnHub-Anbindung.

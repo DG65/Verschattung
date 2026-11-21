@@ -2,7 +2,7 @@
 
 Rollläden, Raffstores und Markisen nach dem Sonnenstand – eingerichtet über eine Grafik statt über Winkelangaben.
 
-> **Stand 0.1.0 (in Entwicklung):** am Prüfstand getestet, noch an keiner echten Anlage gelaufen.
+> **Stand 0.1.1 (in Entwicklung):** am Prüfstand getestet, noch an keiner echten Anlage gelaufen.
 
 ## Wozu?
 
@@ -43,7 +43,7 @@ Markisen und Raffstores fahren bei Wind und Unwetter ein – das geht allem vor,
 - **eigener Windsensor** bzw. eigene Wetterstation (Einheit km/h, m/s, mph oder kn aus dem Profil), Vorgabe Markise 35 km/h, Raffstore 50 km/h, danach 20 min Haltezeit; reagiert sofort, nicht erst im Minutentakt
 - **Regensensor** (nur Markisen)
 - **externe Sperrvariable**, z. B. der Windalarm einer KNX-Wetterstation
-- **WarnHub** (DG65), falls installiert: Sturm-, Hagel- und Gewitterwarnungen der festen Standorte fahren ein, schon ab dem Vorlauf der WarnHub-Schutzaktionen; Frost und Schnee halten die Geräte still. Wertet WarnHub die Wetterstation aus, sie hier nicht noch einmal auswählen.
+- **WarnHub** (DG65), falls installiert: Sturm-, Hagel- und Gewitterwarnungen der festen Standorte fahren ein, schon ab dem Vorlauf der WarnHub-Schutzaktionen; Frost und Schnee halten die Geräte still. Ab WarnHub 1.22.0 bleiben außerdem genau die Geräte in Ruhe, die eine WarnHub-Schutzaktion gefahren hat (auch Rollläden), bis die Warnung endet plus Wartezeit bzw. bis WarnHub selbst zurückgestellt hat. Wertet WarnHub die Wetterstation aus, sie hier nicht noch einmal auswählen.
 - **Böenvorhersage aus dem Internet** (Open-Meteo, alle 15 min) – langsamer als ein Sensor und kein Ersatz dafür, deshalb 10 km/h vorsichtiger
 
 **Ohne jede Wetterquelle fährt eine Markise nie automatisch aus**, außer „Markisen ohne Wetterquelle ausfahren“ ist bewusst angehakt.

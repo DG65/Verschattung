@@ -173,6 +173,8 @@ class Verschattung extends IPSModule
         $hell = $this->hell($z);
         $warm = $this->warm($z);
         $warnungen = $this->warnungen();
+        $schutzAktionen = $this->schutzAktionen();
+        $schutzMerk = (array)($z['_schutz'] ?? []);
         $wetterQuelle = $this->ReadPropertyInteger('WindID') > 0 || $warnungen !== null || $this->ReadPropertyBoolean('NetzWetter') || $this->ReadPropertyInteger('SperreID') > 0;
         $zeiten = ['an' => 60 * $this->ReadPropertyInteger('VerzoegerungAn'), 'aus' => 60 * $this->ReadPropertyInteger('VerzoegerungAus')];
         $statusZeilen = [];
@@ -191,6 +193,8 @@ class Verschattung extends IPSModule
                 'ohneWetterBestaetigt' => $this->ReadPropertyBoolean('MarkiseOhneWetter'),
                 'fensterOffen' => $g['Kontakt'] > 0 && IPS_VariableExists($g['Kontakt']) && $this->kontaktOffen($g['Kontakt']),
                 'automatik' => (bool)$this->GetValue('Automatik'), 'tag' => $sonne['alt'] > 0,
+                'schutz' => $schutzAktionen === [] ? null : VSCHLogik::schutz($schutzAktionen, array_values(array_filter([$g['Position'], $g['Lamelle']])),
+                    IPS_GetParent($g['Position']), $schutzMerk, $now, 60 * $this->ReadPropertyInteger('Haltezeit')),
             ];
             $ger = ['typ' => $g['Typ'], 'az' => (float)$f['Azimut'], 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0,
                 'profil' => VSCHSonne::profilwinkel($sonne['alt'], $sonne['az'], (float)$f['Azimut'])];
@@ -205,6 +209,7 @@ class Verschattung extends IPSModule
             $statusZeilen[] = $g['Name'] . ': ' . $r['grund'];
         }
         $z['_w'] = $this->wetterLage();
+        $z['_schutz'] = $schutzMerk;
         $this->WriteAttributeString('Zustand', json_encode($z));
         $status = $statusZeilen === [] ? $this->t('No device assigned') : implode(' · ', array_slice($statusZeilen, 0, 4));
         if ($this->GetValue('Status') !== $status) {
@@ -396,6 +401,35 @@ class Verschattung extends IPSModule
                 $w['von'] = isset($w['onsetTs']) && $w['onsetTs'] ? (int)$w['onsetTs'] - $vorlauf : 0;
                 $w['bis'] = (int)($w['expiresTs'] ?? 0);
                 $out[] = $w;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Schutzaktionen aus WarnHub (WHUB_GetProtectionState, Vertrag protection 1.x, ab WarnHub 1.22.0).
+     * Liefert die Aktionen aller WarnHub-Instanzen; leer, wenn es die Funktion nicht gibt oder die Hauptversion nicht passt.
+     */
+    private function schutzAktionen(): array
+    {
+        if (!$this->ReadPropertyBoolean('WarnHubNutzen') || !function_exists('WHUB_GetProtectionState')) {
+            return [];
+        }
+        $out = [];
+        foreach (IPS_GetInstanceListByModuleID(self::WARNHUB_GUID) as $id) {
+            try {
+                $j = json_decode((string)WHUB_GetProtectionState($id), true);
+            } catch (Throwable $e) {
+                continue;
+            }
+            if (!is_array($j) || (int)explode('.', (string)($j['contractVersion'] ?? '0'))[0] !== 1) {
+                continue;
+            }
+            foreach ((array)($j['actions'] ?? []) as $a) {
+                if (is_array($a)) {
+                    $a['index'] = $id . ':' . ($a['index'] ?? count($out));
+                    $out[] = $a;
+                }
             }
         }
         return $out;
@@ -733,7 +767,7 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'name' => 'SperreIDHint', 'caption' => 'A variable that is "true" while another system reports danger, e.g. the wind alarm of a KNX weather station.'],
             ['type' => 'CheckBox', 'name' => 'WarnHubNutzen', 'caption' => 'Use WarnHub warnings'],
             ['type' => 'Label', 'name' => 'WarnHubNutzenHint', 'caption' => $warnHub
-                ? self::fest('WarnHub found. Storm, hail and thunderstorm warnings for your fixed locations retract awnings and venetian blinds, from the lead time of the WarnHub protective actions on. Frost and snow keep them still. If WarnHub evaluates your weather station, do not select it here as well.')
+                ? self::fest('WarnHub found. Storm, hail and thunderstorm warnings for your fixed locations retract awnings and venetian blinds, from the lead time of the WarnHub protective actions on. Frost and snow keep them still. Devices that a WarnHub protective action has moved stay still until it ends plus the waiting time. If WarnHub evaluates your weather station, do not select it here as well.')
                 : self::fest('WarnHub is not installed. It is optional: official warnings (DWD, GeoSphere, MeteoSwiss) are an additional safety net.')],
             ['type' => 'CheckBox', 'name' => 'NetzWetter', 'caption' => 'Gust forecast from the internet'],
             ['type' => 'Label', 'name' => 'NetzWetterHint', 'caption' => 'Open-Meteo, every 15 minutes. Slower than a sensor and does not replace one: the limit is 10 km/h lower than for the sensor.'],

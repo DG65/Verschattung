@@ -216,6 +216,26 @@ check('E13 Frost: festhalten', VSCHLogik::wetter('raffstore', ['warnungen' => [$
 $regenW = ['category' => 'starkregen', 'hazard' => 'heavy_rain', 'event' => 'STARKREGEN', 'von' => $now - 1, 'bis' => $now + 3600];
 check('E14 Starkregen-Warnung nur für Markise', VSCHLogik::wetter('markise', ['warnungen' => [$regenW]] + $Q, $now)['art'] === 'einfahren' && VSCHLogik::wetter('raffstore', ['warnungen' => [$regenW], 'windSchwelle' => 50.0] + $Q, $now)['art'] === '');
 
+heading('E2 WarnHub-Schutzaktionen (Vertrag protection 1.0)');
+$akt = ['index' => 0, 'name' => 'Markise rein', 'enabled' => true, 'targetVariableID' => 701, 'targetInstanceID' => 700, 'active' => true,
+    'activeEpisodes' => [['event' => 'STURMBÖEN', 'expiresTs' => $now + 3600]], 'neverFired' => false, 'autoRestore' => null];
+$merk = [];
+check('E15 aktive Aktion auf dieses Gerät: gesperrt', VSCHLogik::schutz([$akt], [701], 700, $merk, $now, 1200) !== null && isset($merk['0']));
+$merk2 = [];
+check('E16 Aktion auf anderes Gerät: frei', VSCHLogik::schutz([$akt], [601], 600, $merk2, $now, 1200) === null);
+check('E17 Treffer über die Instanz (Zielvariable ist eine andere Variable desselben Geräts)', VSCHLogik::schutz([['targetVariableID' => 999] + $akt], [701], 700, $merk2, $now, 1200) !== null);
+$vorbei = ['active' => false, 'activeEpisodes' => [], 'lastTrigger' => ['event' => 'STURMBÖEN']] + $akt;
+check('E18 nach Ende: Haltezeit läuft', VSCHLogik::schutz([$vorbei], [701], 700, $merk, $now + 600, 1200) !== null);
+check('E19 nach Haltezeit: frei, Merker gelöscht', VSCHLogik::schutz([$vorbei], [701], 700, $merk, $now + 1300, 1200) === null && $merk === []);
+$merk3 = [];
+check('E20 Rückstellung durch WarnHub ausstehend: gesperrt', VSCHLogik::schutz([['autoRestore' => ['restoreValue' => 0, 'calmSinceTs' => $now, 'dueAt' => null]] + $vorbei], [701], 700, $merk3, $now, 1200) !== null);
+check('E21 nie ausgelöst und nicht aktiv: frei', VSCHLogik::schutz([['neverFired' => true] + $vorbei], [701], 700, $merk3, $now, 1200) === null);
+check('E22 abgeschaltete Aktion zählt nicht', VSCHLogik::schutz([['enabled' => false] + $akt], [701], 700, $merk3, $now, 1200) === null);
+$r = VSCHLogik::entscheide(['typ' => 'rollladen'] + $G, ['schutz' => 'HAGEL'] + $U, ['soll' => false], ['an' => 0, 'aus' => 0], $t0);
+check('E23 gesicherter Rollladen bleibt unten (keine Beschattungsfahrt)', $r['ziel'] === null && strpos($r['grund'], 'HAGEL') !== false);
+$r = VSCHLogik::entscheide(['typ' => 'markise'] + $G, ['schutz' => 'X', 'wetter' => ['art' => 'einfahren', 'grund' => 'Wind']] + $U, ['soll' => true], ['an' => 0, 'aus' => 0], $t0);
+check('E24 Wetterschutz-Einfahren geht der Sperre vor', $r['ziel'] === 'offen');
+
 // ---------------------------------------------------------------------------
 heading('F Grafik');
 $haus = VSCHGeo::ausUmrissen($la, $lo, $poly, 'BW', '');
@@ -342,6 +362,23 @@ check('G21 Sturm am Auto-Standort: Markise darf ausfahren', GetValue(701) === 10
 $GLOBALS['WHUB']['warnings'][] = ['standortKey' => 'h', 'category' => 'sturm', 'hazard' => 'wind', 'event' => 'STURMBÖEN', 'onsetTs' => $GLOBALS['CLOCK'] + 20 * 60, 'expiresTs' => $GLOBALS['CLOCK'] + 7200];
 $m->Tick();
 check('G22 Sturm zuhause in 20 min (Vorlauf 30): Markise fährt jetzt ein', GetValue(701) === 0, (string)GetValue(701));
+// Schutzaktion von WarnHub auf den Raffstore: bleibt stehen, auch wenn die Sonne ihn sonst fahren würde
+$GLOBALS['WHUB']['warnings'] = [];
+$GLOBALS['WHUB_P'] = ['contractVersion' => '1.0', 'actions' => [['index' => 3, 'name' => 'Raffstore hoch', 'enabled' => true, 'targetVariableID' => 601, 'targetInstanceID' => 600,
+    'active' => true, 'activeEpisodes' => [['event' => 'HAGEL']], 'autoRestore' => null]]];
+function WHUB_GetProtectionState(int $id): string { return json_encode($GLOBALS["WHUB_P"] ?? ["contractVersion" => "1.0", "actions" => []]); }
+SetValue(601, 0);
+$z = json_decode($m->attrs['Zustand'], true);
+$z['g601'] = ['soll' => false, 'wir' => false];
+$m->attrs['Zustand'] = json_encode($z);
+$GLOBALS['CLOCK'] += 7200;
+$GLOBALS['BEFEHLE'] = [];
+$m->Tick();
+check('G24 von WarnHub gesicherter Raffstore fährt nicht', GetValue(601) === 0 && !in_array(601, array_column($GLOBALS['BEFEHLE'], 0), true), json_encode($GLOBALS['BEFEHLE']));
+check('G25 Status nennt WarnHub', strpos((string)$m->GetValue('Status'), 'HAGEL') !== false, (string)$m->GetValue('Status'));
+$GLOBALS['WHUB_P']['contractVersion'] = '2.0';
+$m->Tick();
+check('G26 fremde Hauptversion: Vertrag wird ignoriert', GetValue(601) === 100, (string)GetValue(601));
 check('G23 GetState liefert Geräte', count(json_decode($m->GetState(), true)['devices']) === 2);
 
 // ---------------------------------------------------------------------------
