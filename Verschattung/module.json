@@ -1,0 +1,15 @@
+{
+  "id": "{DAD1C0DF-D8EA-4839-8CAC-84C36A944F2D}",
+  "library": "{AC9C6695-857A-40BE-B770-13C510985906}",
+  "name": "Verschattung",
+  "type": 3,
+  "vendor": "",
+  "aliases": [
+    "DG65-Toolkit Verschattung"
+  ],
+  "url": "https://github.com/DG65/Verschattung",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "VSCH"
+}

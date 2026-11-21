@@ -1,0 +1,1249 @@
+<?xml version="1.0" encoding="UTF-8"?><wfs:FeatureCollection xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:nora="http://nora-prod.lgl.bwl.de/nora" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" numberMatched="39" numberReturned="39" timeStamp="2026-11-20T21:38:19.919Z" xsi:schemaLocation="http://www.opengis.net/wfs/2.0 https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ALKIS/schemas/wfs/2.0/wfs.xsd http://nora-prod.lgl.bwl.de/nora https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ALKIS?service=WFS&amp;version=2.0.0&amp;request=DescribeFeatureType&amp;typeName=nora%3Av_al_gebaeude http://www.opengis.net/gml/3.2 https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ALKIS/schemas/gml/3.2.1/gml.xsd">
+  <wfs:boundedBy>
+    <gml:Envelope srsDimension="2" srsName="http://www.opengis.net/gml/srs/epsg.xml#25832">
+      <gml:lowerCorner>421879.01 5369289.2</gml:lowerCorner>
+      <gml:upperCorner>422090.46 5369539.37</gml:upperCorner>
+    </gml:Envelope>
+  </wfs:boundedBy>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.38ad66bf-14c0-4d64-887a-1b307b593149">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421912.42 5369422.54</gml:lowerCorner>
+          <gml:upperCorner>421929.22 5369437.61</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapt</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940050000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.38ad66bf-14c0-4d64-887a-1b307b593149.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.38ad66bf-14c0-4d64-887a-1b307b593149.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421929.22 5369433.71 421918.68 5369437.61 421916.55 5369431.79 421914.59 5369432.5 421912.42 5369426.59 421923.08 5369422.54 421925.39 5369423.66 421929.22 5369433.71</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.4cf2611e-1142-4761-a516-8e647cbd526b">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421904.07 5369445.2</gml:lowerCorner>
+          <gml:upperCorner>421938.9 5369471.83</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapk</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940046000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.4cf2611e-1142-4761-a516-8e647cbd526b.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.4cf2611e-1142-4761-a516-8e647cbd526b.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421938.9 5369459.79 421922.97 5369465.74 421906.46 5369471.83 421904.07 5369465.32 421908.85 5369463.51 421905.8 5369455.45 421912.11 5369452.79 421933.56 5369445.2 421938.9 5369459.79</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.17f11557-4e70-455f-8c29-e2214d6a44ae">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421908.96 5369433.71</gml:lowerCorner>
+          <gml:upperCorner>421933.56 5369452.79</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapC</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940048000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.17f11557-4e70-455f-8c29-e2214d6a44ae.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.17f11557-4e70-455f-8c29-e2214d6a44ae.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421933.56 5369445.2 421912.11 5369452.79 421908.96 5369444.32 421910.69 5369443.64 421909.66 5369440.97 421913.53 5369439.52 421916.04 5369438.59 421918.68 5369437.61 421929.22 5369433.71 421933.56 5369445.2</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.465a79d8-1573-4a95-8beb-7f24e7139379">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421947.75 5369303.66</gml:lowerCorner>
+          <gml:upperCorner>422011.75 5369354.5</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTmm</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906520001000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.465a79d8-1573-4a95-8beb-7f24e7139379.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.465a79d8-1573-4a95-8beb-7f24e7139379.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421947.75 5369322.59 421959.99 5369318.83 421999.31 5369306.76 422009.41 5369303.66 422009.83 5369311.5 422011.56 5369349.16 422011.75 5369353.1 422007.93 5369353.36 421984 5369354.5 421953.11 5369340.2 421947.75 5369322.59</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.e2315252-34cd-4251-bbf1-5a1a28c1bc56">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421951.08 5369429.59</gml:lowerCorner>
+          <gml:upperCorner>422004.59 5369459.45</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqd</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940015000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.e2315252-34cd-4251-bbf1-5a1a28c1bc56.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.e2315252-34cd-4251-bbf1-5a1a28c1bc56.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421969.63 5369455.08 421958.03 5369459.45 421951.08 5369440.8 421965.99 5369435.21 421969.25 5369433.99 421971.3 5369433.23 421978.18 5369430.65 421978.07 5369430.35 421980.01 5369429.59 421984.14 5369441.24 421993.21 5369437.83 421993.13 5369437.34 421993.18 5369436.85 421993.35 5369436.39 421993.63 5369435.98 421994 5369435.66 421994.45 5369435.45 421994.93 5369435.35 421995.43 5369435.38 421995.89 5369435.54 421996.31 5369435.81 421996.64 5369436.17 421996.87 5369436.61 422002.1 5369434.67 422004.59 5369441.9 421988.44 5369447.97 421969.63 5369455.08</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.bef132b7-5e84-44e7-8c2f-49551c277a09">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421920.18 5369349.29</gml:lowerCorner>
+          <gml:upperCorner>421965.53 5369386.24</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000i3KuT</nora:gml_id>
+      <nora:gebaeudefunktion_id>2020</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Büro</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Bürogebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940025000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.bef132b7-5e84-44e7-8c2f-49551c277a09.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.bef132b7-5e84-44e7-8c2f-49551c277a09.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421965.53 5369386.24 421961.51 5369385.82 421956.39 5369385.28 421948.65 5369364.57 421937.8 5369368.63 421925.97 5369373.04 421925.9 5369372.85 421925.78 5369372.9 421920.18 5369357.89 421920.31 5369357.84 421920.23 5369357.62 421920.31 5369357.59 421942.61 5369349.29 421960.97 5369354.38 421961.43 5369364.32 421964.48 5369364.18 421965.53 5369386.24</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.39afbfa7-2add-4c10-99c0-a4fe0b59ecc4">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421898.42 5369294.08</gml:lowerCorner>
+          <gml:upperCorner>421930.23 5369313.88</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwah1</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940029000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2022-12-15T07:42:07Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.39afbfa7-2add-4c10-99c0-a4fe0b59ecc4.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.39afbfa7-2add-4c10-99c0-a4fe0b59ecc4.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421905.4 5369313.88 421903.35 5369312.69 421898.42 5369299.66 421917.89 5369296.35 421928.76 5369294.08 421928.77 5369294.13 421930.23 5369300.9 421918.86 5369303.13 421919.9 5369310.43 421905.4 5369313.88</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.1f245f11-ccde-4e32-b3c0-59aa03c8cf90">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421889.9 5369429.78</gml:lowerCorner>
+          <gml:upperCorner>421907.28 5369444.42</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapr</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096909310001000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.1f245f11-ccde-4e32-b3c0-59aa03c8cf90.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.1f245f11-ccde-4e32-b3c0-59aa03c8cf90.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421900.22 5369441.84 421897.04 5369443.04 421893.39 5369444.42 421889.9 5369435.04 421893.5 5369433.68 421896.68 5369432.47 421903.82 5369429.78 421907.28 5369439.17 421900.22 5369441.84</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.71eb84df-b36d-4db1-ae89-bc53fe7fa882">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421965.41 5369475.07</gml:lowerCorner>
+          <gml:upperCorner>421986.03 5369495.74</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqf</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940011000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.71eb84df-b36d-4db1-ae89-bc53fe7fa882.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.71eb84df-b36d-4db1-ae89-bc53fe7fa882.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421971.41 5369495.74 421965.41 5369479.39 421977.14 5369475.07 421978.49 5369478.73 421979.09 5369478.51 421979.32 5369479.14 421979.93 5369480.84 421982.03 5369486.69 421981.47 5369486.9 421981.68 5369487.5 421984.63 5369486.44 421986.03 5369490.31 421983.26 5369491.3 421971.41 5369495.74</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.53e58961-69e2-455e-a122-de8573c15d07">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421908.23 5369459.79</gml:lowerCorner>
+          <gml:upperCorner>421945.34 5369488.64</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapx</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940044000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.53e58961-69e2-455e-a122-de8573c15d07.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.53e58961-69e2-455e-a122-de8573c15d07.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421945.34 5369477.04 421914.04 5369488.64 421913.02 5369485.85 421908.23 5369473.05 421920.55 5369468.64 421921 5369469.92 421924.07 5369468.82 421922.97 5369465.74 421938.9 5369459.79 421945.34 5369477.04</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.16778766-b3e2-424f-ae5c-aaecc26a5873">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421957.98 5369455.08</gml:lowerCorner>
+          <gml:upperCorner>421979.33 5369479.39</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqg</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940013000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.16778766-b3e2-424f-ae5c-aaecc26a5873.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.16778766-b3e2-424f-ae5c-aaecc26a5873.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421979.33 5369474.26 421977.14 5369475.07 421965.41 5369479.39 421959.31 5369463.05 421957.98 5369459.49 421958.03 5369459.45 421969.63 5369455.08 421970.97 5369458.65 421972.27 5369462.15 421972.87 5369461.92 421974.45 5369462.8 421975.67 5369466.1 421975.14 5369467.82 421974.47 5369468.07 421976.25 5369472.9 421977.6 5369472.4 421977.93 5369473.34 421978.87 5369472.99 421979.33 5369474.26</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.3da4ae66-af77-4f38-9dc3-fc68d430c021">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421996.1 5369438.05</gml:lowerCorner>
+          <gml:upperCorner>422040.84 5369468.57</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaql</nora:gml_id>
+      <nora:gebaeudefunktion_id>2020</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Büro</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Bürogebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096916360006000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.3da4ae66-af77-4f38-9dc3-fc68d430c021.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.3da4ae66-af77-4f38-9dc3-fc68d430c021.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422000.35 5369465.86 421998.62 5369461.23 421996.1 5369454.4 422040.39 5369438.05 422040.84 5369438.34 422040.83 5369453.72 422001.36 5369468.57 422000.35 5369465.86</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.2c7d4716-4ec1-4333-9d75-793fc11c36e1">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421971.41 5369478.9</gml:lowerCorner>
+          <gml:upperCorner>422030.84 5369512.11</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqn</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940009000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.2c7d4716-4ec1-4333-9d75-793fc11c36e1.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.2c7d4716-4ec1-4333-9d75-793fc11c36e1.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421971.41 5369495.74 421983.26 5369491.3 421984.45 5369494.46 422026.01 5369478.9 422028.38 5369485.14 422020.71 5369488.05 422021.45 5369489.99 422029.04 5369487.12 422030.84 5369491.84 422023.14 5369494.77 421977.63 5369512 421977.49 5369512.11 421971.41 5369495.74</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.279b43ae-22ce-4f50-84c4-59d55336a51f">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421977.49 5369490.08</gml:lowerCorner>
+          <gml:upperCorner>422036.69 5369539.37</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqq</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940007000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.279b43ae-22ce-4f50-84c4-59d55336a51f.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.279b43ae-22ce-4f50-84c4-59d55336a51f.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421977.49 5369512.11 421977.63 5369512 422023.14 5369494.77 422030.84 5369491.84 422035.42 5369490.08 422036.69 5369493.17 422034.26 5369518.91 422032.3 5369519.58 422033.36 5369522.33 422032.24 5369524.97 422029.67 5369525.93 422022.9 5369539.37 422019.89 5369539.24 422014.96 5369526.17 422009.52 5369528.32 422009.17 5369527.43 421998.67 5369531.28 421997.21 5369527.48 421985.05 5369532.05 421977.49 5369512.11</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.a29bc229-b902-4de5-b668-173f8ad71503">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421888.35 5369474.35</gml:lowerCorner>
+          <gml:upperCorner>421904.61 5369489.46</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapA</nora:gml_id>
+      <nora:gebaeudefunktion_id>2071</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Hotel</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Hotel, Motel, Pension</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096912970005000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.a29bc229-b902-4de5-b668-173f8ad71503.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.a29bc229-b902-4de5-b668-173f8ad71503.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421888.42 5369478.58 421898.87 5369474.7 421899.81 5369474.35 421902.83 5369482.28 421903.49 5369482.03 421904.61 5369484.95 421904 5369485.18 421892.61 5369489.46 421890.07 5369482.65 421889.95 5369482.69 421888.35 5369478.61 421888.42 5369478.58</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.bb06c2f1-d210-4b97-81e2-b66433b72de4">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>422020.71 5369470.37</gml:lowerCorner>
+          <gml:upperCorner>422040.27 5369491.84</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqo</nora:gml_id>
+      <nora:gebaeudefunktion_id>2112</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Btrg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Betriebsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>0831709691636000400a</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2022-12-12T11:10:21Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.bb06c2f1-d210-4b97-81e2-b66433b72de4.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.bb06c2f1-d210-4b97-81e2-b66433b72de4.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422035.17 5369472.2 422040.27 5369470.37 422039.12 5369488.72 422035.42 5369490.08 422030.84 5369491.84 422029.04 5369487.12 422021.45 5369489.99 422020.71 5369488.05 422028.38 5369485.14 422026.01 5369478.9 422024.97 5369476.15 422024.9 5369475.96 422029.56 5369474.22 422030.5 5369473.87 422035.17 5369472.2</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.ed8a90b5-216a-437d-9e62-ec2f4af39a1e">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421893.93 5369489.14</gml:lowerCorner>
+          <gml:upperCorner>421909.13 5369507.62</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapw</nora:gml_id>
+      <nora:gebaeudefunktion_id>1010</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Whs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohnhaus</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096912970003000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.ed8a90b5-216a-437d-9e62-ec2f4af39a1e.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.ed8a90b5-216a-437d-9e62-ec2f4af39a1e.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421893.93 5369493.16 421904.54 5369489.14 421909.13 5369502.4 421905.59 5369503.74 421906.48 5369506.08 421902.4 5369507.62 421901.52 5369505.28 421898.79 5369506.31 421893.93 5369493.16</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.6a247de1-5d3d-4658-873c-c72439d83c04">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421932.87 5369481.45</gml:lowerCorner>
+          <gml:upperCorner>421953.88 5369505.29</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapp</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940042000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2024-06-25T11:33:25Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.6a247de1-5d3d-4658-873c-c72439d83c04.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.6a247de1-5d3d-4658-873c-c72439d83c04.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421953.65 5369500.18 421939.95 5369505.29 421932.87 5369486.71 421946.95 5369481.45 421953.88 5369500.1 421953.65 5369500.18</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.c0ac750e-ce2a-4e82-a776-8a597f087f34">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421955.11 5369415.97</gml:lowerCorner>
+          <gml:upperCorner>421978.18 5369433.23</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqa</nora:gml_id>
+      <nora:gebaeudefunktion_id>2112</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Btrg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Betriebsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940017</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2023-01-11T09:38:26Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.c0ac750e-ce2a-4e82-a776-8a597f087f34.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.c0ac750e-ce2a-4e82-a776-8a597f087f34.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421956.57 5369426.36 421955.11 5369422.52 421958.62 5369421.21 421972.68 5369415.97 421978.07 5369430.35 421978.18 5369430.65 421971.3 5369433.23 421967.45 5369422.82 421962.68 5369424.64 421962.5 5369424.15 421956.57 5369426.36</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.304170a8-230c-4fd9-b12a-58f5dea1d001">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421903.84 5369427.74</gml:lowerCorner>
+          <gml:upperCorner>421916.04 5369441.51</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaps</nora:gml_id>
+      <nora:gebaeudefunktion_id>2140</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Lagg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Gebäude für Vorratshaltung</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940050</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.304170a8-230c-4fd9-b12a-58f5dea1d001.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.304170a8-230c-4fd9-b12a-58f5dea1d001.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421916.04 5369438.59 421913.53 5369439.52 421909.66 5369440.97 421908.17 5369441.51 421907.28 5369439.17 421903.84 5369429.75 421909.27 5369427.74 421912.82 5369437.68 421915.39 5369436.76 421916.04 5369438.59</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.63638218-f50b-4f8d-a84f-91535d38cfd7">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421925.91 5369368.63</gml:lowerCorner>
+          <gml:upperCorner>421944.03 5369390.27</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq1</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940023000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2017-04-20T05:43:43Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.63638218-f50b-4f8d-a84f-91535d38cfd7.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.63638218-f50b-4f8d-a84f-91535d38cfd7.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421939.93 5369372.01 421940.18 5369371.88 421940.47 5369371.86 421940.73 5369371.97 421940.93 5369372.17 421941.46 5369371.98 421942.32 5369374.33 421942.23 5369374.36 421942.73 5369375.7 421940.53 5369376.51 421944.03 5369385.95 421932.27 5369390.27 421925.91 5369373.06 421925.97 5369373.04 421937.8 5369368.63 421939 5369372.36 421939.93 5369372.01</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.f58707b3-b278-4754-91db-d3aa6b0bd2b5">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421960.97 5369354.38</gml:lowerCorner>
+          <gml:upperCorner>422008.01 5369407.69</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTmw</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906520004000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.f58707b3-b278-4754-91db-d3aa6b0bd2b5.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.f58707b3-b278-4754-91db-d3aa6b0bd2b5.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421965.53 5369386.24 421964.48 5369364.18 421961.43 5369364.32 421960.97 5369354.38 421964 5369355.22 421992.48 5369363.1 421995.01 5369363.78 421995.45 5369372.24 421996.07 5369384.51 422006.92 5369383.99 422008.01 5369407 421994.01 5369407.69 421993.78 5369403 421983.34 5369403.51 421967.56 5369404.29 421967.52 5369403.56 421967.07 5369403.58 421967.1 5369393.6 421961.82 5369393.42 421961.51 5369385.82 421965.53 5369386.24</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.00e831ec-6ba0-4eb9-80f0-28f3134e80eb">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421928.77 5369289.24</gml:lowerCorner>
+          <gml:upperCorner>421955.44 5369305.98</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000s8NAv</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096916240001000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2022-12-15T07:42:07Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.00e831ec-6ba0-4eb9-80f0-28f3134e80eb.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.00e831ec-6ba0-4eb9-80f0-28f3134e80eb.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421928.77 5369294.13 421940.62 5369291.16 421940.63 5369291.2 421945.47 5369290 421945.7 5369290.94 421952.53 5369289.24 421954.32 5369296.45 421954.67 5369296.36 421955.16 5369298.4 421954.83 5369298.49 421955.44 5369300.94 421931.72 5369305.98 421928.77 5369294.13</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.39d31f6b-c555-4f9f-bb54-23594cb7183e">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421932.27 5369385.95</gml:lowerCorner>
+          <gml:upperCorner>421959.05 5369404.03</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq3</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940021000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.39d31f6b-c555-4f9f-bb54-23594cb7183e.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.39d31f6b-c555-4f9f-bb54-23594cb7183e.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421932.27 5369390.27 421944.03 5369385.95 421947.25 5369386.37 421948.02 5369391.96 421959.05 5369390.56 421959 5369393.39 421958.88 5369399.97 421954.65 5369401.46 421953.97 5369395.59 421948.16 5369397.17 421949.11 5369399.75 421937.37 5369404.03 421932.27 5369390.27</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.43e27cdd-c4e2-4fff-bbd3-625b34c760d8">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>422014.98 5369292.33</gml:lowerCorner>
+          <gml:upperCorner>422077.27 5369373.56</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTmk</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906520002000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.43e27cdd-c4e2-4fff-bbd3-625b34c760d8.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.43e27cdd-c4e2-4fff-bbd3-625b34c760d8.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422032.92 5369293.84 422035.71 5369293.28 422038.52 5369292.85 422041.35 5369292.55 422044.18 5369292.37 422047.03 5369292.33 422049.87 5369292.41 422052.66 5369292.62 422055.43 5369292.95 422058.19 5369293.4 422060.92 5369293.97 422063.63 5369294.67 422066.3 5369295.49 422068.93 5369296.42 422066.7 5369302.6 422072.03 5369304.54 422072.58 5369304.79 422073.11 5369305.09 422073.61 5369305.43 422074.08 5369305.81 422074.68 5369306.4 422075.22 5369307.05 422075.67 5369307.76 422076.05 5369308.51 422076.39 5369309.35 422076.67 5369310.2 422076.9 5369311.08 422077.08 5369311.96 422077.23 5369313.2 422077.27 5369314.44 422077.21 5369315.68 422077.04 5369316.92 422076.76 5369318.13 422074.87 5369323.47 422074.69 5369323.85 422074.44 5369324.19 422074.14 5369324.49 422073.79 5369324.72 422073.38 5369324.9 422072.93 5369324.99 422072.48 5369325 422072.04 5369324.92 422068.14 5369335.5 422069.19 5369337.72 422067.86 5369338.4 422067.16 5369338.15 422062.35 5369351.23 422055.58 5369369.66 422054.14 5369373.56 422018.22 5369369.79 422014.98 5369300.88 422027.87 5369300.25 422027.61 5369295.09 422032.92 5369293.84</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.83faa3be-253a-4a27-9d2f-4ee78838fa67">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421911.84 5369330.33</gml:lowerCorner>
+          <gml:upperCorner>421942.61 5369357.59</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTmp</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940027000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.83faa3be-253a-4a27-9d2f-4ee78838fa67.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.83faa3be-253a-4a27-9d2f-4ee78838fa67.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421919.99 5369357.31 421911.84 5369335.44 421928.53 5369331.12 421931.53 5369330.33 421942.61 5369349.29 421920.31 5369357.59 421920.18 5369357.25 421919.99 5369357.31</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.9ec08235-60b7-4294-bb30-5e7935bbc4f2">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>422013.12 5369382.3</gml:lowerCorner>
+          <gml:upperCorner>422051.63 5369406.71</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTmv</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906520003000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.9ec08235-60b7-4294-bb30-5e7935bbc4f2.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.9ec08235-60b7-4294-bb30-5e7935bbc4f2.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422014.21 5369406.71 422013.14 5369384.31 422013.12 5369383.85 422042.82 5369382.54 422048.2 5369382.3 422048.28 5369384.06 422050.66 5369383.95 422051.63 5369403.23 422049.27 5369403.35 422049.38 5369405.14 422043.91 5369405.38 422014.21 5369406.71</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.8c589472-4a93-4c17-a1b1-aab90ab1d7ad">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421945.55 5369422.52</gml:lowerCorner>
+          <gml:upperCorner>421965.99 5369440.8</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq8</nora:gml_id>
+      <nora:gebaeudefunktion_id>1123</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WGhs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940017000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2024-03-04T11:27:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.8c589472-4a93-4c17-a1b1-aab90ab1d7ad.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.8c589472-4a93-4c17-a1b1-aab90ab1d7ad.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421945.6 5369426.07 421955.11 5369422.52 421956.57 5369426.36 421958.47 5369431.39 421963.82 5369429.39 421965.99 5369435.21 421951.08 5369440.8 421951.02 5369440.79 421945.55 5369426.09 421945.6 5369426.07</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.696c82b6-06be-492f-ba8e-355ad131a5e8">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421938.46 5369393.39</gml:lowerCorner>
+          <gml:upperCorner>421967.1 5369426.07</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq4</nora:gml_id>
+      <nora:gebaeudefunktion_id>2071</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Hotel</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Hotel, Motel, Pension</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940019000</nora:lage_id>
+      
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2024-03-05T10:55:09Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.696c82b6-06be-492f-ba8e-355ad131a5e8.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.696c82b6-06be-492f-ba8e-355ad131a5e8.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421959 5369393.39 421961.39 5369393.4 421961.82 5369393.42 421967.1 5369393.6 421967.07 5369403.58 421966.99 5369404.32 421964.17 5369404.27 421964.18 5369404.9 421957.08 5369407.5 421957.93 5369409.88 421960.55 5369408.9 421963.06 5369415.62 421957.31 5369417.69 421957.49 5369418.15 421958.62 5369421.21 421955.11 5369422.52 421945.6 5369426.07 421944.39 5369423 421938.46 5369407.14 421954.65 5369401.46 421958.88 5369399.97 421959 5369393.39</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.b3f36ea7-501b-49a0-b934-08c803a7c4e7">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421879.01 5369365.99</gml:lowerCorner>
+          <gml:upperCorner>421909.71 5369404.11</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq0</nora:gml_id>
+      <nora:gebaeudefunktion_id>3041</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Kir</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Kirche</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096912490002000</nora:lage_id>
+      
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>3</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.b3f36ea7-501b-49a0-b934-08c803a7c4e7.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.b3f36ea7-501b-49a0-b934-08c803a7c4e7.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421891.36 5369368.18 421890.98 5369367.16 421891.8 5369366.85 421892.17 5369367.85 421893.83 5369367.23 421893.45 5369366.23 421894.09 5369365.99 421894.46 5369366.99 421895.46 5369366.61 421895.73 5369367.31 421894.7 5369367.7 421898 5369376.53 421899.59 5369375.93 421899.66 5369374.99 421900.28 5369375.03 421900.2 5369376.04 421903.42 5369377.48 421903.98 5369376.82 421904.45 5369377.22 421903.8 5369378 421904.38 5369379.54 421905.37 5369379.17 421905.61 5369379.83 421904.65 5369380.19 421907.81 5369388.65 421908.81 5369388.27 421909.06 5369388.94 421908.08 5369389.31 421908.7 5369390.96 421909.71 5369390.97 421909.71 5369391.55 421908.63 5369391.54 421907.12 5369394.76 421907.88 5369395.38 421907.48 5369395.87 421906.65 5369395.2 421905.29 5369395.84 421905.56 5369397.13 421906.92 5369397.46 421907 5369398.05 421905.66 5369397.84 421904.26 5369401.18 421905.09 5369401.95 421904.57 5369402.51 421903.65 5369401.64 421900.24 5369402.84 421900.18 5369404.11 421899.41 5369404.07 421899.46 5369402.9 421896.3 5369401.53 421895.54 5369402.28 421894.93 5369401.8 421896 5369400.77 421895.39 5369399.53 421893.77 5369400.05 421893.72 5369401.01 421893.1 5369400.98 421893.15 5369400.02 421889.91 5369398.55 421889.26 5369399.28 421888.79 5369398.85 421889.45 5369398.1 421883.79 5369400.21 421879.01 5369387.36 421884.67 5369385.25 421884.69 5369385.05 421883.68 5369384.96 421883.73 5369384.41 421884.71 5369384.51 421886.13 5369381.32 421885.47 5369380.67 421885.98 5369380.16 421886.7 5369380.87 421888.23 5369380.29 421886.53 5369375.74 421885.56 5369376.11 421885.39 5369375.65 421883.86 5369376.22 421882.84 5369373.48 421885.39 5369372.53 421885 5369371.5 421884.06 5369371.85 421883.79 5369371.13 421884.73 5369370.78 421884.37 5369369.8 421885.04 5369369.54 421885.41 5369370.51 421887.09 5369369.88 421886.72 5369368.9 421887.45 5369368.63 421887.78 5369369.52 421891.36 5369368.18</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.5f64e916-037a-4cb1-b09a-eb07d7bae992">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421959.99 5369289.2</gml:lowerCorner>
+          <gml:upperCorner>422090.46 5369406.71</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000qWTms</nora:gml_id>
+      <nora:gebaeudefunktion_id>2465</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Tgar</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Tiefgarage</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906520001</nora:lage_id>
+      <nora:lage_oberflaeche_id>1200</nora:lage_oberflaeche_id>
+      <nora:lage_oberflaeche_name>Unter der Erdoberfläche</nora:lage_oberflaeche_name>
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>4</nora:klasse>
+      <nora:beginn>2021-05-11T13:14:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.5f64e916-037a-4cb1-b09a-eb07d7bae992.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.5f64e916-037a-4cb1-b09a-eb07d7bae992.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422032.22 5369302.66 422038.08 5369304.8 422042.79 5369291.85 422048.61 5369289.2 422087.83 5369303.46 422090.46 5369309.21 422068.38 5369369.59 422062.62 5369372.24 422055.58 5369369.66 422054.14 5369373.56 422050.95 5369382.18 422048.2 5369382.3 422042.82 5369382.54 422043.91 5369405.38 422014.21 5369406.71 422013.14 5369384.31 421993.47 5369385.25 421994.32 5369402.97 421993.78 5369403 421983.34 5369403.51 421983.28 5369402.18 421978.54 5369402.4 421978.43 5369400.19 421975.58 5369400.32 421975.49 5369398.28 421974.39 5369398.33 421974.22 5369394.74 421978.16 5369394.55 421977.75 5369386 421965.53 5369386.24 421964.48 5369364.18 421961.43 5369364.32 421960.97 5369354.38 421964 5369355.22 421962.68 5369327.62 421959.99 5369318.83 421999.31 5369306.76 422009.41 5369303.66 422032.22 5369302.66</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.f0e18ecd-3ab0-46fd-8e8d-bf801e67bf47">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421963.82 5369428.5</gml:lowerCorner>
+          <gml:upperCorner>421969.25 5369435.21</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaq9</nora:gml_id>
+      <nora:gebaeudefunktion_id>2112</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Btrg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Betriebsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940017</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.f0e18ecd-3ab0-46fd-8e8d-bf801e67bf47.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.f0e18ecd-3ab0-46fd-8e8d-bf801e67bf47.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421965.99 5369435.21 421963.82 5369429.39 421966.2 5369428.5 421967.43 5369429.13 421969.25 5369433.99 421965.99 5369435.21</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.58485251-ece9-43d3-bbbe-6c9a9909dd7d">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421977.14 5369467.41</gml:lowerCorner>
+          <gml:upperCorner>421997.28 5369479.14</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqh</nora:gml_id>
+      <nora:gebaeudefunktion_id>2463</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Gar</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Garage</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940011</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.58485251-ece9-43d3-bbbe-6c9a9909dd7d.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.58485251-ece9-43d3-bbbe-6c9a9909dd7d.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421979.33 5369474.26 421980.8 5369473.71 421980.58 5369473.14 421981.99 5369472.6 421995.68 5369467.41 421997.28 5369472.39 421993.77 5369473.64 421993.37 5369472.54 421980.15 5369477.37 421980.63 5369478.66 421979.32 5369479.14 421979.09 5369478.51 421978.49 5369478.73 421977.14 5369475.07 421979.33 5369474.26</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.0b7e355b-a526-4fc1-adfb-5baac653283c">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>422028.28 5369468.68</gml:lowerCorner>
+          <gml:upperCorner>422035.17 5369474.22</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqm</nora:gml_id>
+      <nora:gebaeudefunktion_id>2463</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Gar</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Garage</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906942031</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.0b7e355b-a526-4fc1-adfb-5baac653283c.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.0b7e355b-a526-4fc1-adfb-5baac653283c.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>422035.17 5369472.2 422030.5 5369473.87 422029.56 5369474.22 422028.28 5369470.56 422033.95 5369468.68 422035.17 5369472.2</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.bc0c3846-13e5-4b05-9cf9-6f10b7aaba25">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421978.99 5369459.03</gml:lowerCorner>
+          <gml:upperCorner>421995.68 5369472.6</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqj</nora:gml_id>
+      <nora:gebaeudefunktion_id>1131</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>WBtrg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Wohn- und Betriebsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940011</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>1</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.bc0c3846-13e5-4b05-9cf9-6f10b7aaba25.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.bc0c3846-13e5-4b05-9cf9-6f10b7aaba25.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421987.52 5369460.92 421992.56 5369459.03 421995.68 5369467.41 421981.99 5369472.6 421978.99 5369464.05 421987.52 5369460.92</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.93c62214-070b-4d4b-94fc-00d1dc085adf">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421991.32 5369454.94</gml:lowerCorner>
+          <gml:upperCorner>422000.35 5369470.89</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqk</nora:gml_id>
+      <nora:gebaeudefunktion_id>2140</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Lagg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Gebäude für Vorratshaltung</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096916360006</nora:lage_id>
+      <nora:qualitaet>Katastervermessung</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.93c62214-070b-4d4b-94fc-00d1dc085adf.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.93c62214-070b-4d4b-94fc-00d1dc085adf.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421995.68 5369467.41 421992.56 5369459.03 421991.32 5369455.69 421993.36 5369454.94 421996.04 5369462.19 421998.62 5369461.23 422000.35 5369465.86 421997.71 5369466.71 421998.94 5369470.11 421996.88 5369470.89 421995.68 5369467.41</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.659f424b-358e-4e16-9eb9-5c00c95e2bf2">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421985.7 5369454.4</gml:lowerCorner>
+          <gml:upperCorner>421992.56 5369460.92</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwaqi</nora:gml_id>
+      <nora:gebaeudefunktion_id>2140</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Lagg</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Gebäude für Vorratshaltung</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940011</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2014-05-20T17:25:45Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.659f424b-358e-4e16-9eb9-5c00c95e2bf2.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.659f424b-358e-4e16-9eb9-5c00c95e2bf2.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421991.32 5369455.69 421992.56 5369459.03 421987.52 5369460.92 421985.7 5369456.17 421990.83 5369454.4 421991.32 5369455.69</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.c5cc97e6-41e7-4931-973d-621144a0f74a">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421899.02 5369466.47</gml:lowerCorner>
+          <gml:upperCorner>421906.33 5369473.88</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapm</nora:gml_id>
+      <nora:gebaeudefunktion_id>2463</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Gar</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Garage</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096912970007</nora:lage_id>
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2013-01-19T00:04:41Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.c5cc97e6-41e7-4931-973d-621144a0f74a.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.c5cc97e6-41e7-4931-973d-621144a0f74a.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421904.31 5369466.47 421906.33 5369471.93 421901.09 5369473.88 421899.02 5369468.51 421904.31 5369466.47</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+  <wfs:member>
+    <nora:v_al_gebaeude gml:id="v_al_gebaeude.2c942bd7-a4e8-4fe1-92ad-5ce08e12c0a4">
+      <gml:boundedBy>
+        <gml:Envelope srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2">
+          <gml:lowerCorner>421938.44 5369500.18</gml:lowerCorner>
+          <gml:upperCorner>421965.83 5369538.5</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <nora:gml_id>DEBWL001000bwapq</nora:gml_id>
+      <nora:gebaeudefunktion_id>2050</nora:gebaeudefunktion_id>
+      <nora:gebaeudefunktion_kuerzel>Ghs</nora:gebaeudefunktion_kuerzel>
+      <nora:gebaeudefunktion_name>Geschäftsgebäude</nora:gebaeudefunktion_name>
+      <nora:lage_id>08317096906940040000</nora:lage_id>
+      
+      <nora:qualitaet>Digitalisierungsstufe 1</nora:qualitaet>
+      <nora:klasse>2</nora:klasse>
+      <nora:beginn>2024-06-25T11:33:25Z</nora:beginn>
+      <nora:geom>
+        <gml:MultiSurface srsName="http://www.opengis.net/gml/srs/epsg.xml#25832" srsDimension="2" gml:id="v_al_gebaeude.2c942bd7-a4e8-4fe1-92ad-5ce08e12c0a4.geom">
+          <gml:surfaceMember>
+            <gml:Polygon gml:id="v_al_gebaeude.2c942bd7-a4e8-4fe1-92ad-5ce08e12c0a4.geom.1">
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>421965.83 5369532.81 421955.44 5369536.44 421955.52 5369536.59 421950.47 5369538.5 421947.12 5369529.55 421942.96 5369531.11 421941.88 5369528.25 421945.96 5369526.73 421942.61 5369517.79 421942.85 5369517.68 421938.44 5369505.86 421939.95 5369505.29 421953.65 5369500.18 421957.93 5369511.96 421958.28 5369511.83 421961.81 5369521.31 421961.47 5369521.44 421965.83 5369532.81</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </nora:geom>
+    </nora:v_al_gebaeude>
+  </wfs:member>
+</wfs:FeatureCollection>
