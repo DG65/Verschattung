@@ -591,13 +591,13 @@ class Verschattung extends IPSModule
             if (!in_array($v['VariableType'], [VARIABLETYPE_INTEGER, VARIABLETYPE_FLOAT], true)) {
                 continue;
             }
-            $p = mb_strtolower($this->profil($vid));
-            $n = $this->name($vid);
-            $typ = $this->typRaten($n . ' ' . $p);
-            if (strpos($p, 'shutter') === false && $typ === null) {
+            $eltern = IPS_GetParent($vid);
+            $o = IPS_GetObject($vid);
+            $typ = VSCHLogik::kandidat($eltern > 0 && IPS_InstanceExists($eltern) ? IPS_GetName($eltern) : '', $o['ObjectName'], $o['ObjectIdent'], $this->profil($vid));
+            if ($typ === null) {
                 continue;
             }
-            $vorschlaege[] = ['Nehmen' => false, 'Name' => $n, 'Typ' => $typ ?? 'rollladen', 'Position' => $vid, 'Lamelle' => $this->lamelleFinden($vid)];
+            $vorschlaege[] = ['Nehmen' => false, 'Name' => $this->name($vid), 'Typ' => $typ, 'Position' => $vid, 'Lamelle' => $this->lamelleFinden($vid)];
             if (count($vorschlaege) >= 60) {
                 break;
             }
@@ -618,7 +618,8 @@ class Verschattung extends IPSModule
                 continue;
             }
             $geraete[] = ['Name' => (string)$v['Name'], 'Fassade' => $fassade, 'Typ' => (string)$v['Typ'], 'Position' => (int)$v['Position'],
-                'Richtung' => 0, 'Lamelle' => (int)($v['Lamelle'] ?? 0), 'LamelleUmgekehrt' => false, 'Kontakt' => 0, 'Beschattung' => 0];
+                'Richtung' => 0, 'Lamelle' => (int)($v['Lamelle'] ?? 0),
+                'LamelleUmgekehrt' => stripos($this->profil((int)($v['Lamelle'] ?? 0)), 'reversed') !== false, 'Kontakt' => 0, 'Beschattung' => 0];
             $neu++;
         }
         $this->UpdateFormField('Geraete', 'values', json_encode($geraete));
@@ -636,6 +637,9 @@ class Verschattung extends IPSModule
             $z = [];
             $this->ausfuehren($g, $beschatten ? 'beschatten' : 'offen', $beschatten && $g['Lamelle'] > 0 ? 45.0 : null, $z, $this->now());
             $n++;
+        }
+        if ($n === 1) {
+            return $this->t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', $fassade);
         }
         return $n === 0
             ? $this->t('Facade %s has no saved devices yet (apply changes first).', $fassade)
@@ -834,7 +838,7 @@ class Verschattung extends IPSModule
             ]],
             ['type' => 'Image', 'name' => 'Himmel', 'image' => $this->himmelBild($fassaden, 0, 'heute'), 'center' => true, 'width' => '560px'],
             ['type' => 'Label', 'name' => 'Vorschau', 'caption' => $this->vorschauText($fassaden, 0, 'heute')],
-            ['type' => 'Label', 'caption' => 'Grey: terrain horizon (PVGIS, drawn three times higher). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.'],
+            ['type' => 'Label', 'caption' => 'Grey: terrain horizon (PVGIS, true to scale). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.'],
         ]];
 
         $actions[] = ['type' => 'Label', 'caption' => $this->t('Current state: %s', (string)@$this->GetValue('Status'))];
@@ -873,7 +877,7 @@ class Verschattung extends IPSModule
         }
         $f = $fassaden[$auswahl] ?? null;
         return VSCHGrafik::himmel($bahnen, $this->horizontPunkte(), $f !== null ? (float)$f['Azimut'] : null,
-            VSCHGrafik::FARBEN[$auswahl % count(VSCHGrafik::FARBEN)], date_default_timezone_get(), $this->t('Horizon (3× higher)'));
+            VSCHGrafik::FARBEN[$auswahl % count(VSCHGrafik::FARBEN)], date_default_timezone_get(), $this->t('Horizon'));
     }
 
     private function vorschauText(array $fassaden, int $auswahl, string $tag): string
@@ -1102,20 +1106,6 @@ class Verschattung extends IPSModule
         return $p > 0 && IPS_InstanceExists($p) ? IPS_GetName($p) . ' / ' . $n : $n;
     }
 
-    private function typRaten(string $text): ?string
-    {
-        $t = mb_strtolower($text);
-        if (preg_match('/markise|awning|sonnensegel/', $t)) {
-            return 'markise';
-        }
-        if (preg_match('/raffstore|jalousie|venetian|lamell|blind/', $t)) {
-            return 'raffstore';
-        }
-        if (preg_match('/rollladen|rolladen|rollo|shutter|rolltor/', $t)) {
-            return 'rollladen';
-        }
-        return null;
-    }
 
     /** Lamellenvariable neben der Positionsvariable (gleiche Instanz, Name/Ident mit Lamelle/Slat/Tilt/Winkel). */
     private function lamelleFinden(int $vid): int

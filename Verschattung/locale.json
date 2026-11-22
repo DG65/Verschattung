@@ -46,7 +46,6 @@
             "21 December": "21. Dezember",
             "Not detected yet.": "Noch nicht erkannt.",
             "Current state: %s": "Aktueller Zustand: %s",
-            "Horizon (3× higher)": "Horizont (3-fach überhöht)",
             "The preview appears once facades are known.": "Die Vorschau erscheint, sobald Fassaden bekannt sind.",
             "no direct sun": "keine direkte Sonne",
             "Sun on the facade (%s): %s": "Sonne auf der Fassade (%s): %s",
@@ -106,7 +105,6 @@
             "☀️  Preview": "☀️  Vorschau",
             "Day": "Tag",
             "Redraw": "Neu zeichnen",
-            "Grey: terrain horizon (PVGIS, drawn three times higher). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.": "Grau: Gelände-Horizont (PVGIS, dreifach überhöht). Farbiges Band: der Himmelsausschnitt, aus dem die gewählte Fassade Sonne bekommt. Ob dann tatsächlich beschattet wird, hängt noch von Helligkeit und Temperatur ab.",
             "🌬️  Weather protection": "🌬️  Wetterschutz",
             "Awnings and venetian blinds retract on wind and severe weather — this has priority over everything, also over manual operation. Roller shutters are not moved by wind.": "Markisen und Raffstores fahren bei Wind und Unwetter ein – das geht allem vor, auch der Handbedienung. Rollläden bewegt der Wind nicht.",
             "Wind gust (own sensor)": "Windböe (eigener Sensor)",
@@ -153,7 +151,11 @@
             "South": "Süd",
             "South-west": "Südwest",
             "West": "West",
-            "North-west": "Nordwest"
+            "North-west": "Nordwest",
+            "Grey: terrain horizon (PVGIS, true to scale). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.": "Grau: Gelände-Horizont (PVGIS, maßstabsgetreu). Farbiges Band: der Himmelsausschnitt, aus dem die gewählte Fassade Sonne bekommt. Ob dann tatsächlich beschattet wird, hängt noch von Helligkeit und Temperatur ab.",
+            "Horizon": "Horizont",
+            "Night": "Nacht",
+            "1 device of facade %s is moving. If it moves the wrong way, change its \"0 %% means\" column.": "1 Gerät der Fassade %s fährt. Fährt es falsch herum, dessen Spalte „0 %% bedeutet“ ändern."
         }
     }
 }

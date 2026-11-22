@@ -193,6 +193,34 @@ $r = VSCHLogik::entscheide($G, ['hell' => false] + $U, ['soll' => false], ['an' 
 check('D24 zu dunkel: keine Beschattung', $r['ziel'] === null && strpos($r['grund'], '') !== false);
 $r = VSCHLogik::entscheide($G, ['automatik' => false] + $U, ['soll' => false], ['an' => 0, 'aus' => 0], $t0);
 check('D25 Automatik aus: nichts', $r['ziel'] === null && $r['z']['soll'] === true);
+// Nachts ein ehrlicher Grund statt „keine direkte Sonne“
+$r = VSCHLogik::entscheide(['sonneAn' => false] + $G, ['tag' => false] + $U, [], $T, $t0);
+check('D26 nachts: Grund „Nacht“', $r['grund'] === 'Nacht', $r['grund']);
+$r = VSCHLogik::entscheide(['sonneAn' => false] + $G, $U, [], $T, $t0);
+check('D27 tagsüber ohne Sonne: Grund bleibt', $r['grund'] === 'Keine direkte Sonne auf der Fassade', $r['grund']);
+// Gerätevorschläge: Fälle aus dem Live-Test 21.11. (Z-Wave-Jalousien, Markise, Klimaanlage)
+$fall = [
+    ['Jalousie Kind I', 'Position', '', '~Shutter.Reversed', 'raffstore'],
+    ['Jalousie Wohnen Rechts', 'Position', '', '~Shutter', 'raffstore'],
+    ['Markise', 'Position', '', '~Shutter', 'markise'],
+    ['Rollladen Küche', 'Höhe', '', '~Shutter', 'rollladen'],
+    ['Wohnzimmer', 'Position', 'POSITION', '~Shutter', 'rollladen'],
+    ['KNX Kanal 3', 'Rollladen Bad Position', '', '', 'rollladen'],
+    ['Jalousie Kind I', 'Status', '', '~ShutterMoveStop', null],
+    ['Jalousie Kind I', 'Lamellenposition', '', '~Lamella.Reversed', null],
+    ['Jalousie Wohnen Rechts', 'Drehwinkel', '', '~Lamella', null],
+    ['Jalousie Wohnen Rechts', 'Sicherung (RF)', '', '~ProtectionRF.ZWave', null],
+    ['Markise', 'Sicherung (lokal)', '', '~Protection.ZWave', null],
+    ['Klimaanlage', 'Vertikale Lamellen', '', '', null],
+    ['Lamellensteuerung', 'Hilfswinkel', '', '~Lamella', null],
+    ['Shelly 2PM', 'Slat position', 'slat_pos', '', null],
+    ['Heizung', 'Ventil', '', '~Intensity.100', null],
+    ['Jalousien Position Wohnzimmer', 'Position', 'Status', '~Shutter', 'raffstore'],
+];
+foreach ($fall as $i => $f) {
+    $ist = VSCHLogik::kandidat($f[0], $f[1], $f[2], $f[3]);
+    check(sprintf('D%d Vorschlag %s / %s → %s', 28 + $i, $f[0], $f[1], $f[4] ?? 'nein'), $ist === $f[4], var_export($ist, true));
+}
 
 // ---------------------------------------------------------------------------
 heading('E Wetter');
@@ -251,6 +279,11 @@ check('F4 Grafik ohne Haus (manuelle Fassaden) geht', @simplexml_load_string(bas
 $fenster = VSCHGrafik::sonnenfenster(VSCHSonne::bahn($LAT, $LON, '2026-06-21', 'Europe/Berlin', 5), $H, 2.0);
 check('F5 Nordfassade 21.06.: Sonne morgens und abends', count($fenster) === 2, json_encode(array_map(fn($w) => [date('H:i', $w[0]), date('H:i', $w[1])], $fenster)));
 check('F6 Nordfassade 21.12.: keine Sonne', VSCHGrafik::sonnenfenster(VSCHSonne::bahn($LAT, $LON, '2026-12-21', 'Europe/Berlin', 5), $H, 2.0) === []);
+// Horizont maßstabsgetreu: 10° Gelände liegt auf der 10°-Höhe, nicht auf 30°
+$svg = base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 10], [90, 10], [180, 10], [270, 10]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont'), 26));
+preg_match('/<path d="M[^"]*"/', $svg, $pf);
+$ys = array_map(fn($p) => (float)explode(',', $p)[1], array_slice(explode(' L', $pf[0] ?? ''), 1, 10));
+check('F7 Horizont maßstabsgetreu (10° ≈ y 199)', $ys !== [] && abs(max($ys) - min($ys)) < 0.2 && abs($ys[0] - 199.2) < 1.5, json_encode(array_slice($ys, 0, 3)));
 
 // ---------------------------------------------------------------------------
 heading('G Modul');
@@ -337,6 +370,22 @@ check('G17 Vorschau aktualisiert Bilder und Text', isset($f['Grundriss'], $f['Hi
 $m->fieldUpdates = [];
 $msg = $m->UIUebernehmen(json_encode([['Nehmen' => true, 'Name' => 'X', 'Typ' => 'rollladen', 'Position' => 601, 'Lamelle' => 0]]), $m->props['Geraete'], 'B');
 check('G18 Übernehmen: UpdateFormField statt Eigenschaft', $m->fieldUpdates[0][0] === 'Geraete' && count(json_decode($m->fieldUpdates[0][2], true)) === 3 && count(json_decode($m->props['Geraete'], true)) === 2);
+// Vorschläge filtern Begleitvariablen aus; Übernehmen erkennt umgekehrte Lamelle am Profil
+mkinst(950, 'Jalousie Kind I', 0);
+mkvar(951, 1, 0, 'Position', 950, true, '~Shutter.Reversed');
+mkvar(952, 1, 0, 'Lamellenposition', 950, true, '~Lamella.Reversed');
+mkvar(953, 1, 4, 'Status', 950, true, '~ShutterMoveStop');
+mkvar(954, 1, 0, 'Sicherung (lokal)', 950, true, '~Protection.ZWave');
+$m->fieldUpdates = [];
+$m->UIVorschlaege($m->props['Geraete']);
+$f = array_column($m->fieldUpdates, 2, 0);
+$vs = array_values(array_filter(json_decode($f['Vorschlaege'], true), fn($v) => $v['Position'] >= 950 && $v['Position'] < 960));
+check('G20 Vorschläge: nur die Position, nicht Status/Sicherung/Lamelle', count($vs) === 1 && $vs[0]['Position'] === 951 && $vs[0]['Lamelle'] === 952 && $vs[0]['Typ'] === 'raffstore', json_encode($vs));
+$m->fieldUpdates = [];
+$m->UIUebernehmen(json_encode([['Nehmen' => true] + ($vs[0] ?? [])]), $m->props['Geraete'], 'A');
+$neu = json_decode($m->fieldUpdates[0][2], true);
+check('G21 Übernehmen: ~Lamella.Reversed → Lamelle umgekehrt', end($neu)['LamelleUmgekehrt'] === true);
+check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

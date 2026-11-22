@@ -92,7 +92,7 @@ final class VSCHLogik
 
         // 2. Wunsch aus Sonne, Helligkeit, Temperatur
         $wunsch = (bool)$g['sonneAn'];
-        $warum = $wunsch ? VSCHText::t('Sun on the facade') : VSCHText::t('No direct sun on the facade');
+        $warum = $wunsch ? VSCHText::t('Sun on the facade') : (($u['tag'] ?? true) ? VSCHText::t('No direct sun on the facade') : VSCHText::t('Night'));
         if ($wunsch && ($u['hell'] ?? null) === false) {
             $wunsch = false;
             $warum = VSCHText::t('Sun on the facade, but not bright enough');
@@ -244,5 +244,44 @@ final class VSCHLogik
     public static function zahl(float $v): string
     {
         return rtrim(rtrim(number_format($v, 1, ',', ''), '0'), ',');
+    }
+
+    /** Typ aus Namen/Profil raten (Markise, Raffstore, Rollladen) oder null. */
+    public static function typRaten(string $text): ?string
+    {
+        $t = mb_strtolower($text);
+        if (preg_match('/markise|awning|sonnensegel/', $t)) {
+            return 'markise';
+        }
+        if (preg_match('/raffstore|jalousie|venetian|lamell|blind/', $t)) {
+            return 'raffstore';
+        }
+        if (preg_match('/rollladen|rolladen|rollo|shutter|rolltor/', $t)) {
+            return 'rollladen';
+        }
+        return null;
+    }
+
+    /**
+     * Ist diese Variable eine Positionsvariable eines Behangs? Rückgabe: geratener Typ oder null.
+     * Aussortiert werden Begleitvariablen derselben Geräteinstanz (Lamelle/Drehwinkel, Auf/Ab/Stopp,
+     * Z-Wave-Sicherung, Geschwindigkeit …), damit die Vorschlagsliste nur echte Behänge zeigt.
+     */
+    public static function kandidat(string $instanzName, string $varName, string $ident, string $profil): ?string
+    {
+        $p = mb_strtolower($profil);
+        if (preg_match('/movestop|movestep|protection|lamella|slat|tilt|switch|direction|speed/', $p)) {
+            return null;
+        }
+        // Name: alle Begleitvariablen; Ident nur Lamellen-Hinweise (Gruppensteuerung u. a. nennen ihren Wert intern „Status“)
+        if (preg_match('/lamell|slat|tilt|winkel|angle|sicherung|protection|schutz|status|stop|richtung|direction|speed|geschwindigkeit|laufzeit|kalibr/', mb_strtolower($varName))
+            || preg_match('/lamell|slat|tilt|winkel|angle|protection/', mb_strtolower($ident))) {
+            return null;
+        }
+        $typ = self::typRaten($instanzName . ' ' . $varName . ' ' . $p);
+        if (preg_match('/^~shutter(\.reversed)?$/', $p)) {
+            return $typ ?? 'rollladen';
+        }
+        return $typ;
     }
 }

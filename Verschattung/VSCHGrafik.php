@@ -153,10 +153,10 @@ final class VSCHGrafik
             $o .= '<line x1="' . $ml . '" y1="' . self::n($y($g)) . '" x2="' . ($w - $mr) . '" y2="' . self::n($y($g)) . '" stroke="#e3e6e0"/>'
                 . '<text x="' . ($ml - 6) . '" y="' . self::n($y($g) + 3) . '" font-size="10" text-anchor="end" fill="#5f665c">' . $g . '°</text>';
         }
-        // Horizont, dreifach überhöht (sonst kaum sichtbar)
+        // Horizont maßstabsgetreu: nur so ist ablesbar, ob die Sonne wirklich dahinter verschwindet
         $d = 'M' . self::n($x($az0)) . ',' . self::n($y(0));
         for ($a = $az0; $a <= $az1; $a += 2.5) {
-            $d .= ' L' . self::n($x($a)) . ',' . self::n($y(min($alt1, VSCHHorizont::hoehe($horizont, $a) * 3)));
+            $d .= ' L' . self::n($x($a)) . ',' . self::n($y(min($alt1, VSCHHorizont::hoehe($horizont, $a))));
         }
         $o .= '<path d="' . $d . ' L' . self::n($x($az1)) . ',' . self::n($y(0)) . 'Z" fill="#c9cfc4"/>';
         $o .= '<text x="' . ($ml + 6) . '" y="' . self::n($y(0) - 4) . '" font-size="9.5" fill="#3d443a">' . htmlspecialchars($hinweisHorizont) . '</text>';
