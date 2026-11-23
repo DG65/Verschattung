@@ -205,5 +205,13 @@
 "No facades yet – go back one step.": "Noch keine Fassaden – bitte einen Schritt zurück.",
 "🧭 Start setup assistant": "🧭 Einrichtungsassistent starten",
 "Easiest way: the setup assistant guides you through location, house, devices, test run, weather protection and when to shade. You only choose the facade for each device.": "Am einfachsten: Der Einrichtungsassistent führt durch Standort, Haus, Geräte, Probefahrt, Wetterschutz und „Wann beschatten“. Von Hand wird nur je Gerät die Fassade gewählt.",
-"WarnHub (not installed)": "WarnHub (nicht installiert)"
+"WarnHub (not installed)": "WarnHub (nicht installiert)",
+"Variable #%d no longer exists.": "Variable #%d gibt es nicht mehr.",
+"Found: %s (%s) – \"Detect devices and sensors\" enters it.": "Gefunden: %s (%s) – „Geräte und Sensoren erkennen“ trägt sie ein.",
+"Evaluated by WarnHub (weather station).": "Wertet WarnHub aus (Wetterstation).",
+"not connected": "nicht verbunden",
+"%d min ago": "vor %d min",
+"%d h ago": "vor %d h",
+"%d days ago": "vor %d Tagen",
+"Lock": "Sperre"
 }

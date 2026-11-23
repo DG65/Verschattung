@@ -656,7 +656,7 @@ class Verschattung extends IPSModule
      * leere Sensorfelder (Wind, Regen, Helligkeit, Temperatur) füllen. Nur ins offene Formular, nichts wird überschrieben.
      * Die Fassade bleibt die einzige Angabe des Nutzers.
      */
-    public function UIAutomatik(string $geraeteJson, int $wind, int $regen, int $hell, int $temp): string
+    public function UIAutomatik(string $geraeteJson, int $wind, int $regen, int $hell, int $temp, int $sperre = 0): string
     {
         $inst = $this->momentaufnahme();
         $geraete = $this->listeWerte($geraeteJson);
@@ -682,9 +682,10 @@ class Verschattung extends IPSModule
 
         $sens = VSCHErkennung::sensoren($inst, $this->warnHubWetterstation());
         $gesetzt = [];
-        foreach (['WindID' => $wind, 'RegenID' => $regen, 'HelligkeitID' => $hell, 'TemperaturID' => $temp] as $feld => $jetzt) {
+        foreach (['WindID' => $wind, 'RegenID' => $regen, 'SperreID' => $sperre, 'HelligkeitID' => $hell, 'TemperaturID' => $temp] as $feld => $jetzt) {
             if ($jetzt === 0 && $sens[$feld] > 0) {
                 $this->UpdateFormField($feld, 'value', $sens[$feld]);
+                $this->UpdateFormField($feld . 'Verbindung', 'caption', $this->verbindungsText($feld, $sens[$feld], ['hinweise' => []]));
                 $gesetzt[] = $this->sensorName($feld) . ': ' . $this->name($sens[$feld]);
             }
         }
@@ -700,6 +701,48 @@ class Verschattung extends IPSModule
         return implode("\n", $zeilen);
     }
 
+    /** Kandidaten für leere Sensorfelder (nur berechnet, wenn eines leer ist). */
+    private function sensorVorschlag(): array
+    {
+        foreach (['WindID', 'RegenID', 'SperreID', 'HelligkeitID', 'TemperaturID'] as $f) {
+            if ($this->ReadPropertyInteger($f) === 0) {
+                return VSCHErkennung::sensoren($this->momentaufnahme(), $this->warnHubWetterstation());
+            }
+        }
+        return ['hinweise' => []];
+    }
+
+    /**
+     * Sichtbarer Nachweis der Verbindung unter einem Sensorfeld:
+     * „✓ Wetterstation / Außentemperatur: 3,1 °C · vor 1 min“ oder „🔍 Gefunden: …“ oder „– nicht verbunden“.
+     */
+    private function verbindungsText(string $feld, int $id, array $vorschlag): string
+    {
+        if ($id > 0) {
+            if (!IPS_VariableExists($id)) {
+                return '⚠️ ' . $this->t('Variable #%d no longer exists.', $id);
+            }
+            return '✓ ' . $this->name($id) . ': ' . $this->wertText($id);
+        }
+        $k = (int)($vorschlag[$feld] ?? 0);
+        if ($k > 0 && IPS_VariableExists($k)) {
+            return '🔍 ' . $this->t('Found: %s (%s) – "Detect devices and sensors" enters it.', $this->name($k), $this->wertText($k));
+        }
+        if (($vorschlag['hinweise'][$feld] ?? '') === 'warnhub') {
+            return 'ℹ️ ' . $this->t('Evaluated by WarnHub (weather station).');
+        }
+        return '– ' . $this->t('not connected');
+    }
+
+    /** „3,1 °C · vor 2 min“ */
+    private function wertText(int $id): string
+    {
+        $wert = @GetValueFormatted($id);
+        $alter = max(0, $this->now() - (int)(IPS_GetVariable($id)['VariableUpdated'] ?? 0));
+        $wann = $alter < 3600 ? $this->t('%d min ago', intdiv($alter, 60)) : ($alter < 172800 ? $this->t('%d h ago', intdiv($alter, 3600)) : $this->t('%d days ago', intdiv($alter, 86400)));
+        return $wert . ' · ' . $wann;
+    }
+
     private function sensorName(string $feld): string
     {
         switch ($feld) {
@@ -709,6 +752,8 @@ class Verschattung extends IPSModule
                 return $this->t('Rain');
             case 'HelligkeitID':
                 return $this->t('Brightness');
+            case 'SperreID':
+                return $this->t('Lock');
             default:
                 return $this->t('Temperature');
         }
@@ -881,16 +926,18 @@ class Verschattung extends IPSModule
                     ['caption' => 'Window/door contact', 'name' => 'Kontakt', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Shading position (%)', 'name' => 'Beschattung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 100]],
                 ]],
-            ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID);'],
+            ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID);'],
             ['type' => 'Label', 'name' => 'GeraeteHint', 'caption' => 'Any device with a position variable works (e.g. Z-Wave, Shelly, KNX, Homematic, EnOcean, Zigbee). Shading position 0 = default of the type (roller shutter 75 %, venetian blind and awning 100 %). Use the test run to check the direction.'],
         ]];
 
         // 4. Wetterschutz
+        $vorschlag = $this->sensorVorschlag();
         $warnHub = function_exists('WHUB_GetActiveWarnings') && IPS_GetInstanceListByModuleID(self::WARNHUB_GUID) !== [];
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🌬️  Weather protection', 'items' => [
             ['type' => 'Label', 'caption' => $this->wetterStatus($warnHub)],
             ['type' => 'Label', 'caption' => 'Awnings and venetian blinds retract on wind and severe weather — this has priority over everything, also over manual operation. Roller shutters are not moved by wind.'],
             ['type' => 'SelectVariable', 'name' => 'WindID', 'caption' => 'Wind gust (own sensor)'],
+            ['type' => 'Label', 'name' => 'WindIDVerbindung', 'caption' => $this->verbindungsText('WindID', $this->ReadPropertyInteger('WindID'), $vorschlag)],
             ['type' => 'Label', 'name' => 'WindIDHint', 'caption' => 'Wind speed or gust of your weather station or wind sensor. The unit (km/h, m/s, mph) is read from the profile.'],
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'NumberSpinner', 'name' => 'WindMarkise', 'caption' => 'Awning: retract from', 'suffix' => 'km/h', 'minimum' => 0, 'maximum' => 150],
@@ -899,8 +946,10 @@ class Verschattung extends IPSModule
             ]],
             ['type' => 'Label', 'name' => 'WindMarkiseHint', 'caption' => 'Defaults: awning 35 km/h (just below wind resistance class 2), venetian blind 50 km/h. Check the data sheet of your product.'],
             ['type' => 'SelectVariable', 'name' => 'RegenID', 'caption' => 'Rain sensor (optional)'],
+            ['type' => 'Label', 'name' => 'RegenIDVerbindung', 'caption' => $this->verbindungsText('RegenID', $this->ReadPropertyInteger('RegenID'), $vorschlag)],
             ['type' => 'Label', 'name' => 'RegenIDHint', 'caption' => 'Retracts awnings when it rains (true or a value above 0).'],
             ['type' => 'SelectVariable', 'name' => 'SperreID', 'caption' => 'External lock (optional)'],
+            ['type' => 'Label', 'name' => 'SperreIDVerbindung', 'caption' => $this->verbindungsText('SperreID', $this->ReadPropertyInteger('SperreID'), $vorschlag)],
             ['type' => 'Label', 'name' => 'SperreIDHint', 'caption' => 'A variable that is "true" while another system reports danger, e.g. the wind alarm of a KNX weather station.'],
             ['type' => 'CheckBox', 'name' => 'WarnHubNutzen', 'caption' => 'Use WarnHub warnings'],
             ['type' => 'Label', 'name' => 'WarnHubNutzenHint', 'caption' => $warnHub
@@ -915,12 +964,14 @@ class Verschattung extends IPSModule
         // 5. Feinheiten
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🌡️  Fine tuning', 'items' => [
             ['type' => 'SelectVariable', 'name' => 'HelligkeitID', 'caption' => 'Brightness (optional)'],
+            ['type' => 'Label', 'name' => 'HelligkeitIDVerbindung', 'caption' => $this->verbindungsText('HelligkeitID', $this->ReadPropertyInteger('HelligkeitID'), $vorschlag)],
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'NumberSpinner', 'name' => 'HellAn', 'caption' => 'Shade from', 'suffix' => 'lx', 'minimum' => 0, 'maximum' => 200000],
                 ['type' => 'NumberSpinner', 'name' => 'HellAus', 'caption' => 'End below', 'suffix' => 'lx', 'minimum' => 0, 'maximum' => 200000],
             ]],
             ['type' => 'Label', 'name' => 'HelligkeitIDHint', 'caption' => 'Without a brightness sensor the module shades whenever the sun is on the facade, also when it is cloudy.'],
             ['type' => 'SelectVariable', 'name' => 'TemperaturID', 'caption' => 'Temperature (optional)'],
+            ['type' => 'Label', 'name' => 'TemperaturIDVerbindung', 'caption' => $this->verbindungsText('TemperaturID', $this->ReadPropertyInteger('TemperaturID'), $vorschlag)],
             ['type' => 'NumberSpinner', 'name' => 'TemperaturMin', 'caption' => 'Shade only from', 'suffix' => '°C', 'digits' => 1, 'minimum' => 0, 'maximum' => 40],
             ['type' => 'Label', 'name' => 'TemperaturMinHint', 'caption' => '0 = always. With an indoor or outdoor temperature, e.g. 22 °C, the sun can heat the house in winter.'],
             ['type' => 'RowLayout', 'items' => [

@@ -123,7 +123,11 @@ trait VSCHAssistent
                     ['type' => 'CheckBox', 'name' => 'WWarnHub', 'caption' => $warnHub ? $this->t('Use WarnHub warnings') : $this->t('WarnHub (not installed)'),
                         'value' => $this->ReadPropertyBoolean('WarnHubNutzen') && $warnHub, 'enabled' => $warnHub],
                     ['type' => 'SelectVariable', 'name' => 'WWind', 'caption' => $this->t('Wind gust (own sensor)'), 'value' => $this->ReadPropertyInteger('WindID')],
+                    ['type' => 'Label', 'name' => 'WWindInfo', 'caption' => $this->verbindungsText('WindID', $this->ReadPropertyInteger('WindID'), ['hinweise' => []])],
                     ['type' => 'SelectVariable', 'name' => 'WRegen', 'caption' => $this->t('Rain sensor (optional)'), 'value' => $this->ReadPropertyInteger('RegenID')],
+                    ['type' => 'Label', 'name' => 'WRegenInfo', 'caption' => $this->verbindungsText('RegenID', $this->ReadPropertyInteger('RegenID'), ['hinweise' => []])],
+                    ['type' => 'SelectVariable', 'name' => 'WSperre', 'caption' => $this->t('External lock (optional)'), 'value' => $this->ReadPropertyInteger('SperreID')],
+                    ['type' => 'Label', 'name' => 'WSperreInfo', 'caption' => $this->verbindungsText('SperreID', $this->ReadPropertyInteger('SperreID'), ['hinweise' => []])],
                     ['type' => 'CheckBox', 'name' => 'WNetzWetter', 'caption' => $this->t('Gust forecast from the internet'), 'value' => $this->ReadPropertyBoolean('NetzWetter')],
                     ['type' => 'CheckBox', 'name' => 'WMarkiseOhne', 'caption' => $this->t('Extend awnings without weather source'), 'value' => $this->ReadPropertyBoolean('MarkiseOhneWetter')],
                 ],
@@ -135,10 +139,12 @@ trait VSCHAssistent
                         ['caption' => $this->t('Whenever the sun shines on the facade'), 'value' => 0],
                         ['caption' => $this->t('Only when it is bright'), 'value' => 1, 'items' => [
                             ['type' => 'SelectVariable', 'name' => 'WHell', 'caption' => $this->t('Brightness (outdoor, lux)'), 'value' => $this->ReadPropertyInteger('HelligkeitID')],
+                            ['type' => 'Label', 'name' => 'WHellInfo', 'caption' => $this->verbindungsText('HelligkeitID', $this->ReadPropertyInteger('HelligkeitID'), ['hinweise' => []])],
                             ['type' => 'NumberSpinner', 'name' => 'WHellAn', 'caption' => $this->t('Shade from'), 'suffix' => 'lx', 'minimum' => 0, 'value' => $this->ReadPropertyFloat('HellAn')],
                         ]],
                         ['caption' => $this->t('Only on warm days'), 'value' => 2, 'items' => [
                             ['type' => 'SelectVariable', 'name' => 'WTemp', 'caption' => $this->t('Temperature'), 'value' => $this->ReadPropertyInteger('TemperaturID')],
+                            ['type' => 'Label', 'name' => 'WTempInfo', 'caption' => $this->verbindungsText('TemperaturID', $this->ReadPropertyInteger('TemperaturID'), ['hinweise' => []])],
                             ['type' => 'NumberSpinner', 'name' => 'WTempMin', 'caption' => $this->t('Shade only from'), 'suffix' => '°C', 'digits' => 1,
                                 'value' => $this->ReadPropertyFloat('TemperaturMin') > 0 ? $this->ReadPropertyFloat('TemperaturMin') : 22.0],
                         ]],
@@ -157,7 +163,7 @@ trait VSCHAssistent
                 'nextPage' => -1,
                 'onConfirm' => $liste('WFassaden') . $liste('WGeraete')
                     . 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', "fassaden" => $WFassadenA, "geraete" => $WGeraeteA, '
-                    . '"warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
+                    . '"warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"wann" => (int)$WWann, "hell" => (int)$WHell, "hellAn" => (float)$WHellAn, "temp" => (int)$WTemp, "tempMin" => (float)$WTempMin]));',
             ],
         ];
@@ -252,10 +258,14 @@ trait VSCHAssistent
             : $this->t('%d devices detected (%d with window contact).', count($neu), count(array_filter($neu, fn($g) => $g['Kontakt'] > 0))));
 
         $sens = VSCHErkennung::sensoren($inst, $this->warnHubWetterstation());
-        foreach (['WindID' => 'WWind', 'RegenID' => 'WRegen', 'HelligkeitID' => 'WHell', 'TemperaturID' => 'WTemp'] as $rolle => $feld) {
-            if ($sens[$rolle] > 0 && $this->ReadPropertyInteger($rolle) === 0) {
-                $this->UpdateFormField($feld, 'value', $sens[$rolle]);
+        foreach (['WindID' => 'WWind', 'RegenID' => 'WRegen', 'SperreID' => 'WSperre', 'HelligkeitID' => 'WHell', 'TemperaturID' => 'WTemp'] as $rolle => $feld) {
+            $id = $this->ReadPropertyInteger($rolle);
+            if ($sens[$rolle] > 0 && $id === 0) {
+                $id = $sens[$rolle];
+                $this->UpdateFormField($feld, 'value', $id);
             }
+            // sichtbar machen, woher der Wert kommt und dass er lebt
+            $this->UpdateFormField($feld . 'Info', 'caption', $this->verbindungsText($rolle, $id, $sens));
         }
         if ($this->ReadPropertyInteger('HelligkeitID') === 0 && $this->ReadPropertyInteger('TemperaturID') === 0 && $sens['HelligkeitID'] > 0) {
             $this->UpdateFormField('WWann', 'value', 1);
@@ -330,6 +340,7 @@ trait VSCHAssistent
         $this->UpdateFormField('WarnHubNutzen', 'value', (bool)($d['warnhub'] ?? false));
         $this->UpdateFormField('WindID', 'value', (int)($d['wind'] ?? 0));
         $this->UpdateFormField('RegenID', 'value', (int)($d['regen'] ?? 0));
+        $this->UpdateFormField('SperreID', 'value', (int)($d['sperre'] ?? 0));
         $this->UpdateFormField('NetzWetter', 'value', (bool)($d['netz'] ?? false));
         $this->UpdateFormField('MarkiseOhneWetter', 'value', (bool)($d['ohne'] ?? false));
         $wann = (int)($d['wann'] ?? 0);

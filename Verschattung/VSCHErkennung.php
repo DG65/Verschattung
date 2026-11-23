@@ -23,6 +23,8 @@ class VSCHErkennung
 {
     /** Gruppensteuerung: schaltet nur andere Geräte, die ohnehin einzeln erkannt werden. */
     public const GRUPPE_GUID = '{F197064F-791F-0964-2B8E-563136E9B7B4}';
+    /** WarnHub: seine eigenen Variablen sind keine Sensoren für die Verschattung (WarnHub wird direkt abgefragt). */
+    public const WARNHUB_GUID = '{97621F9C-C61B-4A7F-9B03-C34BC58B04A6}';
     /** Symcon-8-Darstellung „Shutter“. */
     public const SHUTTER_DARSTELLUNG = '{6075FC22-69AF-B110-3749-C24138883082}';
     /** Symcon-Vorlagen (VARIABLE_TEMPLATE_*), ab Symcon 8.0. */
@@ -297,18 +299,18 @@ class VSCHErkennung
     // ------------------------------------------------------------------ Sensoren
 
     /**
-     * Wind, Regen, Helligkeit, Temperatur: je Rolle der beste eindeutige Kandidat.
+     * Wind, Regen, Sperre (Wind-/Unwetteralarm), Helligkeit, Temperatur: je Rolle der beste eindeutige Kandidat.
      * $warnHub: ['instanz' => int, 'vars' => int[]] – wertet WarnHub eine Wetterstation aus, ordnet die Verschattung
      * Wind und Regen gar nicht zu (WarnHub ist dann der einzige Auswerter, abgestimmt 20.11.2026).
      * Rückgabe: ['WindID' => id|0, …, 'hinweise' => [rolle => text-schlüssel]]
      */
     public static function sensoren(array $instanzen, array $warnHub): array
     {
-        $rollen = ['WindID' => [], 'RegenID' => [], 'HelligkeitID' => [], 'TemperaturID' => []];
+        $rollen = ['WindID' => [], 'RegenID' => [], 'SperreID' => [], 'HelligkeitID' => [], 'TemperaturID' => []];
         $belegt = [];
         foreach ($instanzen as $iid => $i) {
             $ort = self::norm($i['name'] . ' ' . ($i['ort'] ?? ''));
-            if (preg_match('/prognose|forecast|vorhersage/', $ort)) {
+            if (preg_match('/prognose|forecast|vorhersage/', $ort) || ($i['modul'] ?? '') === self::WARNHUB_GUID) {
                 continue;
             }
             foreach ($i['vars'] as $v) {
@@ -321,7 +323,7 @@ class VSCHErkennung
                 $vonWarnHub = $iid === ($warnHub['instanz'] ?? -1) || in_array($id, $warnHub['vars'] ?? [], true);
                 $s = self::wertung($n, $ort, $p, $typ, (string)($v[8] ?? ''));
                 foreach ($s as $rolle => $punkte) {
-                    if ($vonWarnHub && in_array($rolle, ['WindID', 'RegenID'], true)) {
+                    if ($vonWarnHub && in_array($rolle, ['WindID', 'RegenID', 'SperreID'], true)) {
                         $belegt[$rolle] = true;
                         continue;
                     }
@@ -369,6 +371,10 @@ class VSCHErkennung
         $zahl = in_array($typ, [1, 2], true);
         // Wind: aktuelle Böe vor Mittelwert; Tageshöchstwerte und Richtungen nie
         $station = preg_match('/wetter|weather|station/', $ort) === 1 ? 2 : 0; // feste Wetterstation vor Sensoren anderer Geräte
+        // Sperre: Alarmmeldung einer Wetterstation/Wetterzentrale (z. B. KNX-Windalarm), true = Gefahr
+        if ($typ === 0 && preg_match('/windalarm|sturmalarm|wind alarm|storm alarm|wetteralarm|unwetter|windwarnung|wind warning|sturmwarnung/', $n)) {
+            $s['SperreID'] = 3 + $station;
+        }
         if ($zahl && (str_contains($p, 'windspeed') || preg_match('/\bwind|windboe|\bboee?\b|gust/', $n))
             && !preg_match('/richtung|direction|dir\b|max|tag|day|durchschnitt|avg|mittel|chill|gefuehlt|windfang/', $n)) {
             $s['WindID'] = (preg_match('/windboe|\bboee?\b|gust/', $n) ? 2 : 1) + $station;

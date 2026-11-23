@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 (in Entwicklung)
+
+- Unter jedem Sensorfeld (Wind, Regen, Sperre, Helligkeit, Temperatur) steht jetzt sichtbar, womit es verbunden ist – mit aktuellem Wert und Alter, z. B. „✓ Wetterstation / Außentemperatur: 1,1 °C · vor 0 min“. Ist das Feld leer und es gibt einen passenden Kandidaten: „🔍 Gefunden: …“ mit Wert. Wertet WarnHub die Wetterstation aus, steht das dort. Gelöschte Variablen werden gemeldet. Dasselbe im Assistenten.
+- Neu erkannt: externe Sperre (Wind-/Unwetteralarm einer Wetterstation, z. B. KNX); auch im Assistenten (Wetterschutz).
+- Variablen von WarnHub selbst werden nie als Sensor zugeordnet.
+- Live geprüft (Privat, Symcon 9.1): Seitenprüfungen, Verzweigung Wetterschutz, Geräte-/Sensorerkennung (0,7 s) und Übernahme des Assistenten; die Darstellung des Assistenten in der Konsole ist noch nicht gesehen.
+
 ## 0.2.0 (in Entwicklung)
 
 - Neu: „🔍 Geräte und Sensoren erkennen“ ersetzt die Vorschlagsliste. Erkennt Rollläden, Raffstores/Jalousien und Markisen je Geräteinstanz – herstellerunabhängig über Darstellung „Shutter“, Profil, Auf/Ab/Stopp-, Lamellen-/Neigungsvariable, Idents und Modulnamen, Namen nur ergänzend – samt Lamelle (Richtung aus dem Profil) und eindeutigem Fenster-/Türkontakt. Gruppensteuerungen, Beschattungs-Steuermodule und Dimmer bleiben draußen. Nur die Fassade wählt der Nutzer.

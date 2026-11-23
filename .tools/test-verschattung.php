@@ -395,6 +395,14 @@ $mx = new ReflectionMethod($m, 'maxWert'); $mx->setAccessible(true);
 check('G23 Darstellung „offen bei 100, geschlossen bei 0“: 0 % heißt zu', $ref->invoke($m, ['Richtung' => 0, 'Position' => 960]) === false);
 check('G24 Darstellung „offen bei 0, geschlossen bei 255“: 0 = offen, Höchstwert 255', $ref->invoke($m, ['Richtung' => 0, 'Position' => 961]) === true && $mx->invoke($m, 961) == 255.0);
 check('G25 Spalte „0 % bedeutet“ des Nutzers geht vor', $ref->invoke($m, ['Richtung' => 1, 'Position' => 960]) === true);
+// sichtbare Verbindung unter den Sensorfeldern
+$vt = new ReflectionMethod($m, 'verbindungsText'); $vt->setAccessible(true);
+mkvar(970, 2, 3.1, 'Außentemperatur', 0, false, '~Temperature');
+$GLOBALS['OBJ'][970]['updated'] = $GLOBALS['CLOCK'] - 120;
+check('G26 verbunden: Name, aktueller Wert und Alter sichtbar', strpos($vt->invoke($m, 'TemperaturID', 970, []), '✓ Außentemperatur: 3,1 · vor 2 min') === 0, $vt->invoke($m, 'TemperaturID', 970, []));
+check('G27 leer, Kandidat gefunden: „🔍 Gefunden“ mit Wert', strpos($vt->invoke($m, 'TemperaturID', 0, ['TemperaturID' => 970, 'hinweise' => []]), '🔍 Gefunden: Außentemperatur (3,1') === 0);
+check('G28 gelöschte Variable wird gemeldet', strpos($vt->invoke($m, 'WindID', 999999, []), '⚠️') === 0);
+check('G29 WarnHub-Hinweis statt „nicht verbunden“', strpos($vt->invoke($m, 'WindID', 0, ['WindID' => 0, 'hinweise' => ['WindID' => 'warnhub']]), 'WarnHub') !== false);
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
@@ -558,6 +566,11 @@ $SV = VSCHErkennung::sensoren([
         [704, 'R', 'r', 0, '', false, '', '', VSCHErkennung::V_REGEN],
         [705, 'W', 'w', 2, '', false, '', '', VSCHErkennung::V_WIND[1]]]]], []);
 check('I39 Vorlagen: Außentemperatur/Regen/Wind sicher, Raumtemperatur-Vorlage und Solarstrahlung nie', $SV['TemperaturID'] === 701 && $SV['RegenID'] === 704 && $SV['WindID'] === 705 && $SV['HelligkeitID'] === 0, json_encode($SV));
+$SS = VSCHErkennung::sensoren([
+    800 => ['name' => 'KNX Wetterstation', 'ort' => 'Wetter', 'modul' => '{KNX}', 'vars' => [[801, 'Windalarm', 'Value', 0, '~Alert', false], [802, 'Regen', 'Value', 0, '~Raining', false]]],
+    810 => ['name' => 'WarnHub', 'ort' => '', 'modul' => VSCHErkennung::WARNHUB_GUID, 'vars' => [[811, 'Sturmwarnung aktiv', 'storm', 0, '~Alert', false], [812, 'Wind', 'w', 2, '~WindSpeed.kmh', false]]]], []);
+check('I40 Sperre: KNX-Windalarm wird als externe Sperre erkannt', $SS['SperreID'] === 801 && $SS['RegenID'] === 802, json_encode($SS));
+check('I41 Variablen von WarnHub selbst werden nie als Sensor genommen', $SS['WindID'] === 0);
 check('I33 Kontaktrichtung aus Darstellung „Geschlossen“', VSCHErkennung::kontaktUmgekehrt('', 'Status STATE', 'Geschlossen'));
 check('I34 Kontaktrichtung aus Darstellung „Open“', !VSCHErkennung::kontaktUmgekehrt('~Window.Reversed', 'x', 'Open'));
 
