@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 (in Entwicklung)
+
+- Neu: „🔍 Geräte und Sensoren erkennen“ ersetzt die Vorschlagsliste. Erkennt Rollläden, Raffstores/Jalousien und Markisen je Geräteinstanz – herstellerunabhängig über Darstellung „Shutter“, Profil, Auf/Ab/Stopp-, Lamellen-/Neigungsvariable, Idents und Modulnamen, Namen nur ergänzend – samt Lamelle (Richtung aus dem Profil) und eindeutigem Fenster-/Türkontakt. Gruppensteuerungen, Beschattungs-Steuermodule und Dimmer bleiben draußen. Nur die Fassade wählt der Nutzer.
+- Neu: leere Felder Wind, Regen, Helligkeit, Temperatur werden mit passenden Sensoren gefüllt (Wetterstation bevorzugt; keine Tageshöchstwerte, Regenmengen, Prognosen, Einstrahlung, Innenraumsensoren). Wertet WarnHub die Wetterstation aus, bleiben Wind und Regen leer.
+- Fensterkontakt: Richtung („true = geschlossen“) aus der Darstellung bzw. dem Profil; Matter- und Zigbee2MQTT-Kontakte ohne Profil werden richtig gelesen.
+- Geräte ohne Fassade erscheinen im Status mit „Fassade wählen“.
+- Symcon-Vorlagen als stärkstes Merkmal: „Fenster“/„Tür“ (Kontakt), „Rollladen (Invertiert)“ und Lamellen-Vorlagen, „Außentemperatur“, „Regen“, „Wind“, „Beleuchtungsstärke“; „Solarstrahlung“ und „Raumtemperatur“ werden nie als Helligkeit bzw. Außentemperatur genommen. Rollladen-Darstellung: Verwendungstyp Öffnung = Position, Rotation = Lamelle.
+- Laufrichtung und Höchstwert aus der Rollladen-Darstellung („offen bei“/„geschlossen bei“), sonst wie bisher aus dem Profil; Profil auch aus der Darstellung „Legacy-Profil“ gelesen.
+- Shelly ab Werk: Die Lamelle trägt dort ebenfalls `~Shutter` – sie wird über Name/Ident als Lamelle erkannt, nicht als Position.
+- Neu: **Einrichtungsassistent** (Symcon 9.1, mehrseitiges Popup) in sieben Schritten: Standort → Haus → Geräte (nur Fassade wählen) → Probefahrt → Wetterschutz (nur bei Markise/Raffstore) → Wann beschatten → Zusammenfassung. Startet bei einer neuen Instanz von selbst, sonst über „🧭 Einrichtungsassistent starten“. Jede Seite prüft ihre Eingaben, bevor es weitergeht. Er füllt am Ende das Formular aus; gespeichert wird wie immer mit „Änderungen übernehmen“.
+- Die Vorschlagsliste „Geräte hinzufügen …“ entfällt; Probefahrt im Formular bleibt.
+- Mindestversion jetzt **Symcon 9.1** (für den Einrichtungsassistenten).
+
 ## 0.1.2 (in Entwicklung)
 
 Befunde aus dem ersten Live-Test:

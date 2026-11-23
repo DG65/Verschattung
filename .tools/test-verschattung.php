@@ -48,6 +48,7 @@ require $root . '/Verschattung/VSCHGeo.php';
 require $root . '/Verschattung/VSCHHorizont.php';
 require $root . '/Verschattung/VSCHLogik.php';
 require $root . '/Verschattung/VSCHGrafik.php';
+require $root . '/Verschattung/VSCHErkennung.php';
 $GLOBALS['DE'] = json_decode((string)@file_get_contents($root . '/Verschattung/locale.json'), true)['translations']['de'] ?? [];
 VSCHText::setzen(function (string $t): string { return $GLOBALS['DE'][$t] ?? $t; });
 
@@ -366,25 +367,34 @@ $m->fieldUpdates = [];
 $m->UIVorschau($m->props['Fassaden'], 0, 'juni');
 $f = array_column($m->fieldUpdates, 2, 0);
 check('G17 Vorschau aktualisiert Bilder und Text', isset($f['Grundriss'], $f['Himmel'], $f['Vorschau']) && strpos($f['Vorschau'], 'A ') !== false);
-// Übernehmen schreibt nur ins offene Formular
+// Automatisch erkennen: schreibt nur ins offene Formular, ergänzt Geräte und leere Sensorfelder
+mkinst(950, 'Jalousie Kind I', 949);
+mkinst(949, 'Jalousien', 0);
+$GLOBALS['OBJ'][949]['kind'] = 0;
+mkvar(951, 1, 0, 'Position', 950, true, '~Shutter.Reversed', 'CoverPosition');
+mkvar(952, 1, 0, 'Lamellenposition', 950, true, '~Lamella.Reversed', 'SlatPosition');
+mkvar(953, 1, 4, 'Status', 950, true, '~ShutterMoveStop', 'State');
+mkinst(955, 'Kind 1 Balkontüre', 0);
+mkvar(956, 0, true, 'Status', 955, true, '', 'E1_BooleanState_State');
+mkvar(957, 0, false, 'Ersatz erforderlich', 955, false, '', 'E0_PowerSource_BatReplacementNeeded');
 $m->fieldUpdates = [];
-$msg = $m->UIUebernehmen(json_encode([['Nehmen' => true, 'Name' => 'X', 'Typ' => 'rollladen', 'Position' => 601, 'Lamelle' => 0]]), $m->props['Geraete'], 'B');
-check('G18 Übernehmen: UpdateFormField statt Eigenschaft', $m->fieldUpdates[0][0] === 'Geraete' && count(json_decode($m->fieldUpdates[0][2], true)) === 3 && count(json_decode($m->props['Geraete'], true)) === 2);
-// Vorschläge filtern Begleitvariablen aus; Übernehmen erkennt umgekehrte Lamelle am Profil
-mkinst(950, 'Jalousie Kind I', 0);
-mkvar(951, 1, 0, 'Position', 950, true, '~Shutter.Reversed');
-mkvar(952, 1, 0, 'Lamellenposition', 950, true, '~Lamella.Reversed');
-mkvar(953, 1, 4, 'Status', 950, true, '~ShutterMoveStop');
-mkvar(954, 1, 0, 'Sicherung (lokal)', 950, true, '~Protection.ZWave');
-$m->fieldUpdates = [];
-$m->UIVorschlaege($m->props['Geraete']);
+$msg = $m->UIAutomatik($m->props['Geraete'], 0, 0, 0, 0);
 $f = array_column($m->fieldUpdates, 2, 0);
-$vs = array_values(array_filter(json_decode($f['Vorschlaege'], true), fn($v) => $v['Position'] >= 950 && $v['Position'] < 960));
-check('G20 Vorschläge: nur die Position, nicht Status/Sicherung/Lamelle', count($vs) === 1 && $vs[0]['Position'] === 951 && $vs[0]['Lamelle'] === 952 && $vs[0]['Typ'] === 'raffstore', json_encode($vs));
-$m->fieldUpdates = [];
-$m->UIUebernehmen(json_encode([['Nehmen' => true] + ($vs[0] ?? [])]), $m->props['Geraete'], 'A');
-$neu = json_decode($m->fieldUpdates[0][2], true);
-check('G21 Übernehmen: ~Lamella.Reversed → Lamelle umgekehrt', end($neu)['LamelleUmgekehrt'] === true);
+$liste = json_decode($f['Geraete'] ?? '[]', true);
+$neu = array_values(array_filter($liste, fn($g) => $g['Position'] === 951));
+check('G18 Erkennen: UpdateFormField statt Eigenschaft, bestehende Geräte bleiben', count(json_decode($m->props['Geraete'], true)) === 2 && count($liste) >= 3);
+check('G20 Erkennen: Kind I als Raffstore mit umgekehrter Lamelle und Kontakt', count($neu) === 1 && $neu[0]['Typ'] === 'raffstore' && $neu[0]['Lamelle'] === 952
+    && $neu[0]['LamelleUmgekehrt'] === true && $neu[0]['Kontakt'] === 956 && $neu[0]['Fassade'] === '', json_encode($neu));
+check('G21 Erkennen: Meldung nennt Anzahl und Fassadenwahl', strpos($msg, 'Fassade wählen') !== false, $msg);
+// Laufrichtung aus Rollladen-Darstellung (offen bei / geschlossen bei), ohne Profil
+mkvar(960, 1, 0, 'Höhe', 950, true, '');
+$GLOBALS['OBJ'][960]['pres'] = ['PRESENTATION' => VSCHErkennung::SHUTTER_DARSTELLUNG, 'USAGE_TYPE' => 0, 'OPEN_OUTSIDE_VALUE' => 100, 'CLOSE_INSIDE_VALUE' => 0];
+$GLOBALS['OBJ'][961] = $GLOBALS['OBJ'][960]; $GLOBALS['OBJ'][961]['pres'] = ['PRESENTATION' => VSCHErkennung::SHUTTER_DARSTELLUNG, 'USAGE_TYPE' => 0, 'OPEN_OUTSIDE_VALUE' => 0, 'CLOSE_INSIDE_VALUE' => 255];
+$ref = new ReflectionMethod($m, 'nullIstOffen'); $ref->setAccessible(true);
+$mx = new ReflectionMethod($m, 'maxWert'); $mx->setAccessible(true);
+check('G23 Darstellung „offen bei 100, geschlossen bei 0“: 0 % heißt zu', $ref->invoke($m, ['Richtung' => 0, 'Position' => 960]) === false);
+check('G24 Darstellung „offen bei 0, geschlossen bei 255“: 0 = offen, Höchstwert 255', $ref->invoke($m, ['Richtung' => 0, 'Position' => 961]) === true && $mx->invoke($m, 961) == 255.0);
+check('G25 Spalte „0 % bedeutet“ des Nutzers geht vor', $ref->invoke($m, ['Richtung' => 1, 'Position' => 960]) === true);
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
@@ -429,6 +439,229 @@ $GLOBALS['WHUB_P']['contractVersion'] = '2.0';
 $m->Tick();
 check('G26 fremde Hauptversion: Vertrag wird ignoriert', GetValue(601) === 100, (string)GetValue(601));
 check('G23 GetState liefert Geräte', count(json_decode($m->GetState(), true)['devices']) === 2);
+
+// ---------------------------------------------------------------------------
+heading('I Automatische Erkennung (Nachbildung eines echten Bestands)');
+$zw = '{101352E1-88C7-4F16-998B-E20D50779AF6}';
+$sh = '{362656D9-579E-F416-7C0B-CD01C08A3800}';
+$mt = '{MATTER}';
+$zwave = fn(int $b, string $n) => ['name' => $n, 'ort' => 'Jalousien', 'modul' => $zw, 'vars' => [
+    [$b + 1, 'Position', 'IntensityVariable', 1, '~Shutter', true], [$b + 2, 'Drehwinkel', '', 1, '~Lamella', true],
+    [$b + 3, 'Status', 'StatusVariable', 0, '~Switch', true], [$b + 4, 'Sicherung (RF)', 'ProtectionRFVariable', 1, '~ProtectionRF.ZWave', true],
+    [$b + 5, 'Meter (2), Elektro, W', 'Meter2Variable', 2, '~Watt.3680', false]]];
+$shelly = fn(int $b, string $n) => ['name' => $n, 'ort' => 'Jalousien', 'modul' => $sh, 'vars' => [
+    [$b + 1, 'Position', 'CoverPosition', 1, '~Shutter.Reversed', true], [$b + 2, 'Status', 'State', 1, '~ShutterMoveStop', true],
+    [$b + 3, 'Lamellenposition', 'SlatPosition', 1, '~Lamella.Reversed', true], [$b + 4, 'Eingang 1', 'Input0', 0, '~Switch', false]]];
+$kontakt = fn(int $b, string $n) => ['name' => $n, 'ort' => 'Öffnungskontakte', 'modul' => $mt, 'vars' => [
+    [$b + 1, 'Status', 'E1_BooleanState_State', 0, '', true], [$b + 2, 'Ersatz erforderlich', 'E0_PowerSource_BatReplacementNeeded', 0, '', false]]];
+$IN = [
+    100 => $zwave(100, 'Jalousie Wohnen Rechts'), 110 => $zwave(110, 'Jalousie Wohnen Links'), 120 => $zwave(120, 'Jalousie Esszimmer'),
+    130 => $shelly(130, 'Jalousie Kind I'), 140 => $shelly(140, 'Jalousie Kind II'), 150 => $shelly(150, 'Jalousie Schlafzimmer'),
+    160 => ['name' => 'Markise', 'ort' => 'Jalousien', 'modul' => $zw, 'vars' => [[161, 'Position', 'IntensityVariable', 1, '~Shutter', true], [162, 'Sicherung (lokal)', 'ProtectionVariable', 1, '~Protection.ZWave', true]]],
+    170 => ['name' => 'Jalousien Position Wohnzimmer', 'ort' => 'Jalousien Wohnen', 'modul' => VSCHErkennung::GRUPPE_GUID, 'vars' => [[171, 'Position', 'Status', 1, '~Shutter', true]]],
+    200 => $kontakt(200, 'Wohnen Terrassentür Links'), 210 => $kontakt(210, 'Wohnen Terrassentür Rechts'), 220 => $kontakt(220, 'Essen Terrassentür'),
+    230 => $kontakt(230, 'Kind 1 Balkontüre'), 240 => $kontakt(240, 'Kind 2 Balkontüre'), 250 => $kontakt(250, 'Schlafzimmer Fenster Links'),
+    260 => $kontakt(260, 'Schlafzimmer Fenster Rechts'), 270 => $kontakt(270, 'Küche Fenster'),
+    280 => ['name' => 'Haustüre', 'ort' => 'Schlösser', 'modul' => $zw, 'vars' => [[281, 'Türschloß (Türstatus)', 'DoorLockDoorState', 0, '~Lock', true]]],
+    300 => ['name' => 'Wetterstation', 'ort' => 'Geräte', 'modul' => '{FROGGIT}', 'vars' => [
+        [301, 'Windböe', 'windgustmph', 2, '~WindSpeed.kmh', false], [302, 'Windböe (Max.) Tag', 'maxdailygust', 2, '~WindSpeed.kmh', false],
+        [303, 'Windgeschwindigkeit', 'windspeedmph', 2, '~WindSpeed.kmh', false], [304, 'Windrichtung', 'winddir_int', 1, '~WindDirection', false],
+        [305, 'Regenrate', 'rainratein', 2, '~Rainfall', false], [306, 'Regenmenge Tag', 'dailyrainin', 2, '~Rainfall', false],
+        [307, 'Außentemperatur', 'tempf', 2, '~Temperature', false], [308, 'Innentemperatur', 'tempinf', 2, '~Temperature', false],
+        [309, 'Gefühlte Temperatur', 'windchill', 2, '~Temperature', false], [310, 'Taupunkt', 'dewpoint', 2, '~Temperature', false],
+        [311, 'Solar Einstrahlung', 'solarradiation', 1, '~Illumination', false]]],
+    320 => ['name' => 'Wetter-Prognose', 'ort' => '', 'modul' => '{OWM}', 'vars' => [[321, 'Windgeschwindigkeit #1', '', 2, 'OpenWeatherMap.WindSpeed', false]]],
+    330 => ['name' => 'Sensor Wohnzimmer', 'ort' => 'Sensoren', 'modul' => $zw, 'vars' => [[331, 'Helligkeit', '', 2, 'Illumination', false]]],
+    350 => ['name' => 'Börsenpreis', 'ort' => '', 'modul' => '{SPOT}', 'vars' => [[351, 'Börsenpreis jetzt', 'Price', 2, 'SPOT.Price', false]]],
+    360 => ['name' => 'Mähroboter', 'ort' => 'Garten', 'modul' => '{ROBO}', 'vars' => [[361, 'Regen erkannt', 'rain', 0, '', false]]],
+    380 => ['name' => 'Hydraulik', 'ort' => '', 'modul' => '', 'vars' => [[381, 'Wasserfluss-Geschwindigkeit', 'speed', 1, '', false]]],
+    370 => ['name' => 'Thermostat Windfang', 'ort' => 'EG', 'modul' => $zw, 'vars' => [[371, 'Windfang Isttemperatur', 'temp', 2, '~Temperature', false]]],
+    340 => ['name' => 'Kohlekasten', 'ort' => '', 'modul' => '{TESSIE}', 'vars' => [[341, 'Außentemperatur (°C)', '', 2, '', false]]],
+];
+$G = array_column(VSCHErkennung::geraete($IN, []), null, 'Name');
+check('I1 sieben Behänge, Gruppensteuerung ausgelassen', count($G) === 7 && !isset($G['Jalousien Position Wohnzimmer']), implode(', ', array_keys($G)));
+check('I2 Z-Wave: Position + Drehwinkel → Raffstore', ($G['Jalousie Wohnen Rechts']['Position'] ?? 0) === 101 && $G['Jalousie Wohnen Rechts']['Lamelle'] === 102 && $G['Jalousie Wohnen Rechts']['Typ'] === 'raffstore' && $G['Jalousie Wohnen Rechts']['LamelleUmgekehrt'] === false);
+check('I3 Shelly: ~Lamella.Reversed → umgekehrt', ($G['Jalousie Kind I']['Lamelle'] ?? 0) === 133 && $G['Jalousie Kind I']['LamelleUmgekehrt'] === true);
+check('I4 Markise: Typ Markise, ohne Lamelle', ($G['Markise']['Typ'] ?? '') === 'markise' && $G['Markise']['Lamelle'] === 0 && $G['Markise']['Position'] === 161);
+check('I5 Kontakt Wohnen Rechts → Terrassentür Rechts', ($G['Jalousie Wohnen Rechts']['Kontakt'] ?? 0) === 211);
+check('I6 Kontakt Wohnen Links → Terrassentür Links', ($G['Jalousie Wohnen Links']['Kontakt'] ?? 0) === 201);
+check('I7 Kontakt Esszimmer → Essen Terrassentür', ($G['Jalousie Esszimmer']['Kontakt'] ?? 0) === 221);
+check('I8 Kontakt Kind I → Kind 1 (römisch = arabisch)', ($G['Jalousie Kind I']['Kontakt'] ?? 0) === 231);
+check('I9 Kontakt Kind II → Kind 2, nicht Kind 1', ($G['Jalousie Kind II']['Kontakt'] ?? 0) === 241);
+check('I10 Schlafzimmer mit zwei Fenstern: nicht raten', ($G['Jalousie Schlafzimmer']['Kontakt'] ?? -1) === 0);
+check('I11 Markise: kein Kontakt', ($G['Markise']['Kontakt'] ?? -1) === 0);
+check('I12 Fassade bleibt leer (Angabe des Nutzers)', array_unique(array_column($G, 'Fassade')) === ['']);
+check('I13 schon zugeordnete Geräte nicht doppelt', count(VSCHErkennung::geraete($IN, [101, 161])) === 5);
+check('I14 Türschloss ist kein Fensterkontakt', !in_array(281, array_column(VSCHErkennung::kontakte($IN), 0), true));
+$S = VSCHErkennung::sensoren($IN, []);
+check('I15 Wind: aktuelle Böe, nicht Tagesmaximum/Prognose', $S['WindID'] === 301, (string)$S['WindID']);
+check('I16 Regen: Wetterstation vor Mähroboter, nie Tagesmenge', $S['RegenID'] === 305, (string)$S['RegenID']);
+check('I16c Regen ohne Station: Regenmelder des Geräts', VSCHErkennung::sensoren([360 => $IN[360]], [])['RegenID'] === 361);
+check('I16d Wind: „Geschwindigkeit“ ist kein Wind', VSCHErkennung::sensoren([380 => $IN[380]], [])['WindID'] === 0);
+check('I16b Wind: „Börse“ ist keine „Böe“', VSCHErkennung::sensoren([350 => $IN[350]], [])['WindID'] === 0);
+check('I17 Temperatur: Außentemperatur, nicht gefühlt/innen/Auto', $S['TemperaturID'] === 307, (string)$S['TemperaturID']);
+check('I18 Helligkeit: weder Einstrahlung (W/m²) noch Innensensor', $S['HelligkeitID'] === 0, (string)$S['HelligkeitID']);
+$S = VSCHErkennung::sensoren($IN, ['instanz' => 300, 'vars' => []]);
+check('I19 WarnHub wertet die Station aus: Wind/Regen gar nicht zuordnen, auch nicht aus anderen Geräten', $S['WindID'] === 0 && $S['RegenID'] === 0 && ($S['hinweise']['WindID'] ?? '') === 'warnhub' && ($S['hinweise']['RegenID'] ?? '') === 'warnhub' && $S['TemperaturID'] === 307);
+$IN2 = $IN + [400 => ['name' => 'Zweite Station', 'ort' => 'Wetter', 'modul' => '', 'vars' => [[401, 'Außentemperatur', 'temp', 2, '~Temperature', false]]]];
+$S = VSCHErkennung::sensoren($IN2, []);
+check('I20 zwei gleich gute Kandidaten: leer lassen und Hinweis', $S['TemperaturID'] === 0 && ($S['hinweise']['TemperaturID'] ?? '') === 'mehrdeutig');
+check('I21 Kontaktrichtung: Matter BooleanState = true heißt zu', VSCHErkennung::kontaktUmgekehrt('', 'Status E1_BooleanState_State'));
+check('I22 Kontaktrichtung: ~Window true = offen', !VSCHErkennung::kontaktUmgekehrt('~Window', 'Status STATE'));
+check('I23 Kontaktrichtung: ~Window.Reversed umgekehrt', VSCHErkennung::kontaktUmgekehrt('~Window.Reversed', 'x'));
+check('I24 Kontaktrichtung: Zigbee2MQTT contact = true heißt zu', VSCHErkennung::kontaktUmgekehrt('', 'Kontakt contact'));
+check('I25 Kontaktrichtung: Homematic STATE ohne Profil = offen', !VSCHErkennung::kontaktUmgekehrt('', 'STATE STATE'));
+
+// Andere Systeme und Werkseinstellungen (nicht Dietmars Anlage): Erkennung darf nicht an Namen hängen
+$X = [
+    500 => ['name' => 'Wohnzimmer links', 'ort' => 'Wohnzimmer', 'modul' => $zw, 'modulName' => 'Z-Wave Module', 'vars' => [
+        [501, 'Intensität', 'IntensityVariable', 1, '~Intensity.100', true], [502, 'Status', 'StatusVariable', 0, '~Switch', true], [503, 'Bewegung', 'ShutterMoveVariable', 1, '~ShutterMoveStop', true]]],
+    510 => ['name' => 'Küche', 'ort' => 'EG', 'modul' => '{Z2M}', 'modulName' => 'Zigbee2MQTT Device', 'vars' => [
+        [511, 'Position', 'position', 1, '', true, '{6B9CAEEC-5958-C223-30F7-BD36569FC57A}'], [512, 'Neigung', 'tilt', 1, '', true], [513, 'Zustand', 'state', 3, '', true]]],
+    520 => ['name' => 'Büro', 'ort' => 'OG', 'modul' => '{HMIP}', 'modulName' => 'HomeMatic Device', 'vars' => [
+        [521, 'LEVEL', 'LEVEL', 2, '~Intensity.1', true], [522, 'SLATS_LEVEL', 'SLATS_LEVEL', 2, '~Intensity.1', true], [523, 'ACTIVITY_STATE', 'ACTIVITY_STATE', 1, '', false]]],
+    530 => ['name' => 'Licht Flur', 'ort' => 'Flur', 'modul' => $zw, 'modulName' => 'Z-Wave Module', 'vars' => [
+        [531, 'Intensität', 'IntensityVariable', 1, '~Intensity.100', true], [532, 'Status', 'StatusVariable', 0, '~Switch', true]]],
+    540 => ['name' => 'Gaube', 'ort' => 'DG', 'modul' => '{NEU}', 'modulName' => 'Irgendein Modul', 'vars' => [
+        [541, 'Höhe', 'height', 1, '', true, VSCHErkennung::SHUTTER_DARSTELLUNG]]],
+    550 => ['name' => 'Beschattung Süd', 'ort' => '', 'modul' => '{BC}', 'modulName' => 'Blind Control', 'vars' => [
+        [551, 'Behang', 'BlindLevel', 1, '~Shutter', true]]],
+    560 => ['name' => 'Rollladen Bad', 'ort' => 'OG', 'modul' => '{KNX}', 'modulName' => 'EIS Value', 'vars' => [[561, 'Wert', 'Value', 1, '~Intensity.100', true]]],
+];
+$X += [
+    600 => ['name' => 'Shelly ab Werk', 'ort' => 'OG', 'modul' => $sh, 'modulName' => 'Gen3Shelly2PM', 'vars' => [
+        [601, 'Lamellenposition', 'SlatPosition', 1, '~Shutter', true], [602, 'Position', 'CoverPosition', 1, '~Shutter', true], [603, 'Status', 'State', 1, '~ShutterMoveStop', true]]],
+    610 => ['name' => 'Neues Modul', 'ort' => 'EG', 'modul' => '{X}', 'modulName' => 'X', 'vars' => [
+        [611, 'Winkel A', 'a', 1, '', true, VSCHErkennung::SHUTTER_DARSTELLUNG, '', '', ['usage' => 1, 'open' => 0, 'close' => 100]],
+        [612, 'Höhe B', 'b', 1, '', true, VSCHErkennung::SHUTTER_DARSTELLUNG, '', '', ['usage' => 0, 'open' => 100, 'close' => 0]]]],
+    620 => ['name' => 'Gerät 7', 'ort' => '', 'modul' => '{Y}', 'modulName' => 'Y', 'vars' => [
+        [621, 'Wert', 'v', 1, '', true, VSCHErkennung::SHUTTER_DARSTELLUNG, '', VSCHErkennung::V_ROLLLADEN_INVERTIERT]]],
+    630 => ['name' => 'Sensor 4', 'ort' => '', 'modul' => '{Z}', 'modulName' => 'Z', 'vars' => [[631, 'State', 'st', 0, '', false, '{3319437D-7CDE-699D-750A-3C6A3841FA75}', 'Geöffnet', VSCHErkennung::V_FENSTER]]],
+];
+$GX = array_column(VSCHErkennung::geraete($X, []), null, 'Position');
+check('I26 Z-Wave ab Werk (~Intensity.100) mit Auf/Ab/Stopp: erkannt ohne Namenshinweis', isset($GX[501]) && $GX[501]['Typ'] === 'rollladen', json_encode(array_keys($GX)));
+check('I27 Zigbee2MQTT-Cover (position + tilt, ohne Profil): Raffstore mit Neigung', isset($GX[511]) && $GX[511]['Typ'] === 'raffstore' && $GX[511]['Lamelle'] === 512);
+check('I28 Homematic IP (LEVEL + SLATS_LEVEL): Raffstore', isset($GX[521]) && $GX[521]['Typ'] === 'raffstore' && $GX[521]['Lamelle'] === 522);
+check('I29 Dimmer mit gleichem Aufbau wird NICHT erkannt', !isset($GX[531]));
+check('I30 Darstellung „Shutter“ ohne Profil: erkannt', isset($GX[541]));
+check('I31 Steuermodul (Blind Control) ist kein Gerät', !isset($GX[551]));
+check('I32 KNX-Wert, Name sagt Rollladen: erkannt', isset($GX[561]) && $GX[561]['Typ'] === 'rollladen');
+check('I35 Shelly ab Werk: Lamelle mit ~Shutter wird nicht zur Position', isset($GX[602]) && $GX[602]['Lamelle'] === 601 && !isset($GX[601]), json_encode($GX[602] ?? $GX[601] ?? null));
+check('I36 Rollladen-Darstellung: Verwendungstyp Öffnung = Position, Rotation = Lamelle (ohne Namen)', isset($GX[612]) && $GX[612]['Lamelle'] === 611 && $GX[612]['Typ'] === 'raffstore');
+check('I37 Vorlage „Rollladen (Invertiert)“ erkennt ohne jeden Namenshinweis', isset($GX[621]));
+check('I38 Vorlage „Fenster“ macht Kontakt auch ohne Fenster im Namen', in_array(631, array_column(VSCHErkennung::kontakte($X), 0), true));
+$SV = VSCHErkennung::sensoren([
+    700 => ['name' => 'Garten', 'ort' => '', 'modul' => '', 'vars' => [
+        [701, 'T1', 't1', 2, '', false, '', '', VSCHErkennung::V_AUSSENTEMP],
+        [702, 'Außentemperatur', 't2', 2, '~Temperature', false, '', '', VSCHErkennung::V_RAUMTEMP[0]],
+        [703, 'L', 'l', 2, '', false, '', '', VSCHErkennung::V_SOLAR],
+        [704, 'R', 'r', 0, '', false, '', '', VSCHErkennung::V_REGEN],
+        [705, 'W', 'w', 2, '', false, '', '', VSCHErkennung::V_WIND[1]]]]], []);
+check('I39 Vorlagen: Außentemperatur/Regen/Wind sicher, Raumtemperatur-Vorlage und Solarstrahlung nie', $SV['TemperaturID'] === 701 && $SV['RegenID'] === 704 && $SV['WindID'] === 705 && $SV['HelligkeitID'] === 0, json_encode($SV));
+check('I33 Kontaktrichtung aus Darstellung „Geschlossen“', VSCHErkennung::kontaktUmgekehrt('', 'Status STATE', 'Geschlossen'));
+check('I34 Kontaktrichtung aus Darstellung „Open“', !VSCHErkennung::kontaktUmgekehrt('~Window.Reversed', 'x', 'Open'));
+
+// ---------------------------------------------------------------------------
+heading('J Einrichtungsassistent (Symcon 9.1, mehrseitiges PopupAlert)');
+$form = json_decode($m->GetConfigurationForm(), true);
+$wiz = null;
+foreach ($form['actions'] as $a) {
+    if (($a['name'] ?? '') === 'Assistent') {
+        $wiz = $a;
+    }
+}
+$seiten = $wiz['popup']['pages'] ?? [];
+check('J1 PopupAlert „Assistent“ mit 7 Seiten in fester Reihenfolge', $wiz !== null && $wiz['type'] === 'PopupAlert'
+    && array_column($seiten, 'name') === ['standort', 'haus', 'geraete', 'probe', 'wetter', 'wann', 'fertig'], json_encode(array_column($seiten, 'name')));
+check('J2 öffnet sich bei eingerichteter Instanz nicht von selbst', ($wiz['visible'] ?? true) === false);
+$m3 = new VerschattungTest(33333);
+$m3->Create();
+$m3->ApplyChanges();
+$w3 = null;
+foreach (json_decode($m3->GetConfigurationForm(), true)['actions'] as $a) {
+    if (($a['name'] ?? '') === 'Assistent') {
+        $w3 = $a;
+    }
+}
+check('J3 öffnet sich bei neuer Instanz von selbst', ($w3['visible'] ?? false) === true);
+// Felder und Skripte
+$felder = [];
+$skripte = [];
+$sammle = function ($x) use (&$sammle, &$felder, &$skripte) {
+    if (!is_array($x)) {
+        return;
+    }
+    if (isset($x['name'], $x['type'])) {
+        $felder[] = $x['name'];
+    }
+    foreach (['onClick', 'validate', 'onConfirm', 'onUndo', 'nextPage', 'onChange'] as $k) {
+        if (isset($x[$k]) && is_string($x[$k])) {
+            $skripte[] = $x[$k];
+        }
+    }
+    foreach ($x as $v) {
+        $sammle($v);
+    }
+};
+$sammle($seiten);
+$wFelder = array_values(array_filter($felder, fn($n) => $n[0] === 'W'));
+check('J4 Feldnamen über alle Seiten eindeutig', count($wFelder) === count(array_unique($wFelder)), json_encode(array_diff_assoc($wFelder, array_unique($wFelder))));
+$fehler = [];
+foreach ($skripte as $sk) {
+    try {
+        token_get_all('<?php ' . $sk, TOKEN_PARSE);
+    } catch (ParseError $e) {
+        $fehler[] = $e->getMessage() . ' in ' . substr($sk, 0, 60);
+    }
+}
+check('J5 alle Seiten-Skripte sind gültiges PHP', $skripte !== [] && $fehler === [], implode(' | ', $fehler));
+check('J6 kein Seiten-Skript nutzt $this', array_filter($skripte, fn($sk) => strpos($sk, '$this') !== false) === []);
+preg_match_all('/\$(W[A-Za-z]+)(?![A-Za-z])/', implode("\n", $skripte), $mm);
+$benutzt = array_unique(array_map(fn($v) => preg_replace('/A$/', '', $v), $mm[1]));
+$unbekannt = array_values(array_diff($benutzt, $wFelder));
+check('J7 jede $W…-Variable in Skripten ist ein Feld des Assistenten', $unbekannt === [], implode(', ', $unbekannt));
+$echoVerbot = array_filter($seiten, fn($p) => strpos((string)($p['validate'] ?? '') . (is_string($p['nextPage'] ?? null) ? $p['nextPage'] : ''), 'echo') !== false);
+check('J8 validate/nextPage ohne echo (Symcon wertet die Rückgabe sonst nicht aus)', $echoVerbot === []);
+foreach ($seiten as $p) {
+    if (isset($p['onConfirm']) && $p['name'] !== 'fertig') {
+        check("J9 Seite {$p['name']}: onConfirm hat onUndo (sonst kein „Zurück“)", isset($p['onUndo']) && trim((string)$p['onUndo']) !== '');
+    }
+}
+// Prüfen
+$fx = [['Kennung' => 'A', 'Name' => 'Süd', 'Azimut' => 180, 'Aktiv' => true], ['Kennung' => 'B', 'Name' => 'West', 'Azimut' => 270, 'Aktiv' => true]];
+check('J10 Geräte-Seite blockiert ohne Fassade und nennt das Gerät', strpos($m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'Küche', 'Fassade' => '']]])), 'Küche') !== false);
+check('J11 „nicht verschatten“ und gültige Fassade gehen durch', $m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => '-'], ['Name' => 'Y', 'Fassade' => 'B']]])) === '');
+check('J12 Fassade, die es nicht gibt, blockiert', $m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'Z', 'Fassade' => 'F']]])) !== '');
+check('J13 Haus-Seite ohne Fassade blockiert', $m->UIAssistentPruefen('haus', '[]') !== '' && $m->UIAssistentPruefen('haus', json_encode($fx)) === '');
+check('J14 „Nur wenn hell“ ohne Sensor blockiert', $m->UIAssistentPruefen('wann', json_encode(['wann' => 1, 'hell' => 0, 'temp' => 0])) !== ''
+    && $m->UIAssistentPruefen('wann', json_encode(['wann' => 0, 'hell' => 0, 'temp' => 0])) === '');
+check('J15 Standort „woanders“ ohne Kartenpunkt blockiert', $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":0,"longitude":0}'])) !== ''
+    && $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":48.1,"longitude":7.9}'])) === '');
+check('J16 nur Rollläden: Wetterschutz-Seite wird übersprungen', $m->UIAssistentWeiter(json_encode([['Typ' => 'rollladen', 'Fassade' => 'A']])) === 'wann'
+    && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => 'A']])) === 'wetter'
+    && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => '-']])) === 'wann');
+check('J17 Fassade aus dem Gerätenamen („Rollladen Süd“)', Verschattung::fassadeAusName('Rollladen Süd', $fx) === 'A' && Verschattung::fassadeAusName('Jalousie Wohnen', $fx) === '');
+// Geräte vorbefüllen
+$m->fieldUpdates = [];
+$m->UIAssistentGeraete(json_encode($fx), '[]', 0, '');
+$f = array_column($m->fieldUpdates, 2, 0);
+$wg = json_decode($f['WGeraete'] ?? '[]', true);
+check('J18 Seite 3 wird mit erkannten Geräten gefüllt', in_array(951, array_column($wg, 'Position'), true) && isset($f['WLegende']) && strpos($f['WLegende'], 'A = Süd') === 0, json_encode(array_column($wg, 'Position')));
+// Übernehmen
+$m->fieldUpdates = [];
+$msg = $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'standort' => '', 'fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]],
+    'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'wann' => 0, 'hell' => 123, 'hellAn' => 30000, 'temp' => 0, 'tempMin' => 0]));
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J19 Übernehmen füllt nur das Formular (keine Eigenschaft geändert)', isset($f['Fassaden'], $f['Geraete']) && count(json_decode($m->props['Geraete'], true)) === 2);
+check('J20 „nicht verschatten“ landet nicht in der Geräteliste', array_column(json_decode($f['Geraete'], true), 'Name') === ['X']);
+check('J21 „Immer bei Sonne“: Helligkeitssensor wird geleert', ($f['HelligkeitID'] ?? -1) === 0 && ($f['TemperaturID'] ?? -1) === 0);
+check('J22 Standort-Instanz gewählt: eigener Standort wird geleert', json_decode($f['Standort'], true) === ['latitude' => 0, 'longitude' => 0]);
+check('J23 Meldung sagt „Änderungen übernehmen“', strpos($msg, 'Änderungen übernehmen') !== false, $msg);
+// Probefahrt mit Assistenten-Daten
+$GLOBALS['BEFEHLE'] = [];
+$m->fieldUpdates = [];
+$m->UIAssistentProbe(json_encode([['Name' => 'Kind', 'Fassade' => 'B', 'Typ' => 'raffstore', 'Position' => 951, 'Lamelle' => 952]]), 'B', true);
+check('J24 Probefahrt fährt Gerät aus dem Assistenten (ungespeichert)', in_array(951, array_column($GLOBALS['BEFEHLE'], 0), true), json_encode($GLOBALS['BEFEHLE']));
 
 // ---------------------------------------------------------------------------
 heading('H Übersetzung und Formularregeln');

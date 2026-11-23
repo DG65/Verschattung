@@ -8,11 +8,35 @@ Rollläden, Raffstores und Markisen nach dem Sonnenstand – eingerichtet über 
 
 Die Verschattung fährt Rollläden, Raffstores und Markisen, wenn die Sonne auf ihre Fassade scheint, und danach wieder zurück. Die Lamellen von Raffstores folgen der Sonne. Winkel muss niemand eintippen: Das Modul findet das Haus in amtlichen Kartendaten, zeigt seine Fassaden, und man ordnet nur noch die Geräte zu.
 
-## Einrichtung in vier Schritten
+## Einrichtung mit dem Assistenten
+
+Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später jederzeit über „🧭 Einrichtungsassistent starten“. Er führt in sieben Schritten durch alles:
+
+1. **Standort** – aus der Standort-Instanz oder auf der Karte gewählt.
+2. **Haus** – „Haus erkennen“ holt die Fassaden aus amtlichen Kartendaten; korrigieren oder ergänzen geht in der Liste.
+3. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, Fensterkontakt). **Von Hand wird nur je Gerät die Fassade gewählt** (oder „nicht verschatten“).
+4. **Probefahrt** – je Fassade herunter und wieder hoch, noch bevor etwas gespeichert ist.
+5. **Wetterschutz** – nur bei Markisen/Raffstores: WarnHub, eigener Windsensor, Regensensor, Böenvorhersage.
+6. **Wann beschatten** – immer bei Sonne, nur wenn es hell ist, oder nur an warmen Tagen.
+7. **Fertig** – Zusammenfassung mit den Sonnenzeiten von heute. „OK“ füllt das Formular, danach mit **„Änderungen übernehmen“** bestätigen.
+
+Der Assistent speichert nichts selbst – die Einstellungen gehören dem Nutzer. Für Feinarbeit bleibt das Formular darunter.
+
+## Einrichtung ohne Assistent
+
 
 1. **Standort prüfen.** Das Modul nimmt den Standort der Symcon-Standort-Instanz (Kern Instanzen). Steht das Haus nicht genau dort, im Formular einen eigenen Standort auf der Karte wählen.
 2. **„Haus aus Kartendaten erkennen“.** Das Modul holt den Gebäudeumriss und leitet daraus die Fassaden ab, dazu den Gelände-Horizont. Die Fassaden erscheinen als Grafik und Liste; mit „Änderungen übernehmen“ bestätigen. Stimmt etwas nicht, Richtung in der Liste korrigieren oder Fassaden von Hand eintragen.
-3. **Geräte zuordnen.** Unten bei den Aktionen eine Fassade wählen, „Geräte hinzufügen …“ schlägt passende Positionsvariablen vor. Jedes Gerät mit Positionsvariable funktioniert (z. B. Z-Wave, Shelly, KNX, Homematic, EnOcean, Zigbee). Die **Probefahrt** zeigt, ob die Richtung stimmt; sonst die Spalte „0 % bedeutet“ ändern.
+3. **Geräte erkennen, Fassade wählen.** „🔍 Geräte und Sensoren erkennen“ trägt alle Rollläden, Raffstores/Jalousien und Markisen in die Geräteliste ein – mit Typ, Positions- und Lamellenvariable samt Richtung und, wenn eindeutig, dem Fenster-/Türkontakt. Leere Felder für Wind, Regen, Helligkeit und Temperatur werden mit passenden Sensoren gefüllt. **Von Hand bleibt nur die Fassade je Gerät.** Die **Probefahrt** zeigt, ob die Richtung stimmt; sonst die Spalte „0 % bedeutet“ ändern.
+
+   So wird erkannt (bei jedem Nutzer, nicht anhand bestimmter Namen):
+   - am sichersten: eine Symcon-Vorlage an der Variable (z. B. „Fenster“, „Außentemperatur“, „Rollladen (Invertiert)“);
+   - sicher: Darstellung „Rollladen“ (Verwendungstyp Öffnung = Position, Rotation = Lamelle; Laufrichtung aus „offen bei/geschlossen bei“) oder Profil `~Shutter`/`~Shutter.Reversed`;
+   - belegt: die Geräteinstanz hat eine Auf/Ab/Stopp-, Lamellen- oder Neigungsvariable, Idents wie cover/roller/shutter/blind/slat oder einen Modul-/Gerätenamen mit Rollladen/Jalousie/Markise – dann gilt ihre Prozent-/Level-Variable als Position (z. B. Z-Wave ab Werk mit `~Intensity.100`, Homematic `LEVEL`, Zigbee2MQTT `position`);
+   - nicht übernommen: Gruppensteuerungen und Beschattungs-Steuermodule (z. B. Blind Control), Dimmer ohne Behang-Merkmal.
+   - Fensterkontakt: über Raum-/Gerätenamen (z. B. „Jalousie Wohnen Rechts“ ↔ „Wohnen Terrassentür Rechts“, „Kind I“ ↔ „Kind 1“). Ist es nicht eindeutig (zwei Fenster im Raum, Behang ohne Seitenangabe), bleibt das Feld leer. Ob der Kontakt mit `true` „offen“ oder „geschlossen“ meldet, liest das Modul aus der Darstellung („Geschlossen“/„Closed“) bzw. dem Profil.
+   - Sensoren: Wetterstation vor Sensoren anderer Geräte; nie Tageshöchstwerte, Regenmengen, Prognosewerte, Einstrahlung (W/m²) oder Innenraumsensoren. Wertet WarnHub die Wetterstation aus, bleiben Wind und Regen hier leer.
+   - Was nicht gefunden wird, lässt sich mit „+“ von Hand ergänzen.
 4. **Vorschau prüfen.** Sonnenbahn für heute, den 21. Juni und den 21. Dezember über dem Horizont und „Sonne auf der Fassade von … bis …“.
 
 ## Woher die Kartendaten kommen
@@ -54,7 +78,7 @@ Markisen und Raffstores fahren bei Wind und Unwetter ein – das geht allem vor,
 
 ## Voraussetzungen
 
-Symcon 8.1 oder neuer. Für die Erkennung Internetzugang; im Betrieb nur für die optionale Böenvorhersage und WarnHub.
+- Symcon 9.1 oder neuer
 
 ## Lizenz
 

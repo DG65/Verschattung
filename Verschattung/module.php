@@ -23,9 +23,16 @@ require_once __DIR__ . '/VSCHGeo.php';
 require_once __DIR__ . '/VSCHHorizont.php';
 require_once __DIR__ . '/VSCHLogik.php';
 require_once __DIR__ . '/VSCHGrafik.php';
+require_once __DIR__ . '/VSCHErkennung.php';
+require_once __DIR__ . '/VSCHAssistent.php';
 
 class Verschattung extends IPSModule
 {
+    use VSCHAssistent;
+
+    /** Standort, den der Assistent gerade prüft (überlagert Eigenschaft/Standort-Instanz). */
+    private ?array $koordinatenAssistent = null;
+
     private const LOCATION_CONTROL_GUID = '{45E97A63-F870-408A-B259-2933F7EABF74}';
     private const WARNHUB_GUID = '{97621F9C-C61B-4A7F-9B03-C34BC58B04A6}';
     private const DOC_URL = 'https://github.com/DG65/Verschattung/blob/beta/README.md';
@@ -180,6 +187,9 @@ class Verschattung extends IPSModule
         $statusZeilen = [];
         foreach ($this->geraete() as $g) {
             $f = $fassaden[$g['Fassade']] ?? null;
+            if ($f === null && $g['Position'] > 0) {
+                $statusZeilen[] = $g['Name'] . ': ' . $this->t('choose a facade');
+            }
             if ($f === null || !$f['Aktiv'] || $g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
             }
@@ -462,7 +472,55 @@ class Verschattung extends IPSModule
     private function kontaktOffen(int $id): bool
     {
         $v = GetValue($id);
-        return is_bool($v) ? $v : (float)$v > 0;
+        $offen = is_bool($v) ? $v : (float)$v > 0;
+        return VSCHErkennung::kontaktUmgekehrt($this->profil($id), IPS_GetName($id) . ' ' . IPS_GetObject($id)['ObjectIdent'], $this->wahrText($id)) ? !$offen : $offen;
+    }
+
+    /**
+     * Darstellung einer Variable (Symcon 8): [GUID, Beschriftung für true, Vorlagen-GUID, Rollladen-Werte].
+     * Die gespeicherte Darstellung enthält den Vorlagen-Verweis (TEMPLATE); IPS_GetVariablePresentation()
+     * löst die Vorlage in ihre Werte auf (OPTIONS, OPEN_OUTSIDE_VALUE …), lässt TEMPLATE aber weg – daher beides lesen.
+     */
+    private function darstellung(int $id): array
+    {
+        $v = IPS_GetVariable($id);
+        $d = $v['VariableCustomPresentation'] ?? [];
+        if (!is_array($d) || $d === []) {
+            $d = $v['VariablePresentation'] ?? [];
+        }
+        $d = is_array($d) ? $d : [];
+        $w = $this->aufgeloest($id) ?: $d;
+        $wahr = '';
+        $opt = isset($w['OPTIONS']) ? json_decode((string)$w['OPTIONS'], true) : null;
+        foreach (is_array($opt) ? $opt : [] as $o) {
+            if (($o['Value'] ?? null) === true) {
+                $wahr = (string)($o['Caption'] ?? '');
+            }
+        }
+        $roll = [];
+        if (($w['PRESENTATION'] ?? '') === VSCHErkennung::SHUTTER_DARSTELLUNG && isset($w['OPEN_OUTSIDE_VALUE'], $w['CLOSE_INSIDE_VALUE'])) {
+            $roll = ['usage' => (int)($w['USAGE_TYPE'] ?? 0), 'open' => (float)$w['OPEN_OUTSIDE_VALUE'], 'close' => (float)$w['CLOSE_INSIDE_VALUE']];
+        }
+        return [(string)($d['PRESENTATION'] ?? ''), $wahr, (string)($d['TEMPLATE'] ?? ''), $roll];
+    }
+
+    /** Aufgelöste Darstellung (Vorlagenwerte eingesetzt), leer wenn nicht verfügbar. */
+    private function aufgeloest(int $id): array
+    {
+        if (!function_exists('IPS_GetVariablePresentation')) {
+            return [];
+        }
+        try {
+            $w = @IPS_GetVariablePresentation($id);
+        } catch (Throwable $e) {
+            return [];
+        }
+        return is_array($w) ? $w : [];
+    }
+
+    private function wahrText(int $id): string
+    {
+        return $this->darstellung($id)[1];
     }
 
     // =====================================================================
@@ -485,6 +543,11 @@ class Verschattung extends IPSModule
         }
         if ($g['Richtung'] === 2) {
             return false;
+        }
+        // Rollladen-Darstellung/-Vorlage: „offen bei“ kleiner als „geschlossen bei“ → 0 % = offen
+        $roll = $this->darstellung($g['Position'])[3];
+        if ($roll !== [] && $roll['open'] !== $roll['close']) {
+            return $roll['open'] < $roll['close'];
         }
         $p = mb_strtolower($this->profil($g['Position']));
         return strpos($p, 'reversed') === false;
@@ -533,9 +596,28 @@ class Verschattung extends IPSModule
     /** „Haus erkennen“: Umriss, Fassaden, Horizont abrufen. Fassaden gehen nur in das offene Formular. */
     public function UIErkennen(): string
     {
+        $r = $this->hausErkennen();
+        if (!$r['ok']) {
+            $this->UpdateFormField('GeoStatus', 'caption', '⛔ ' . $r['text']);
+            return $r['text'];
+        }
+        $this->UpdateFormField('Fassaden', 'values', json_encode($r['werte']));
+        $this->UpdateFormField('GeoStatus', 'caption', '🔗 ' . $this->geoStatus());
+        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($r['werte'], 0, 'heute'));
+        $this->UpdateFormField('Himmel', 'image', $this->himmelBild($r['werte'], 0, 'heute'));
+        $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($r['werte'], 0, 'heute'));
+        return $r['text'];
+    }
+
+    /**
+     * Umriss, Fassaden und Horizont am aktuellen Standort abrufen und die abgeleiteten Werte merken.
+     * Rückgabe: ['ok' => bool, 'text' => Meldung, 'werte' => Zeilen für eine Fassadenliste]
+     */
+    private function hausErkennen(): array
+    {
         $pos = $this->koordinaten();
         if ($pos === null) {
-            return $this->t('No location: please set the location in the Location instance or choose one here.');
+            return ['ok' => false, 'werte' => [], 'text' => $this->t('No location: please set the location in the Location instance or choose one here.')];
         }
         $haus = VSCHGeo::erkennen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
             return $this->abruf($url, $kopf, $post);
@@ -547,9 +629,7 @@ class Verschattung extends IPSModule
             $this->WriteAttributeString('Horizont', json_encode(['punkte' => $hor['punkte'], 'quelle' => 'PVGIS © European Union', 'ts' => $this->now()]));
         }
         if (!$haus['ok']) {
-            $text = $this->t('No house found: %s', $haus['meldung']) . ' ' . $this->t('You can enter the facades by hand in the list.');
-            $this->UpdateFormField('GeoStatus', 'caption', '⛔ ' . $text);
-            return $text;
+            return ['ok' => false, 'werte' => [], 'text' => $this->t('No house found: %s', $haus['meldung']) . ' ' . $this->t('You can enter the facades by hand in the list.')];
         }
         $this->WriteAttributeString('Haus', json_encode([
             'eigen' => $haus['eigen'], 'nachbarn' => $haus['nachbarn'], 'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
@@ -559,12 +639,7 @@ class Verschattung extends IPSModule
         foreach ($haus['fassaden'] as $i => $f) {
             $werte[] = ['Kennung' => VSCHGrafik::kennung($i), 'Name' => $this->richtungName((float)$f['az']), 'Azimut' => $f['az'], 'Aktiv' => true];
         }
-        $this->UpdateFormField('Fassaden', 'values', json_encode($werte));
-        $this->UpdateFormField('GeoStatus', 'caption', '🔗 ' . $this->geoStatus());
-        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($werte, 0, 'heute'));
-        $this->UpdateFormField('Himmel', 'image', $this->himmelBild($werte, 0, 'heute'));
-        $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, 0, 'heute'));
-        return $this->t('%d facades found. Please check them in the list and confirm with "Apply changes".', count($werte));
+        return ['ok' => true, 'werte' => $werte, 'text' => $this->t('%d facades found. Please check them in the list and confirm with "Apply changes".', count($werte))];
     }
 
     /** Vorschau neu zeichnen (Fassade/Tag gewählt oder Liste geändert). */
@@ -576,54 +651,109 @@ class Verschattung extends IPSModule
         $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, $auswahl, $tag));
     }
 
-    /** Geräte-Vorschläge: Variablen mit Rollladen-Profil oder passendem Namen, schaltbar, noch nicht zugeordnet. */
-    public function UIVorschlaege(string $geraeteJson): void
+    /**
+     * „Automatisch erkennen“: Behänge je Instanz (Typ, Position, Lamelle samt Richtung, Fensterkontakt) in die Geräteliste,
+     * leere Sensorfelder (Wind, Regen, Helligkeit, Temperatur) füllen. Nur ins offene Formular, nichts wird überschrieben.
+     * Die Fassade bleibt die einzige Angabe des Nutzers.
+     */
+    public function UIAutomatik(string $geraeteJson, int $wind, int $regen, int $hell, int $temp): string
     {
-        $vergeben = array_map(function ($g) {
-            return (int)($g['Position'] ?? 0);
-        }, $this->listeWerte($geraeteJson));
-        $vorschlaege = [];
-        foreach (IPS_GetVariableList() as $vid) {
-            if (in_array($vid, $vergeben, true) || !HasAction($vid)) {
-                continue;
-            }
-            $v = IPS_GetVariable($vid);
-            if (!in_array($v['VariableType'], [VARIABLETYPE_INTEGER, VARIABLETYPE_FLOAT], true)) {
-                continue;
-            }
-            $eltern = IPS_GetParent($vid);
-            $o = IPS_GetObject($vid);
-            $typ = VSCHLogik::kandidat($eltern > 0 && IPS_InstanceExists($eltern) ? IPS_GetName($eltern) : '', $o['ObjectName'], $o['ObjectIdent'], $this->profil($vid));
-            if ($typ === null) {
-                continue;
-            }
-            $vorschlaege[] = ['Nehmen' => false, 'Name' => $this->name($vid), 'Typ' => $typ, 'Position' => $vid, 'Lamelle' => $this->lamelleFinden($vid)];
-            if (count($vorschlaege) >= 60) {
-                break;
+        $inst = $this->momentaufnahme();
+        $geraete = $this->listeWerte($geraeteJson);
+        $vergeben = array_map(fn($g) => (int)($g['Position'] ?? 0), $geraete);
+        // bestehende Zeilen nur ergänzen, wo etwas fehlt
+        $kontakte = VSCHErkennung::kontakte($inst);
+        $ergaenzt = 0;
+        foreach ($geraete as &$g) {
+            $p = (int)($g['Position'] ?? 0);
+            if ($p > 0 && IPS_VariableExists($p) && (int)($g['Kontakt'] ?? 0) === 0) {
+                $i = IPS_GetParent($p);
+                $k = VSCHErkennung::kontaktFuer(($inst[$i]['name'] ?? (string)($g['Name'] ?? '')) . ' ' . ($inst[$i]['ort'] ?? ''), $kontakte);
+                if ($k > 0) {
+                    $g['Kontakt'] = $k;
+                    $ergaenzt++;
+                }
             }
         }
-        $this->UpdateFormField('Vorschlaege', 'values', json_encode($vorschlaege));
-        $this->UpdateFormField('VorschlaegeHint', 'caption', $vorschlaege === []
-            ? $this->t('No candidates found. Add devices by hand with "+" in the list.')
-            : $this->t('%d candidates. Tick the ones that belong to this facade.', count($vorschlaege)));
+        unset($g);
+        $neu = VSCHErkennung::geraete($inst, $vergeben);
+        $mitKontakt = count(array_filter($neu, fn($g) => $g['Kontakt'] > 0));
+        $this->UpdateFormField('Geraete', 'values', json_encode(array_merge($geraete, $neu)));
+
+        $sens = VSCHErkennung::sensoren($inst, $this->warnHubWetterstation());
+        $gesetzt = [];
+        foreach (['WindID' => $wind, 'RegenID' => $regen, 'HelligkeitID' => $hell, 'TemperaturID' => $temp] as $feld => $jetzt) {
+            if ($jetzt === 0 && $sens[$feld] > 0) {
+                $this->UpdateFormField($feld, 'value', $sens[$feld]);
+                $gesetzt[] = $this->sensorName($feld) . ': ' . $this->name($sens[$feld]);
+            }
+        }
+        $zeilen = [$this->t('%d devices detected (%d with window contact).', count($neu), $mitKontakt + $ergaenzt)];
+        if ($neu !== []) {
+            $zeilen[] = $this->t('Please choose the facade for each device in the list.');
+        }
+        $zeilen[] = $gesetzt === [] ? $this->t('No further sensors assigned.') : $this->t('Sensors: %s', implode(' · ', $gesetzt));
+        foreach ($sens['hinweise'] as $feld => $h) {
+            $zeilen[] = $this->sensorName($feld) . ': ' . ($h === 'warnhub' ? $this->t('already evaluated by WarnHub') : $this->t('several candidates, please choose'));
+        }
+        $zeilen[] = $this->t('Confirm with "Apply changes".');
+        return implode("\n", $zeilen);
     }
 
-    /** Angehakte Vorschläge der gewählten Fassade in die Geräteliste übernehmen (nur offenes Formular). */
-    public function UIUebernehmen(string $vorschlaegeJson, string $geraeteJson, string $fassade): string
+    private function sensorName(string $feld): string
     {
-        $geraete = $this->listeWerte($geraeteJson);
-        $neu = 0;
-        foreach ($this->listeWerte($vorschlaegeJson) as $v) {
-            if (!($v['Nehmen'] ?? false)) {
+        switch ($feld) {
+            case 'WindID':
+                return $this->t('Wind');
+            case 'RegenID':
+                return $this->t('Rain');
+            case 'HelligkeitID':
+                return $this->t('Brightness');
+            default:
+                return $this->t('Temperature');
+        }
+    }
+
+    /** Momentaufnahme aller Instanzen mit ihren Variablen (Grundlage der Erkennung). */
+    private function momentaufnahme(): array
+    {
+        $out = [];
+        foreach (IPS_GetInstanceList() as $i) {
+            if ($i === $this->InstanceID) {
                 continue;
             }
-            $geraete[] = ['Name' => (string)$v['Name'], 'Fassade' => $fassade, 'Typ' => (string)$v['Typ'], 'Position' => (int)$v['Position'],
-                'Richtung' => 0, 'Lamelle' => (int)($v['Lamelle'] ?? 0),
-                'LamelleUmgekehrt' => stripos($this->profil((int)($v['Lamelle'] ?? 0)), 'reversed') !== false, 'Kontakt' => 0, 'Beschattung' => 0];
-            $neu++;
+            $vars = [];
+            foreach (IPS_GetChildrenIDs($i) as $c) {
+                if (IPS_VariableExists($c)) {
+                    $v = IPS_GetVariable($c);
+                    $d = $this->darstellung($c);
+                    $vars[] = [$c, IPS_GetName($c), IPS_GetObject($c)['ObjectIdent'], $v['VariableType'], $this->profil($c), HasAction($c), $d[0], $d[1], $d[2], $d[3]];
+                }
+            }
+            if ($vars !== []) {
+                $p = IPS_GetParent($i);
+                $mi = IPS_GetInstance($i)['ModuleInfo'];
+                $out[$i] = ['name' => IPS_GetName($i), 'ort' => $p > 0 ? IPS_GetName($p) : '', 'modul' => $mi['ModuleID'], 'modulName' => (string)($mi['ModuleName'] ?? ''), 'vars' => $vars];
+            }
         }
-        $this->UpdateFormField('Geraete', 'values', json_encode($geraete));
-        return $this->t('%d devices added to facade %s. Confirm with "Apply changes".', $neu, $fassade);
+        return $out;
+    }
+
+    /** Was WarnHub schon an Wetterstation auswertet (dann ordnet die Verschattung Wind/Regen nicht doppelt zu). */
+    private function warnHubWetterstation(): array
+    {
+        $wh = IPS_GetInstanceListByModuleID(self::WARNHUB_GUID);
+        if ($wh === []) {
+            return [];
+        }
+        $lies = function (string $p) use ($wh) {
+            try {
+                return (int)@IPS_GetProperty($wh[0], $p);
+            } catch (Throwable $e) {
+                return 0;
+            }
+        };
+        return ['instanz' => $lies('WetterstationInstanceID'), 'vars' => array_values(array_filter([$lies('WetterstationWindVariableID'), $lies('WetterstationRegenVariableID')]))];
     }
 
     /** Probefahrt: alle Geräte einer Fassade auf Beschattung bzw. zurück. Zeigt so, ob die Richtung stimmt. */
@@ -685,6 +815,7 @@ class Verschattung extends IPSModule
         if ($optFassade === []) {
             $optFassade = [['caption' => '—', 'value' => '']];
         }
+        $optGeraetFassade = array_merge([['caption' => '— choose —', 'value' => '']], $optFassade[0]['value'] === '' ? [] : $optFassade);
         $optTyp = [
             ['caption' => $this->t('Roller shutter'), 'value' => 'rollladen'],
             ['caption' => $this->t('Venetian blind'), 'value' => 'raffstore'],
@@ -707,8 +838,9 @@ class Verschattung extends IPSModule
                 ['type' => 'Button', 'caption' => 'Got it – do not show again', 'onClick' => 'VSCH_AckPurposeIntro($id);'],
             ]];
         }
+        $elements[] = ['type' => 'Button', 'caption' => '🧭 Start setup assistant', 'onClick' => 'VSCH_UIAssistentOeffnen($id);'];
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📖  Documentation & help', 'items' => [
-            ['type' => 'Label', 'caption' => 'Setup in four steps: 1. check the location, 2. "Detect house", 3. assign devices per facade, 4. check the preview. Weather protection is mandatory for awnings.'],
+            ['type' => 'Label', 'caption' => 'Easiest way: the setup assistant guides you through location, house, devices, test run, weather protection and when to shade. You only choose the facade for each device.'],
             ['type' => 'Label', 'caption' => 'Manual operation has priority: if you move a device by hand, the module leaves it alone until the sun situation changes.'],
             ['type' => 'Label', 'caption' => 'The module only moves back what it has moved itself, and only in daylight. Closing at dusk stays with you or another automation.'],
             ['type' => 'Button', 'caption' => 'Open documentation', 'onClick' => 'echo "' . self::DOC_URL . '";', 'link' => true],
@@ -739,7 +871,7 @@ class Verschattung extends IPSModule
             ['type' => 'List', 'name' => 'Geraete', 'caption' => 'Devices', 'rowCount' => 6, 'add' => true, 'delete' => true, 'sort' => ['column' => 'Fassade', 'direction' => 'ascending'],
                 'columns' => [
                     ['caption' => 'Name', 'name' => 'Name', 'width' => '180px', 'add' => '', 'edit' => ['type' => 'ValidationTextBox']],
-                    ['caption' => 'Facade', 'name' => 'Fassade', 'width' => '110px', 'add' => $optFassade[0]['value'], 'edit' => ['type' => 'Select', 'options' => $optFassade]],
+                    ['caption' => 'Facade', 'name' => 'Fassade', 'width' => '130px', 'add' => '', 'edit' => ['type' => 'Select', 'options' => $optGeraetFassade]],
                     ['caption' => 'Type', 'name' => 'Typ', 'width' => '150px', 'add' => 'rollladen', 'edit' => ['type' => 'Select', 'options' => $optTyp]],
                     ['caption' => 'Position', 'name' => 'Position', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => '0 % means', 'name' => 'Richtung', 'width' => '150px', 'add' => 0, 'edit' => ['type' => 'Select', 'options' => [
@@ -749,6 +881,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Window/door contact', 'name' => 'Kontakt', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Shading position (%)', 'name' => 'Beschattung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 100]],
                 ]],
+            ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID);'],
             ['type' => 'Label', 'name' => 'GeraeteHint', 'caption' => 'Any device with a position variable works (e.g. Z-Wave, Shelly, KNX, Homematic, EnOcean, Zigbee). Shading position 0 = default of the type (roller shutter 75 %, venetian blind and awning 100 %). Use the test run to check the direction.'],
         ]];
 
@@ -803,26 +936,11 @@ class Verschattung extends IPSModule
         ]];
 
         $actions = [];
+        $actions[] = $this->assistentFormular($fassaden, $optTyp);
         $actions[] = ['type' => 'ExpansionPanel', 'caption' => '🔧  Assign devices & test run', 'expanded' => $fassaden !== [] && $this->geraete() === [], 'items' => [
-            ['type' => 'Label', 'caption' => 'Choose a facade, add its devices from the suggestions, then check the direction with the test run (only saved devices move).'],
+            ['type' => 'Label', 'caption' => 'Choose a facade and check the direction with the test run (only saved devices move).'],
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'Select', 'name' => 'ZuordnenFassade', 'caption' => 'Facade', 'options' => $optFassade],
-                ['type' => 'PopupButton', 'caption' => '➕ Add devices …', 'popup' => [
-                    'caption' => 'Devices for this facade',
-                    'items' => [
-                        // onClick am PopupButton ist in der SDK-Doku nicht belegt → eigener Suchknopf im Popup
-                        ['type' => 'Button', 'caption' => '🔍 Find devices', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } VSCH_UIVorschlaege($id, json_encode($g));'],
-                        ['type' => 'Label', 'name' => 'VorschlaegeHint', 'caption' => 'Click "Find devices" to list candidates.'],
-                        ['type' => 'List', 'name' => 'Vorschlaege', 'rowCount' => 10, 'add' => false, 'delete' => false, 'columns' => [
-                            ['caption' => 'Take', 'name' => 'Nehmen', 'width' => '70px', 'edit' => ['type' => 'CheckBox']],
-                            ['caption' => 'Name', 'name' => 'Name', 'width' => 'auto', 'save' => true],
-                            ['caption' => 'Type', 'name' => 'Typ', 'width' => '160px', 'edit' => ['type' => 'Select', 'options' => $optTyp]],
-                            ['caption' => 'Position', 'name' => 'Position', 'width' => '90px', 'save' => true],
-                            ['caption' => 'Slats', 'name' => 'Lamelle', 'width' => '90px', 'save' => true],
-                        ], 'values' => []],
-                        ['type' => 'Button', 'caption' => 'Add ticked devices', 'onClick' => '$v = []; foreach ($Vorschlaege as $x) { $v[] = $x; } $g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIUebernehmen($id, json_encode($v), json_encode($g), (string)$ZuordnenFassade);'],
-                    ],
-                ]],
                 ['type' => 'Button', 'caption' => '⬇ Test run', 'onClick' => 'echo VSCH_UIProbefahrt($id, (string)$ZuordnenFassade, true);'],
                 ['type' => 'Button', 'caption' => '⬆ Back', 'onClick' => 'echo VSCH_UIProbefahrt($id, (string)$ZuordnenFassade, false);'],
             ]],
@@ -990,10 +1108,19 @@ class Verschattung extends IPSModule
     /** [lat, lon] aus eigener Auswahl oder Standort-Instanz; null = keiner. */
     private function koordinaten(): ?array
     {
+        if ($this->koordinatenAssistent !== null) {
+            return $this->koordinatenAssistent;
+        }
         $eigen = json_decode($this->ReadPropertyString('Standort'), true);
         if (is_array($eigen) && ((float)($eigen['latitude'] ?? 0) != 0.0 || (float)($eigen['longitude'] ?? 0) != 0.0)) {
             return [(float)$eigen['latitude'], (float)$eigen['longitude']];
         }
+        return $this->standortInstanz();
+    }
+
+    /** [lat, lon] der Standort-Instanz (Kerninstanz „Location“) oder null. */
+    private function standortInstanz(): ?array
+    {
         foreach (IPS_GetInstanceListByModuleID(self::LOCATION_CONTROL_GUID) as $id) {
             $l = json_decode((string)@IPS_GetProperty($id, 'Location'), true);
             if (is_array($l) && ((float)($l['latitude'] ?? 0) != 0.0 || (float)($l['longitude'] ?? 0) != 0.0)) {
@@ -1028,8 +1155,14 @@ class Verschattung extends IPSModule
     /** Geräte mit vollständigen Feldern und Schlüssel (Positions-ID, bleibt beim Umsortieren gleich). */
     private function geraete(): array
     {
+        return $this->normalisieren($this->listeWerte($this->ReadPropertyString('Geraete')));
+    }
+
+    /** Geräteliste (Eigenschaft oder Assistent) in vollständige Einträge mit Schlüssel umwandeln. */
+    private function normalisieren(array $liste): array
+    {
         $out = [];
-        foreach ($this->listeWerte($this->ReadPropertyString('Geraete')) as $g) {
+        foreach ($liste as $g) {
             $typ = in_array($g['Typ'] ?? '', VSCHLogik::TYPEN, true) ? $g['Typ'] : 'rollladen';
             $besch = (float)($g['Beschattung'] ?? 0);
             $out[] = [
@@ -1062,7 +1195,16 @@ class Verschattung extends IPSModule
             return '';
         }
         $v = IPS_GetVariable($vid);
-        return (string)($v['VariableCustomProfile'] ?: $v['VariableProfile']);
+        $p = (string)($v['VariableCustomProfile'] ?: $v['VariableProfile']);
+        if ($p === '') {
+            // Symcon 8+: Profil steckt ggf. nur in der Darstellung „Legacy-Profil“
+            foreach (['VariableCustomPresentation', 'VariablePresentation'] as $f) {
+                if (is_array($v[$f] ?? null) && !empty($v[$f]['PROFILE'])) {
+                    return (string)$v[$f]['PROFILE'];
+                }
+            }
+        }
+        return $p;
     }
 
     private function einheit(int $vid): string
@@ -1088,10 +1230,17 @@ class Verschattung extends IPSModule
                 return $m;
             }
         }
-        $v = IPS_GetVariable($vid);
-        $pres = $v['VariableCustomPresentation'] ?? [];
-        if (!is_array($pres) || $pres === []) {
-            $pres = $v['VariablePresentation'] ?? [];
+        $roll = $this->darstellung($vid)[3];
+        if ($roll !== [] && max($roll['open'], $roll['close']) > 0) {
+            return max($roll['open'], $roll['close']);
+        }
+        $pres = $this->aufgeloest($vid);
+        if ($pres === []) {
+            $v = IPS_GetVariable($vid);
+            $pres = $v['VariableCustomPresentation'] ?? [];
+            if (!is_array($pres) || $pres === []) {
+                $pres = $v['VariablePresentation'] ?? [];
+            }
         }
         return isset($pres['MAX']) && (float)$pres['MAX'] > 0 ? (float)$pres['MAX'] : 100.0;
     }
@@ -1107,20 +1256,6 @@ class Verschattung extends IPSModule
     }
 
 
-    /** Lamellenvariable neben der Positionsvariable (gleiche Instanz, Name/Ident mit Lamelle/Slat/Tilt/Winkel). */
-    private function lamelleFinden(int $vid): int
-    {
-        $p = IPS_GetParent($vid);
-        foreach (IPS_GetChildrenIDs($p) as $c) {
-            if ($c !== $vid && IPS_VariableExists($c) && HasAction($c)) {
-                $o = IPS_GetObject($c);
-                if (preg_match('/lamell|slat|tilt|winkel|angle/i', $o['ObjectName'] . ' ' . $o['ObjectIdent'])) {
-                    return $c;
-                }
-            }
-        }
-        return 0;
-    }
 
     /** HTTP-Abruf mit generischem User-Agent (keine Kontaktdaten des Nutzers). */
     private function abruf(string $url, array $kopf = [], ?string $post = null): array

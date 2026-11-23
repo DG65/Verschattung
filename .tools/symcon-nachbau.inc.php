@@ -58,6 +58,18 @@ function IPS_GetObjectIDByIdent(string $ident, int $parent)
 function IPS_GetChildrenIDs(int $p): array { return array_keys(array_filter($GLOBALS['OBJ'], fn($o) => $o['parent'] === $p)); }
 function IPS_GetName(int $id): string { return $GLOBALS['OBJ'][$id]['name'] ?? ''; }
 function IPS_GetParent(int $id): int { return $GLOBALS['OBJ'][$id]['parent'] ?? 0; }
+function IPS_GetVariablePresentation(int $id): array { return $GLOBALS['OBJ'][$id]['pres'] ?? []; }
+function IPS_GetInstanceList(): array { return array_keys(array_filter($GLOBALS['OBJ'], fn($o) => $o['kind'] === 1)); }
+function IPS_GetInstance(int $id): array
+{
+    $guid = '';
+    foreach ($GLOBALS['MODULES'] ?? [] as $g => $ids) {
+        if (in_array($id, $ids, true)) {
+            $guid = $g;
+        }
+    }
+    return ['InstanceID' => $id, 'InstanceStatus' => 102, 'ModuleInfo' => ['ModuleID' => $guid, 'ModuleName' => '']];
+}
 function IPS_GetInstanceListByModuleID(string $guid): array { return $GLOBALS['MODULES'][$guid] ?? []; }
 function IPS_GetProperty(int $id, string $n) { return $GLOBALS['CONF_PROP'][$id][$n] ?? ''; }
 function IPS_VariableProfileExists(string $p): bool { return isset($GLOBALS['PROFILES'][$p]); }
