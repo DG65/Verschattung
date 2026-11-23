@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2 (in Entwicklung)
+
+Befunde aus dem ersten Durchklicken des Assistenten in der Konsole (Chrome, 23.11.):
+
+- **Fehler behoben:** Die im Assistenten gewählten Fassaden kamen nicht im Formular an (alle Geräte ohne Fassade gespeichert), und die Zusammenfassung nannte keine Geräte. Ursache: Listenänderungen aus dem Bearbeiten-Dialog stehen auf späteren Seiten nicht zur Verfügung. Der Assistent merkt sich die Geräteseite jetzt beim „Weiter“ als Entwurf; Probefahrt, Zusammenfassung und Übernahme lesen daraus.
+- Die Fassaden-Auswahl der Geräteliste im Formular kennt immer A–L (mit Namen, soweit bekannt) – vorher wurde eine im Assistenten gewählte, noch nicht gespeicherte Fassade beim Speichern verworfen.
+- Geräteseite: Gerätename auch im Bearbeiten-Dialog sichtbar, schmalere Spalten, breiteres Fenster.
+- Leere Sensorfelder im Assistenten zeigen keine rote Meldung „Ausgewähltes Objekt muss eine Variable sein“ mehr.
+- Nach „OK“ zeigt das Formular auch den Erkennungsstand und die Quellen.
+
 ## 0.2.1 (in Entwicklung)
 
 - Unter jedem Sensorfeld (Wind, Regen, Sperre, Helligkeit, Temperatur) steht jetzt sichtbar, womit es verbunden ist – mit aktuellem Wert und Alter, z. B. „✓ Wetterstation / Außentemperatur: 1,1 °C · vor 0 min“. Ist das Feld leer und es gibt einen passenden Kandidaten: „🔍 Gefunden: …“ mit Wert. Wertet WarnHub die Wetterstation aus, steht das dort. Gelöschte Variablen werden gemeldet. Dasselbe im Assistenten.

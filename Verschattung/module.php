@@ -86,6 +86,7 @@ class Verschattung extends IPSModule
         $this->RegisterAttributeInteger('RegenSeit', 0);
         $this->RegisterAttributeString('NetzBoe', '{}');
         $this->RegisterAttributeBoolean('PurposeIntroGone', false);
+        $this->RegisterAttributeString('AssistentEntwurf', '{}');
 
         $this->RegisterTimer('Tick', 0, 'VSCH_Tick($_IPS[\'TARGET\']);');
     }
@@ -860,7 +861,12 @@ class Verschattung extends IPSModule
         if ($optFassade === []) {
             $optFassade = [['caption' => '—', 'value' => '']];
         }
-        $optGeraetFassade = array_merge([['caption' => '— choose —', 'value' => '']], $optFassade[0]['value'] === '' ? [] : $optFassade);
+        // immer A–L anbieten (der Assistent kann Fassaden eintragen, die beim Öffnen des Formulars noch nicht gespeichert waren)
+        $bekannt = array_column($fassaden, 'Name', 'Kennung');
+        $optGeraetFassade = [['caption' => '— choose —', 'value' => '']];
+        foreach (self::assistentKennungen() as $k) {
+            $optGeraetFassade[] = ['caption' => isset($bekannt[$k]) ? $k . ' · ' . $bekannt[$k] : $k, 'value' => $k];
+        }
         $optTyp = [
             ['caption' => $this->t('Roller shutter'), 'value' => 'rollladen'],
             ['caption' => $this->t('Venetian blind'), 'value' => 'raffstore'],

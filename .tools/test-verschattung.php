@@ -660,7 +660,14 @@ $m->UIAssistentGeraete(json_encode($fx), '[]', 0, '');
 $f = array_column($m->fieldUpdates, 2, 0);
 $wg = json_decode($f['WGeraete'] ?? '[]', true);
 check('J18 Seite 3 wird mit erkannten Geräten gefüllt', in_array(951, array_column($wg, 'Position'), true) && isset($f['WLegende']) && strpos($f['WLegende'], 'A = Süd') === 0, json_encode(array_column($wg, 'Position')));
-// Übernehmen
+// Übernehmen (Entwurf wie im echten Ablauf: Seite 2/3 haben ihn gemerkt)
+$m->UIAssistentOeffnen();
+$m->UIAssistentMerken('fassaden', json_encode($fx));
+$m->UIAssistentMerken('geraete', json_encode([['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]]));
+$m->fieldUpdates = [];
+$m->UIAssistentZusammenfassung('', '', 0);
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J25 Zusammenfassung nennt die Geräte je Fassade (Live-Befund 23.11.)', strpos($f['WZusammenfassung'] ?? '', 'A Süd: X') !== false, $f['WZusammenfassung'] ?? '');
 $m->fieldUpdates = [];
 $msg = $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'standort' => '', 'fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]],
     'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'wann' => 0, 'hell' => 123, 'hellAn' => 30000, 'temp' => 0, 'tempMin' => 0]));
@@ -672,9 +679,20 @@ check('J22 Standort-Instanz gewählt: eigener Standort wird geleert', json_decod
 check('J23 Meldung sagt „Änderungen übernehmen“', strpos($msg, 'Änderungen übernehmen') !== false, $msg);
 // Probefahrt mit Assistenten-Daten
 $GLOBALS['BEFEHLE'] = [];
+$m->UIAssistentMerken('geraete', json_encode([['Name' => 'Kind', 'Fassade' => 'B', 'Typ' => 'raffstore', 'Position' => 951, 'Lamelle' => 952]]));
 $m->fieldUpdates = [];
 $m->UIAssistentProbe(json_encode([['Name' => 'Kind', 'Fassade' => 'B', 'Typ' => 'raffstore', 'Position' => 951, 'Lamelle' => 952]]), 'B', true);
 check('J24 Probefahrt fährt Gerät aus dem Assistenten (ungespeichert)', in_array(951, array_column($GLOBALS['BEFEHLE'], 0), true), json_encode($GLOBALS['BEFEHLE']));
+$m->UIAssistentOeffnen();
+check('J26 erneutes Öffnen verwirft den alten Entwurf', $m->UIAssistentWeiter(json_encode([['Typ' => 'rollladen', 'Fassade' => 'A']])) === 'wann');
+$ff = json_decode($m->GetConfigurationForm(), true);
+$optG = [];
+$sm = function ($x) use (&$sm, &$optG) { if (!is_array($x)) { return; } if (($x['name'] ?? '') === 'Geraete') { foreach ($x['columns'] as $c) { if ($c['name'] === 'Fassade') { $optG = array_column($c['edit']['options'], 'value'); } } } foreach ($x as $v) { $sm($v); } };
+$sm($ff['elements']);
+check('J27 Formular-Geräteliste kennt immer A–L (Live-Befund: „B“ ging beim Speichern verloren)', in_array('B', $optG, true) && in_array('L', $optG, true), json_encode($optG));
+$pg = array_column($seiten, null, 'name');
+check('J28 Geräteseite merkt beim Weiter den Entwurf (aktuelle Seite = Listenänderungen sind da)', strpos((string)($pg['geraete']['onConfirm'] ?? ''), 'VSCH_UIAssistentMerken') !== false);
+check('J29 spätere Seiten lesen nicht mehr $WGeraete', strpos(json_encode([$pg['probe'], $pg['wann'], $pg['fertig']]), 'WGeraete') === false);
 
 // ---------------------------------------------------------------------------
 heading('H Übersetzung und Formularregeln');

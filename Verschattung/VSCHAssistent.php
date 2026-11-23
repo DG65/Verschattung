@@ -86,12 +86,12 @@ trait VSCHAssistent
                     ['type' => 'Label', 'name' => 'WLegende', 'caption' => $this->fassadenLegende($fassaden)],
                     ['type' => 'Image', 'name' => 'WGeraeteBild', 'image' => $this->grundrissBild($fassaden, -1, 'heute'), 'center' => true, 'width' => '300px'],
                     ['type' => 'List', 'name' => 'WGeraete', 'rowCount' => 8, 'add' => false, 'delete' => true, 'values' => $geraete, 'columns' => [
-                        ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'save' => true],
-                        ['caption' => $this->t('Facade'), 'name' => 'Fassade', 'width' => '150px', 'edit' => ['type' => 'Select', 'options' => $optFassade]],
-                        ['caption' => $this->t('Type'), 'name' => 'Typ', 'width' => '150px', 'edit' => ['type' => 'Select', 'options' => $optTyp]],
-                        ['caption' => $this->t('0 % means'), 'name' => 'Richtung', 'width' => '160px', 'edit' => ['type' => 'Select', 'options' => [
+                        ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'edit' => ['type' => 'ValidationTextBox']],
+                        ['caption' => $this->t('Facade'), 'name' => 'Fassade', 'width' => '110px', 'edit' => ['type' => 'Select', 'options' => $optFassade]],
+                        ['caption' => $this->t('Type'), 'name' => 'Typ', 'width' => '140px', 'edit' => ['type' => 'Select', 'options' => $optTyp]],
+                        ['caption' => $this->t('0 % means'), 'name' => 'Richtung', 'width' => '140px', 'edit' => ['type' => 'Select', 'options' => [
                             ['caption' => $this->t('automatic (profile)'), 'value' => 0], ['caption' => $this->t('open / retracted'), 'value' => 1], ['caption' => $this->t('closed / extended'), 'value' => 2]]]],
-                        ['caption' => $this->t('Window/door contact'), 'name' => 'Kontakt', 'width' => '200px', 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Window/door contact'), 'name' => 'Kontakt', 'width' => '160px', 'edit' => ['type' => 'SelectVariable']],
                         ['caption' => 'Position', 'name' => 'Position', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats (optional)'), 'name' => 'Lamelle', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats 0 % = closed'), 'name' => 'LamelleUmgekehrt', 'visible' => false, 'save' => true],
@@ -100,6 +100,10 @@ trait VSCHAssistent
                     ['type' => 'Label', 'name' => 'WGeraeteHinweis', 'caption' => $this->t('Missing a device? Add it later in the device list of the form with "+".')],
                 ],
                 'validate' => $liste('WFassaden') . $liste('WGeraete') . 'return VSCH_UIAssistentPruefen($id, "geraete", json_encode(["fassaden" => $WFassadenA, "geraete" => $WGeraeteA]));',
+                // Live-Test 23.11.: Listenwerte, die im Bearbeiten-Dialog geändert wurden, kommen auf späteren Seiten nicht an –
+                // deshalb hier (aktuelle Seite) als Entwurf merken und später aus dem Entwurf lesen
+                'onConfirm' => $liste('WGeraete') . 'VSCH_UIAssistentMerken($id, "geraete", json_encode($WGeraeteA));',
+                'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
                 'name' => 'probe', 'caption' => $this->t('Step 4 of 7 · Test run'),
@@ -108,13 +112,13 @@ trait VSCHAssistent
                     ['type' => 'RowLayout', 'items' => [
                         ['type' => 'Select', 'name' => 'WProbeFassade', 'caption' => $this->t('Facade'), 'options' => $optProbe, 'value' => 'A'],
                         ['type' => 'Button', 'caption' => $this->t('⬇ Shade'),
-                            'onClick' => $liste('WGeraete') . 'VSCH_UIAssistentProbe($id, json_encode($WGeraeteA), (string)$WProbeFassade, true);'],
+                            'onClick' => 'VSCH_UIAssistentProbe($id, "", (string)$WProbeFassade, true);'],
                         ['type' => 'Button', 'caption' => $this->t('⬆ Back'),
-                            'onClick' => $liste('WGeraete') . 'VSCH_UIAssistentProbe($id, json_encode($WGeraeteA), (string)$WProbeFassade, false);'],
+                            'onClick' => 'VSCH_UIAssistentProbe($id, "", (string)$WProbeFassade, false);'],
                     ]],
                     ['type' => 'Label', 'name' => 'WProbeStatus', 'caption' => $this->t('The test run is optional.')],
                 ],
-                'nextPage' => $liste('WGeraete') . 'return VSCH_UIAssistentWeiter($id, json_encode($WGeraeteA));',
+                'nextPage' => 'return VSCH_UIAssistentWeiter($id, "");',
             ],
             [
                 'name' => 'wetter', 'caption' => $this->t('Step 5 of 7 · Weather protection'),
@@ -122,11 +126,11 @@ trait VSCHAssistent
                     ['type' => 'Label', 'name' => 'WWetterText', 'caption' => $this->t('Awnings and venetian blinds retract on wind and severe weather. Choose at least one source.')],
                     ['type' => 'CheckBox', 'name' => 'WWarnHub', 'caption' => $warnHub ? $this->t('Use WarnHub warnings') : $this->t('WarnHub (not installed)'),
                         'value' => $this->ReadPropertyBoolean('WarnHubNutzen') && $warnHub, 'enabled' => $warnHub],
-                    ['type' => 'SelectVariable', 'name' => 'WWind', 'caption' => $this->t('Wind gust (own sensor)'), 'value' => $this->ReadPropertyInteger('WindID')],
+                    ['type' => 'SelectVariable', 'name' => 'WWind', 'caption' => $this->t('Wind gust (own sensor)')] + $this->auswahlWert('WindID'),
                     ['type' => 'Label', 'name' => 'WWindInfo', 'caption' => $this->verbindungsText('WindID', $this->ReadPropertyInteger('WindID'), ['hinweise' => []])],
-                    ['type' => 'SelectVariable', 'name' => 'WRegen', 'caption' => $this->t('Rain sensor (optional)'), 'value' => $this->ReadPropertyInteger('RegenID')],
+                    ['type' => 'SelectVariable', 'name' => 'WRegen', 'caption' => $this->t('Rain sensor (optional)')] + $this->auswahlWert('RegenID'),
                     ['type' => 'Label', 'name' => 'WRegenInfo', 'caption' => $this->verbindungsText('RegenID', $this->ReadPropertyInteger('RegenID'), ['hinweise' => []])],
-                    ['type' => 'SelectVariable', 'name' => 'WSperre', 'caption' => $this->t('External lock (optional)'), 'value' => $this->ReadPropertyInteger('SperreID')],
+                    ['type' => 'SelectVariable', 'name' => 'WSperre', 'caption' => $this->t('External lock (optional)')] + $this->auswahlWert('SperreID'),
                     ['type' => 'Label', 'name' => 'WSperreInfo', 'caption' => $this->verbindungsText('SperreID', $this->ReadPropertyInteger('SperreID'), ['hinweise' => []])],
                     ['type' => 'CheckBox', 'name' => 'WNetzWetter', 'caption' => $this->t('Gust forecast from the internet'), 'value' => $this->ReadPropertyBoolean('NetzWetter')],
                     ['type' => 'CheckBox', 'name' => 'WMarkiseOhne', 'caption' => $this->t('Extend awnings without weather source'), 'value' => $this->ReadPropertyBoolean('MarkiseOhneWetter')],
@@ -138,12 +142,12 @@ trait VSCHAssistent
                     ['type' => 'RadioButtonGroup', 'name' => 'WWann', 'value' => $wann, 'width' => '600px', 'options' => [
                         ['caption' => $this->t('Whenever the sun shines on the facade'), 'value' => 0],
                         ['caption' => $this->t('Only when it is bright'), 'value' => 1, 'items' => [
-                            ['type' => 'SelectVariable', 'name' => 'WHell', 'caption' => $this->t('Brightness (outdoor, lux)'), 'value' => $this->ReadPropertyInteger('HelligkeitID')],
+                            ['type' => 'SelectVariable', 'name' => 'WHell', 'caption' => $this->t('Brightness (outdoor, lux)')] + $this->auswahlWert('HelligkeitID'),
                             ['type' => 'Label', 'name' => 'WHellInfo', 'caption' => $this->verbindungsText('HelligkeitID', $this->ReadPropertyInteger('HelligkeitID'), ['hinweise' => []])],
                             ['type' => 'NumberSpinner', 'name' => 'WHellAn', 'caption' => $this->t('Shade from'), 'suffix' => 'lx', 'minimum' => 0, 'value' => $this->ReadPropertyFloat('HellAn')],
                         ]],
                         ['caption' => $this->t('Only on warm days'), 'value' => 2, 'items' => [
-                            ['type' => 'SelectVariable', 'name' => 'WTemp', 'caption' => $this->t('Temperature'), 'value' => $this->ReadPropertyInteger('TemperaturID')],
+                            ['type' => 'SelectVariable', 'name' => 'WTemp', 'caption' => $this->t('Temperature')] + $this->auswahlWert('TemperaturID'),
                             ['type' => 'Label', 'name' => 'WTempInfo', 'caption' => $this->verbindungsText('TemperaturID', $this->ReadPropertyInteger('TemperaturID'), ['hinweise' => []])],
                             ['type' => 'NumberSpinner', 'name' => 'WTempMin', 'caption' => $this->t('Shade only from'), 'suffix' => '°C', 'digits' => 1,
                                 'value' => $this->ReadPropertyFloat('TemperaturMin') > 0 ? $this->ReadPropertyFloat('TemperaturMin') : 22.0],
@@ -151,7 +155,7 @@ trait VSCHAssistent
                     ]],
                 ],
                 'validate' => 'return VSCH_UIAssistentPruefen($id, "wann", json_encode(["wann" => (int)$WWann, "hell" => (int)$WHell, "temp" => (int)$WTemp]));',
-                'onConfirm' => $liste('WFassaden') . $liste('WGeraete') . 'VSCH_UIAssistentZusammenfassung($id, json_encode($WFassadenA), json_encode($WGeraeteA), (int)$WWann);',
+                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", (int)$WWann);',
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
@@ -161,8 +165,7 @@ trait VSCHAssistent
                     ['type' => 'Label', 'caption' => $this->t('"OK" fills in the form. Then confirm with "Apply changes" – only then does the module start.')],
                 ],
                 'nextPage' => -1,
-                'onConfirm' => $liste('WFassaden') . $liste('WGeraete')
-                    . 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', "fassaden" => $WFassadenA, "geraete" => $WGeraeteA, '
+                'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"wann" => (int)$WWann, "hell" => (int)$WHell, "hellAn" => (float)$WHellAn, "temp" => (int)$WTemp, "tempMin" => (float)$WTempMin]));',
             ],
@@ -170,15 +173,38 @@ trait VSCHAssistent
         return [
             'type' => 'PopupAlert', 'name' => 'Assistent',
             'visible' => $fassaden === [] && $geraete === [],
-            'popup' => ['caption' => $this->t('Setup assistant'), 'width' => '760px', 'closeCaption' => $this->t('Cancel'), 'initialPage' => 'standort', 'pages' => $seiten],
+            'popup' => ['caption' => $this->t('Setup assistant'), 'width' => '960px', 'closeCaption' => $this->t('Cancel'), 'initialPage' => 'standort', 'pages' => $seiten],
         ];
     }
 
     // ------------------------------------------------------------------ Aktionen der Seiten
 
+    /** Wert für eine Variablenauswahl nur setzen, wenn er nicht 0 ist (0 zeigt Symcon als Fehler „muss eine Variable sein“). */
+    private function auswahlWert(string $eigenschaft): array
+    {
+        $v = $this->ReadPropertyInteger($eigenschaft);
+        return $v > 0 ? ['value' => $v] : [];
+    }
+
+    /** Entwurf des Assistenten (Fassaden/Geräte) merken – Grundlage für Probefahrt, Zusammenfassung und Übernahme. */
+    public function UIAssistentMerken(string $teil, string $json): void
+    {
+        $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
+        $e[$teil] = $this->listeWerte($json);
+        $this->WriteAttributeString('AssistentEntwurf', json_encode($e));
+    }
+
+    /** Entwurfsteil, sonst die übergebene Liste. */
+    private function entwurf(string $teil, string $json): array
+    {
+        $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
+        return isset($e[$teil]) && is_array($e[$teil]) ? $e[$teil] : $this->listeWerte($json);
+    }
+
     /** Assistent (erneut) öffnen, immer ab Seite 1. */
     public function UIAssistentOeffnen(): void
     {
+        $this->WriteAttributeString('AssistentEntwurf', '{}');
         $this->UpdateFormField('Assistent', 'popup.initialPage', 'standort');
         $this->UpdateFormField('Assistent', 'visible', true);
     }
@@ -251,6 +277,8 @@ trait VSCHAssistent
         }
         unset($g);
         $this->UpdateFormField('WGeraete', 'values', json_encode($alle));
+        $this->UIAssistentMerken('fassaden', json_encode($fassaden));
+        $this->UIAssistentMerken('geraete', json_encode($alle));
         $this->UpdateFormField('WLegende', 'caption', $this->fassadenLegende($fassaden));
         $this->UpdateFormField('WGeraeteBild', 'image', $this->grundrissBild($fassaden, -1, 'heute'));
         $this->UpdateFormField('WGeraeteHinweis', 'caption', $neu === []
@@ -281,7 +309,7 @@ trait VSCHAssistent
     public function UIAssistentProbe(string $geraeteJson, string $fassade, bool $beschatten): void
     {
         $n = 0;
-        foreach ($this->normalisieren($this->listeWerte($geraeteJson)) as $g) {
+        foreach ($this->normalisieren($this->entwurf('geraete', $geraeteJson)) as $g) {
             if ($g['Fassade'] !== $fassade || $g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
             }
@@ -297,7 +325,7 @@ trait VSCHAssistent
     /** Nach der Probefahrt: Wetterschutz nur, wenn es Markisen oder Raffstores gibt. */
     public function UIAssistentWeiter(string $geraeteJson): string
     {
-        foreach ($this->listeWerte($geraeteJson) as $g) {
+        foreach ($this->entwurf('geraete', $geraeteJson) as $g) {
             if (($g['Fassade'] ?? '') !== '-' && in_array($g['Typ'] ?? '', ['markise', 'raffstore'], true)) {
                 return 'wetter';
             }
@@ -308,8 +336,8 @@ trait VSCHAssistent
     /** Seite 7: was der Assistent eingerichtet hat, mit den Sonnenzeiten von heute. */
     public function UIAssistentZusammenfassung(string $fassadenJson, string $geraeteJson, int $wann): void
     {
-        $fassaden = array_values(array_filter($this->listeWerte($fassadenJson), fn($f) => (bool)($f['Aktiv'] ?? true)));
-        $geraete = $this->listeWerte($geraeteJson);
+        $fassaden = array_values(array_filter($this->entwurf('fassaden', $fassadenJson), fn($f) => (bool)($f['Aktiv'] ?? true)));
+        $geraete = $this->entwurf('geraete', $geraeteJson);
         $zeilen = [];
         foreach ($fassaden as $f) {
             $namen = array_map(fn($g) => (string)$g['Name'], array_filter($geraete, fn($g) => ($g['Fassade'] ?? '') === $f['Kennung']));
@@ -333,8 +361,8 @@ trait VSCHAssistent
         $d = json_decode($json, true) ?: [];
         $pos = (int)($d['art'] ?? 0) === 1 ? $this->assistentKoordinaten(1, (string)($d['standort'] ?? '')) : null;
         $this->UpdateFormField('Standort', 'value', json_encode(['latitude' => $pos[0] ?? 0, 'longitude' => $pos[1] ?? 0]));
-        $fassaden = $this->listeWerte(json_encode($d['fassaden'] ?? []));
-        $geraete = array_values(array_filter($this->listeWerte(json_encode($d['geraete'] ?? [])), fn($g) => ($g['Fassade'] ?? '') !== '-'));
+        $fassaden = $this->entwurf('fassaden', json_encode($d['fassaden'] ?? []));
+        $geraete = array_values(array_filter($this->entwurf('geraete', json_encode($d['geraete'] ?? [])), fn($g) => ($g['Fassade'] ?? '') !== '-'));
         $this->UpdateFormField('Fassaden', 'values', json_encode($fassaden));
         $this->UpdateFormField('Geraete', 'values', json_encode($geraete));
         $this->UpdateFormField('WarnHubNutzen', 'value', (bool)($d['warnhub'] ?? false));
@@ -351,6 +379,8 @@ trait VSCHAssistent
         $this->UpdateFormField('TemperaturID', 'value', $wann === 2 ? (int)($d['temp'] ?? 0) : 0);
         $this->UpdateFormField('TemperaturMin', 'value', $wann === 2 ? (float)($d['tempMin'] ?? 0) : 0.0);
         $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($fassaden, 0, 'heute'));
+        $this->UpdateFormField('GeoStatus', 'caption', $this->geoStatus() !== '' ? '🔗 ' . $this->geoStatus() : $this->t('Not detected yet.'));
+        $this->UpdateFormField('Quellen', 'caption', $this->quellenText());
         return $this->t('The form is filled in: %d facades, %d devices. Now click "Apply changes".', count($fassaden), count($geraete));
     }
 
