@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 (in Entwicklung)
+
+- Statuszeile: bei mehr als vier Geräten steht „+2 weitere“ dahinter, statt die übrigen still wegzulassen.
+- Konsolen-Nachtest des Assistenten (24.11., v0.2.2): gewählte Fassaden kommen jetzt im Formular an und werden gespeichert, Zusammenfassung nennt die Geräte je Fassade, „nicht verschatten“ bleibt draußen, Fenster breit genug ohne Scrollen, keine rote Leerfeld-Meldung.
+
 ## 0.2.2 (in Entwicklung)
 
 Befunde aus dem ersten Durchklicken des Assistenten in der Konsole (Chrome, 23.11.):

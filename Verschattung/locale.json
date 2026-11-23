@@ -215,7 +215,8 @@
             "%d min ago": "vor %d min",
             "%d h ago": "vor %d h",
             "%d days ago": "vor %d Tagen",
-            "Lock": "Sperre"
+            "Lock": "Sperre",
+            "+%d more": "+%d weitere"
         }
     }
 }

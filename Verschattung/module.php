@@ -222,7 +222,8 @@ class Verschattung extends IPSModule
         $z['_w'] = $this->wetterLage();
         $z['_schutz'] = $schutzMerk;
         $this->WriteAttributeString('Zustand', json_encode($z));
-        $status = $statusZeilen === [] ? $this->t('No device assigned') : implode(' · ', array_slice($statusZeilen, 0, 4));
+        $status = $statusZeilen === [] ? $this->t('No device assigned') : implode(' · ', array_slice($statusZeilen, 0, 4))
+            . (count($statusZeilen) > 4 ? ' · ' . $this->t('+%d more', count($statusZeilen) - 4) : '');
         if ($this->GetValue('Status') !== $status) {
             $this->SetValue('Status', $status);
         }
