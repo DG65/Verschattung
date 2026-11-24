@@ -93,13 +93,24 @@ final class VSCHLogik
         // 2. Wunsch aus Sonne, Helligkeit, Temperatur
         $wunsch = (bool)$g['sonneAn'];
         $warum = $wunsch ? VSCHText::t('Sun on the facade') : (($u['tag'] ?? true) ? VSCHText::t('No direct sun on the facade') : VSCHText::t('Night'));
+        // Scheint die Sonne wirklich? Einstrahlung (W/m²) gegen die Schwelle – sonst nur Geometrie
         if ($wunsch && ($u['hell'] ?? null) === false) {
             $wunsch = false;
-            $warum = VSCHText::t('Sun on the facade, but not bright enough');
+            $warum = (string)($u['hellGrund'] ?? VSCHText::t('Sun on the facade, but not bright enough'));
         }
+        if ($wunsch && ($u['warm'] ?? null) === true && ($u['warmGrund'] ?? '') !== '') {
+            $warum = (string)$u['warmGrund'];
+        }
+        // Wärme: Raum zu warm ODER Sommer (außen warm) → beschatten; Winter mit kühlem Raum → Sonnenwärme nutzen
         if ($wunsch && ($u['warm'] ?? null) === false) {
             $wunsch = false;
-            $warum = VSCHText::t('Sun on the facade, but below the temperature threshold');
+            $warum = (string)($u['warmGrund'] ?? VSCHText::t('Sun on the facade, but below the temperature threshold'));
+        }
+        // Raumhelligkeit nur zum Herunterfahren: fällt die Sonne wirklich in diesen Raum? (Hochfahren nicht danach,
+        // sonst Hin und Her – ist der Behang unten, wird der Raum dunkel.)
+        if ($wunsch && !(bool)$z['soll'] && ($u['raumHell'] ?? null) === false) {
+            $wunsch = false;
+            $warum = (string)($u['raumHellGrund'] ?? VSCHText::t('The sun does not reach the room'));
         }
         if ($wunsch && $typ === 'markise' && !($u['wetterQuelle'] ?? false) && !($u['ohneWetterBestaetigt'] ?? false)) {
             $wunsch = false;
@@ -283,5 +294,41 @@ final class VSCHLogik
             return $typ ?? 'rollladen';
         }
         return $typ;
+    }
+
+    /** Klarer Himmel: globale Einstrahlung (W/m², horizontal) bei Sonnenhöhe $alt (Haurwitz-Näherung). */
+    public static function klarHimmel(float $alt): float
+    {
+        if ($alt <= 0) {
+            return 0.0;
+        }
+        $s = sin(deg2rad($alt));
+        return 1098 * $s * exp(-0.057 / $s);
+    }
+
+    /** Helligkeit in Lux ungefähr in W/m² (Sonnenlicht ≈ 120 lm/W). */
+    public static function luxZuWm2(float $lux): float
+    {
+        return $lux / 120;
+    }
+
+    /**
+     * Ist es zu warm, um die Sonne hereinzulassen? Raum über der Grenze ODER Sommer (außen über der Sommergrenze).
+     * Winter (außen kühl) mit kühlem Raum → false: Sonnenwärme nutzen. Ohne beide Werte → null (Temperatur spielt keine Rolle).
+     * Hysterese 0,5 K über $vorher. Rückgabe: [?bool, Grundschlüssel ('raum'|'sommer'|'winter'|'')]
+     */
+    public static function zuWarm(?float $innen, ?float $aussen, float $innenGrenze, float $sommerAb, ?bool $vorher): array
+    {
+        if ($innen === null && $aussen === null) {
+            return [null, ''];
+        }
+        $h = $vorher ? -0.5 : 0.0;
+        if ($innen !== null && $innen >= $innenGrenze + $h) {
+            return [true, 'raum'];
+        }
+        if ($aussen !== null && $aussen >= $sommerAb + $h) {
+            return [true, 'sommer'];
+        }
+        return [false, 'winter'];
     }
 }

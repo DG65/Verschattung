@@ -163,6 +163,23 @@ $r1 = VSCHLogik::entscheide(['sonneAn' => false] + $G, $U, $z, $T, $t0 + 600);
 $r2 = VSCHLogik::entscheide(['sonneAn' => false] + $G, $U, $r1['z'], $T, $t0 + 1600);
 check('D12 Sonne weg nach 15 min: hochfahren (eigene Fahrt)', $r2['ziel'] === 'offen' && $r2['z']['wir'] === false);
 $r3 = VSCHLogik::entscheide(['sonneAn' => false] + $G, $U, $r2['z'], $T, $t0 + 1700);
+// Einstrahlung, Sommer/Winter, Raumhelligkeit (0.4.0)
+$rw = VSCHLogik::entscheide($G, ['hell' => false, 'hellGrund' => 'zu wenig'] + $U, [], $T, $t0);
+check('D30 Sonne auf der Fassade, Einstrahlung zu gering: nicht beschatten, Grund mit Wert', $rw['z']['kandidat'] === null && $rw['grund'] === 'zu wenig', $rw['grund']);
+$rw = VSCHLogik::entscheide($G, ['warm' => false, 'warmGrund' => 'Winter'] + $U, [], $T, $t0);
+check('D31 Winter: Sonnenwärme nutzen, Behang bleibt oben', $rw['z']['kandidat'] === null && $rw['grund'] === 'Winter');
+$rw = VSCHLogik::entscheide($G, ['warm' => true, 'warmGrund' => 'Raum warm'] + $U, [], $T, $t0);
+check('D32 Raum warm: beschatten, Grund nennt die Wärme', $rw['z']['kandidat'] === true && strpos($rw['grund'], 'Raum warm') === 0, $rw['grund']);
+$rw = VSCHLogik::entscheide($G, ['raumHell' => false, 'raumHellGrund' => 'Raum dunkel'] + $U, [], $T, $t0);
+check('D33 Raumhelligkeit unter Schwelle: nicht herunterfahren', $rw['z']['kandidat'] === null && $rw['grund'] === 'Raum dunkel');
+$rw = VSCHLogik::entscheide($G, ['raumHell' => false] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D34 Behang unten, Raum dunkel: bleibt unten (Hochfahren nie nach Raumhelligkeit)', $rw['ziel'] === 'beschatten' && $rw['z']['soll'] === true, json_encode($rw));
+check('D35 Sommer/Winter-Regel', VSCHLogik::zuWarm(25.0, 5.0, 24, 18, null) === [true, 'raum'] && VSCHLogik::zuWarm(21.0, 22.0, 24, 18, null) === [true, 'sommer']
+    && VSCHLogik::zuWarm(21.0, 5.0, 24, 18, null) === [false, 'winter'] && VSCHLogik::zuWarm(null, null, 24, 18, null) === [null, '']
+    && VSCHLogik::zuWarm(23.6, null, 24, 18, true) === [true, 'raum'] && VSCHLogik::zuWarm(23.6, null, 24, 18, false) === [false, 'winter']);
+check('D36 Klarer Himmel 48° N: Juni ≈ 930, Dezember ≈ 280 W/m²', abs(VSCHLogik::klarHimmel(90 - 48.34 + 23.44) - 930) < 30 && abs(VSCHLogik::klarHimmel(90 - 48.34 - 23.44) - 280) < 40,
+    round(VSCHLogik::klarHimmel(65.1)) . '/' . round(VSCHLogik::klarHimmel(18.2)));
+check('D37 Lux → W/m²: 120 lx ≈ 1 W/m²', VSCHLogik::luxZuWm2(30000) == 250.0);
 check('D13 danach Ruhe', $r3['ziel'] === null);
 // Handbedienung
 $zh = ['hand' => true] + $z;
@@ -359,7 +376,7 @@ $walk = function ($x) use (&$walk, &$namen) {
 };
 $walk($form['elements']);
 $walk($form['actions']);
-foreach (['Standort', 'Fassaden', 'Geraete', 'WindID', 'RegenID', 'SperreID', 'WarnHubNutzen', 'NetzWetter', 'MarkiseOhneWetter', 'HelligkeitID', 'HellAn', 'HellAus', 'TemperaturID', 'TemperaturMin', 'VerzoegerungAn', 'VerzoegerungAus', 'WindMarkise', 'WindRaffstore', 'Haltezeit'] as $p) {
+foreach (['Standort', 'Fassaden', 'Geraete', 'WindID', 'RegenID', 'SperreID', 'WarnHubNutzen', 'NetzWetter', 'MarkiseOhneWetter', 'HelligkeitID', 'SonneAn', 'SonneAus', 'TemperaturID', 'AussenSommer', 'InnenGrenze', 'RaumHellAn', 'VerzoegerungAn', 'VerzoegerungAus', 'WindMarkise', 'WindRaffstore', 'Haltezeit'] as $p) {
     check("G15 Eigenschaft $p im Formular", in_array($p, $namen, true));
 }
 check('G16 Grafiken im Formular', in_array('Grundriss', $namen, true) && in_array('Himmel', $namen, true));
@@ -410,6 +427,14 @@ mkvar(981, 0, true, 'Fenster Rechts', 0, false, '~Window');
 check('G30 zweiter Kontakt offen → Fenster gilt als offen', $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 981]) === true);
 check('G30b vierter Kontakt offen → Fenster gilt als offen', $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 0, 'Kontakt3' => 0, 'Kontakt4' => 981]) === true);
 check('G31 beide zu → nicht offen', (function () use ($fo, $m) { SetValue(981, false); return $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 981]) === false; })());
+$w2 = new ReflectionMethod($m, 'wm2'); $w2->setAccessible(true);
+mkvar(985, 2, 30000.0, 'Helligkeit', 0, false, ''); $GLOBALS['OBJ'][985]['suffix'] = ' lx';
+mkvar(986, 2, 21617.0, 'Solar Einstrahlung', 0, false, '', 'solarradiation'); $GLOBALS['OBJ'][986]['suffix'] = ' lx';
+mkvar(987, 2, 412.0, 'Strahlung', 0, false, ''); $GLOBALS['OBJ'][987]['suffix'] = ' W/m²';
+mkvar(988, 2, 30.0, 'Helligkeit', 0, false, ''); $GLOBALS['OBJ'][988]['suffix'] = ' klx';
+check('G32 W/m²: die Einheit entscheidet – Lux umgerechnet (auch Froggit „Solar Einstrahlung“ in lx, Live-Befund 24.11.), W/m² direkt, klx', $w2->invoke($m, 985) == 250.0 && abs($w2->invoke($m, 986) - 180.1) < 0.1 && $w2->invoke($m, 987) == 412.0
+    && $w2->invoke($m, 988) == 250.0 && $w2->invoke($m, 0) === null);
+check('G33 Verbindung zeigt den umgerechneten Wert', strpos($vt->invoke($m, 'HelligkeitID', 985, []), '≈ 250 W/m²') !== false && strpos($vt->invoke($m, 'HelligkeitID', 987, []), '≈') === false);
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
@@ -518,7 +543,24 @@ check('I16c Regen ohne Station: Regenmelder des Geräts', VSCHErkennung::sensore
 check('I16d Wind: „Geschwindigkeit“ ist kein Wind', VSCHErkennung::sensoren([380 => $IN[380]], [])['WindID'] === 0);
 check('I16b Wind: „Börse“ ist keine „Böe“', VSCHErkennung::sensoren([350 => $IN[350]], [])['WindID'] === 0);
 check('I17 Temperatur: Außentemperatur, nicht gefühlt/innen/Auto', $S['TemperaturID'] === 307, (string)$S['TemperaturID']);
-check('I18 Helligkeit: weder Einstrahlung (W/m²) noch Innensensor', $S['HelligkeitID'] === 0, (string)$S['HelligkeitID']);
+check('I18 Sonne: Einstrahlung der Wetterstation (W/m², auch mit Lux-Profil), nie Innensensor', $S['HelligkeitID'] === 311, (string)$S['HelligkeitID']);
+check('I18g 15-Minuten-Mittelwert nicht neben dem Rohwert (Live-Befund 24.11.)', VSCHErkennung::sensoren([300 => ['name' => 'Wetterstation', 'ort' => '', 'modul' => '', 'vars' => [[1, 'Solar Einstrahlung (MW 15 Minuten)', '', 2, '~Illumination', false], [2, 'Solar Einstrahlung', 'solarradiation', 2, '~Illumination', false]]]], [])['HelligkeitID'] === 2);
+check('I18h Z-Wave „Sensor Multilevel (Beleuchtung)“ ist Raumhelligkeit', VSCHErkennung::raumSensorFuer('Jalousie Kind I', VSCHErkennung::raumSensoren([5 => ['name' => 'Sensor Kind I', 'ort' => 'Sensoren', 'modul' => '', 'vars' => [[51, 'Sensor Multilevel (Beleuchtung)', 'SensorMultilevel03Variable', 2, 'Illumination', false]]]]), 'hell') === 51);
+check('I18b Lux außen, wenn keine Einstrahlung da ist', VSCHErkennung::sensoren([390 => ['name' => 'Wetter', 'ort' => '', 'modul' => '', 'vars' => [[391, 'Helligkeit außen', '', 2, '~Illumination', false]]], 330 => $IN[330]], [])['HelligkeitID'] === 391);
+$RS = VSCHErkennung::raumSensoren([
+    1 => ['name' => 'Thermostat Kind I', 'ort' => '', 'modul' => '', 'vars' => [[11, 'Temperatur', 'temp', 2, '~Temperature.Room', false], [12, 'Solltemperatur', 'setpoint', 2, '~Temperature.Room', false]]],
+    2 => ['name' => 'Sensor Kind II', 'ort' => '', 'modul' => '', 'vars' => [[21, 'Temperatur', '', 2, '~Temperature', false], [22, 'Helligkeit', '', 2, '~Illumination', false]]],
+    3 => ['name' => 'Jalousie Kind I', 'ort' => '', 'modul' => '', 'vars' => [[31, 'Position', '', 1, '~Shutter', true], [32, 'Gerätetemperatur', '', 2, '~Temperature', false]]],
+    4 => ['name' => 'Wetterstation', 'ort' => '', 'modul' => '', 'vars' => [[41, 'Außentemperatur', '', 2, '~Temperature', false]]],
+    5 => ['name' => 'Sensor Küche', 'ort' => '', 'modul' => '', 'vars' => [[51, 'Temperatur', '', 2, '~Temperature', false], [52, 'Temperatur', '', 2, '', false, '', '', VSCHErkennung::V_RAUMTEMP[0]]]],
+]);
+check('I18c Raumtemperatur: Raum und Nummer passen, Sollwert/Gerätetemperatur/Station nie', VSCHErkennung::raumSensorFuer('Jalousie Kind I', $RS, 'temp') === 11
+    && VSCHErkennung::raumSensorFuer('Jalousie Kind II', $RS, 'temp') === 21 && !in_array(12, array_column($RS, 0), true)
+    && !in_array(32, array_column($RS, 0), true) && !in_array(41, array_column($RS, 0), true), json_encode($RS));
+check('I18d Raumhelligkeit nur im selben Raum; Behang ohne Nummer nimmt keinen „Kind II“-Sensor', VSCHErkennung::raumSensorFuer('Jalousie Kind II', $RS, 'hell') === 22
+    && VSCHErkennung::raumSensorFuer('Jalousie Kind I', $RS, 'hell') === 0 && VSCHErkennung::raumSensorFuer('Rollladen Kinderzimmer', $RS, 'hell') === 0);
+check('I18e Vorlage Raumtemperatur geht vor', VSCHErkennung::raumSensorFuer('Rollladen Küche', $RS, 'temp') === 52);
+check('I18f Gerätezeile bekommt Raumsensoren', ($G['Jalousie Wohnen Rechts']['RaumHell'] ?? -1) === 331, json_encode($G['Jalousie Wohnen Rechts'] ?? null));
 $S = VSCHErkennung::sensoren($IN, ['instanz' => 300, 'vars' => []]);
 check('I19 WarnHub wertet die Station aus: Wind/Regen gar nicht zuordnen, auch nicht aus anderen Geräten', $S['WindID'] === 0 && $S['RegenID'] === 0 && ($S['hinweise']['WindID'] ?? '') === 'warnhub' && ($S['hinweise']['RegenID'] ?? '') === 'warnhub' && $S['TemperaturID'] === 307);
 $IN2 = $IN + [400 => ['name' => 'Zweite Station', 'ort' => 'Wetter', 'modul' => '', 'vars' => [[401, 'Außentemperatur', 'temp', 2, '~Temperature', false]]]];
@@ -575,7 +617,7 @@ $SV = VSCHErkennung::sensoren([
         [703, 'L', 'l', 2, '', false, '', '', VSCHErkennung::V_SOLAR],
         [704, 'R', 'r', 0, '', false, '', '', VSCHErkennung::V_REGEN],
         [705, 'W', 'w', 2, '', false, '', '', VSCHErkennung::V_WIND[1]]]]], []);
-check('I39 Vorlagen: Außentemperatur/Regen/Wind sicher, Raumtemperatur-Vorlage und Solarstrahlung nie', $SV['TemperaturID'] === 701 && $SV['RegenID'] === 704 && $SV['WindID'] === 705 && $SV['HelligkeitID'] === 0, json_encode($SV));
+check('I39 Vorlagen: Außentemperatur/Regen/Wind/Solarstrahlung sicher, Raumtemperatur-Vorlage nie außen', $SV['TemperaturID'] === 701 && $SV['RegenID'] === 704 && $SV['WindID'] === 705 && $SV['HelligkeitID'] === 703, json_encode($SV));
 $SS = VSCHErkennung::sensoren([
     800 => ['name' => 'KNX Wetterstation', 'ort' => 'Wetter', 'modul' => '{KNX}', 'vars' => [[801, 'Windalarm', 'Value', 0, '~Alert', false], [802, 'Regen', 'Value', 0, '~Raining', false]]],
     810 => ['name' => 'WarnHub', 'ort' => '', 'modul' => VSCHErkennung::WARNHUB_GUID, 'vars' => [[811, 'Sturmwarnung aktiv', 'storm', 0, '~Alert', false], [812, 'Wind', 'w', 2, '~WindSpeed.kmh', false]]]], []);
@@ -667,8 +709,7 @@ check('J10 Geräte-Seite blockiert ohne Fassade und nennt das Gerät', strpos($m
 check('J11 „nicht verschatten“ und gültige Fassade gehen durch', $m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => '-'], ['Name' => 'Y', 'Fassade' => 'B']]])) === '');
 check('J12 Fassade, die es nicht gibt, blockiert', $m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'Z', 'Fassade' => 'F']]])) !== '');
 check('J13 Haus-Seite ohne Fassade blockiert', $m->UIAssistentPruefen('haus', '[]') !== '' && $m->UIAssistentPruefen('haus', json_encode($fx)) === '');
-check('J14 „Nur wenn hell“ ohne Sensor blockiert', $m->UIAssistentPruefen('wann', json_encode(['wann' => 1, 'hell' => 0, 'temp' => 0])) !== ''
-    && $m->UIAssistentPruefen('wann', json_encode(['wann' => 0, 'hell' => 0, 'temp' => 0])) === '');
+check('J14 Schritt 7: Sensoren sind freiwillig, nichts blockiert', $m->UIAssistentPruefen('wann', json_encode(['hell' => 0, 'temp' => 0])) === '');
 check('J15 Standort „woanders“ ohne Kartenpunkt blockiert', $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":0,"longitude":0}'])) !== ''
     && $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":48.1,"longitude":7.9}'])) === '');
 check('J16 nur Rollläden: Wetterschutz-Seite wird übersprungen', $m->UIAssistentWeiter(json_encode([['Typ' => 'rollladen', 'Fassade' => 'A']])) === 'wann'
@@ -691,16 +732,17 @@ $m->UIAssistentOeffnen();
 $m->UIAssistentMerken('fassaden', json_encode($fx));
 $m->UIAssistentMerken('geraete', json_encode([['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]]));
 $m->fieldUpdates = [];
-$m->UIAssistentZusammenfassung('', '', 0);
+$m->UIAssistentZusammenfassung('', '', '{}');
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J25 Zusammenfassung nennt die Geräte je Fassade (Live-Befund 23.11.)', strpos($f['WZusammenfassung'] ?? '', 'A Süd: X') !== false, $f['WZusammenfassung'] ?? '');
 $m->fieldUpdates = [];
 $msg = $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'standort' => '', 'fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]],
-    'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'wann' => 0, 'hell' => 123, 'hellAn' => 30000, 'temp' => 0, 'tempMin' => 0]));
+    'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'hell' => 123, 'sonneAn' => 300, 'temp' => 0, 'aussenSommer' => 20, 'innenGrenze' => 25, 'raumHellAn' => 15]));
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J19 Übernehmen füllt nur das Formular (keine Eigenschaft geändert)', isset($f['Fassaden'], $f['Geraete']) && count(json_decode($m->props['Geraete'], true)) === 2);
 check('J20 „nicht verschatten“ landet nicht in der Geräteliste', array_column(json_decode($f['Geraete'], true), 'Name') === ['X']);
-check('J21 „Immer bei Sonne“: Helligkeitssensor wird geleert', ($f['HelligkeitID'] ?? -1) === 0 && ($f['TemperaturID'] ?? -1) === 0);
+check('J21 Schritt 7: Sensor und Schieberegler landen im Formular, Ende bei 60 %', ($f['HelligkeitID'] ?? -1) === 123 && ($f['TemperaturID'] ?? -1) === 0
+    && ($f['SonneAn'] ?? 0) == 300 && ($f['SonneAus'] ?? 0) == 180 && ($f['AussenSommer'] ?? 0) == 20 && ($f['InnenGrenze'] ?? 0) == 25 && ($f['RaumHellAn'] ?? 0) == 15, json_encode($f));
 check('J22 Standort-Instanz gewählt: eigener Standort wird geleert', json_decode($f['Standort'], true) === ['latitude' => 0, 'longitude' => 0]);
 check('J23 Meldung sagt „Änderungen übernehmen“', strpos($msg, 'Änderungen übernehmen') !== false, $msg);
 // Probefahrt mit Assistenten-Daten
@@ -744,7 +786,7 @@ $m->UIAssistentUebernehmen(json_encode(['art' => 0]));
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J44 Übernehmen: Fassadenliste mit A/C inaktiv, B aktiv', array_column(json_decode($f['Fassaden'] ?? '[]', true), 'Aktiv', 'Kennung') === ['A' => false, 'B' => true, 'C' => false]);
 $m->fieldUpdates = [];
-$m->UIAssistentZusammenfassung('', '', 0);
+$m->UIAssistentZusammenfassung('', '', '{}');
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J45 Zusammenfassung nennt nur Sonnenzeiten genutzter Fassaden', strpos($f['WZusammenfassung'] ?? '', 'B Süd:') !== false && strpos($f['WZusammenfassung'] ?? '', 'A Ost:') === false, $f['WZusammenfassung'] ?? '');
 // Info-Feld nur mit Häkchen
@@ -766,6 +808,24 @@ $pg = array_column($seiten, null, 'name');
 check('J28 Geräteseite merkt beim Weiter den Entwurf (aktuelle Seite = Listenänderungen sind da)', strpos((string)($pg['geraete']['onConfirm'] ?? ''), 'VSCH_UIAssistentMerken') !== false);
 check('J29 spätere Seiten lesen nicht mehr $WGeraete', strpos(json_encode([$pg['probe'], $pg['wann'], $pg['fertig']]), 'WGeraete') === false);
 
+// WarnHub wertet die Wetterstation aus: klar sagen, überflüssige Felder ausblenden, nicht doppelt auswerten (Dietmar 24.11.)
+mkinst(905, 'Wetterstation', 0);
+$GLOBALS['CONF_PROP'][900]['WetterstationInstanceID'] = 905;
+$sicht = function (array $form, string $name) { $v = null; $w = function ($x) use (&$w, &$v, $name) { if (!is_array($x)) { return; } if (($x['name'] ?? null) === $name) { $v = $x; return; } foreach ($x as $y) { $w($y); } }; $w($form); return $v; };
+$ff = json_decode($m->GetConfigurationForm(), true);
+check('J46 WarnHub deckt die Station: Hinweis sichtbar, nennt die Wetterstation', ($sicht($ff, 'WarnHubDeckt')['visible'] ?? false) === true && strpos($sicht($ff, 'WarnHubDeckt')['caption'] ?? '', 'Wetterstation') !== false);
+check('J47 Formular: Wind/Regen/Böenvorhersage/Markise-ohne ausgeblendet, Sperre und Haltezeit sichtbar',
+    ($sicht($ff, 'WindID')['visible'] ?? true) === false && ($sicht($ff, 'RegenID')['visible'] ?? true) === false && ($sicht($ff, 'WindSchwellen')['visible'] ?? true) === false
+    && ($sicht($ff, 'NetzWetter')['visible'] ?? true) === false && ($sicht($ff, 'SperreID')['visible'] ?? true) !== false && ($sicht($ff, 'Haltezeit')['visible'] ?? true) !== false);
+check('J48 Assistent: Wetterseite blendet die Felder aus und sagt „kommt von WarnHub“', ($sicht($ff, 'WWind')['visible'] ?? true) === false && ($sicht($ff, 'WWarnHubDeckt')['visible'] ?? false) === true);
+$m->fieldUpdates = [];
+$m->UIWetterSicht(false, false);
+$u = []; foreach ($m->fieldUpdates as $x) { if ($x[1] === 'visible') { $u[$x[0]] = $x[2]; } }
+check('J49 „WarnHub nutzen“ aus: Felder wieder sichtbar, Hinweis weg', ($u['WindID'] ?? null) === true && ($u['WarnHubDeckt'] ?? null) === false);
+unset($GLOBALS['CONF_PROP'][900]['WetterstationInstanceID']);
+$ff = json_decode($m->GetConfigurationForm(), true);
+check('J50 ohne Station in WarnHub: Felder sichtbar', ($sicht($ff, 'WindID')['visible'] ?? true) !== false && ($sicht($ff, 'WarnHubDeckt')['visible'] ?? true) === false);
+
 // ---------------------------------------------------------------------------
 heading('H Übersetzung und Formularregeln');
 $code = (string)file_get_contents($root . '/Verschattung/module.php');
@@ -785,7 +845,7 @@ foreach (glob($root . '/Verschattung/*.php') as $datei) {
     }
 }
 $fehlt = array_values(array_filter(array_keys($texte), fn($t) => !isset($GLOBALS['DE'][$t])));
-check('H4 jeder Text hat eine deutsche Übersetzung', $fehlt === [], count($fehlt) . ': ' . implode(' | ', array_slice($fehlt, 0, 8)));
+check('H4 jeder Text hat eine deutsche Übersetzung', $fehlt === [], count($fehlt) . ': ' . implode(' | ', array_slice($fehlt, 0, 60)));
 $unbenutzt = array_values(array_filter(array_keys($GLOBALS['DE']), fn($t) => !isset($texte[$t])));
 check('H5 keine unbenutzten Übersetzungen', $unbenutzt === [], implode(' | ', array_slice($unbenutzt, 0, 8)));
 foreach ($GLOBALS['DE'] as $en => $de) {

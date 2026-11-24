@@ -57,6 +57,7 @@ class VSCHErkennung
     public static function geraete(array $instanzen, array $vergeben): array
     {
         $kontakte = self::kontakte($instanzen);
+        $raum = self::raumSensoren($instanzen);
         $out = [];
         foreach ($instanzen as $iid => $i) {
             if (($i['modul'] ?? '') === self::GRUPPE_GUID || preg_match(self::STEUERMODUL, (string)($i['modulName'] ?? ''))) {
@@ -78,6 +79,8 @@ class VSCHErkennung
                 'Lamelle' => $lam[0] ?? 0, 'LamelleUmgekehrt' => $lam !== null && stripos($lam[4], 'reversed') !== false,
                 'Kontakt' => ($k = self::kontakteFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $kontakte))[0] ?? 0,
                 'Kontakt2' => $k[1] ?? 0, 'Kontakt3' => $k[2] ?? 0, 'Kontakt4' => $k[3] ?? 0, 'Beschattung' => 0,
+                'RaumTemp' => self::raumSensorFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $raum, 'temp'),
+                'RaumHell' => self::raumSensorFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $raum, 'hell'),
             ];
         }
         return $out;
@@ -368,6 +371,75 @@ class VSCHErkennung
         return trim((string)preg_replace('/[^a-z0-9]+/', ' ', $s));
     }
 
+    // ------------------------------------------------------------------ Raumsensoren
+
+    /**
+     * Temperatur- und Helligkeitssensoren in Räumen: [[id, Name samt Ort, 'temp'|'hell', Punkte], …].
+     * Nicht: Wetterstation/außen, Behänge selbst (Gerätetemperatur eines Aktors), Soll- und abgeleitete Werte.
+     */
+    public static function raumSensoren(array $instanzen): array
+    {
+        $out = [];
+        foreach ($instanzen as $iid => $i) {
+            $ort = self::norm($i['name'] . ' ' . ($i['ort'] ?? ''));
+            if (preg_match('/aussen|outdoor|outside|wetter|weather|station|dach|roof|garten|garden|prognose|forecast/', $ort)
+                || ($i['modul'] ?? '') === self::WARNHUB_GUID || self::position($i) !== null) {
+                continue;
+            }
+            foreach ($i['vars'] as $v) {
+                [$id, $name, $ident, $typ, $profil] = $v;
+                if (!in_array($typ, [1, 2], true)) {
+                    continue;
+                }
+                $n = self::norm($name . ' ' . $ident);
+                $p = strtolower($profil);
+                $vorlage = (string)($v[8] ?? '');
+                if (preg_match('/max|min|tag|day|durchschnitt|avg|mittel|soll|setpoint|target|ziel|geraet|device|intern|chip|cpu|board|vorlauf|ruecklauf|rohr|boden|taupunkt|dew|gefuehlt|feels/', $n)) {
+                    continue;
+                }
+                if (in_array($vorlage, self::V_RAUMTEMP, true)) {
+                    $out[] = [$id, $i['name'] . ' ' . ($i['ort'] ?? ''), 'temp', 3];
+                } elseif ($vorlage === '' && str_contains($p, 'temperature') && !preg_match('/aussen|outdoor|outside/', $n)) {
+                    $out[] = [$id, $i['name'] . ' ' . ($i['ort'] ?? ''), 'temp', str_contains($p, 'room') ? 2 : 1];
+                } elseif ($vorlage === self::V_HELLIGKEIT
+                    || ($vorlage === '' && (str_contains($p, 'illumination') || preg_match('/helligkeit|\blux\b|illumin|brightness/', $n)))) {
+                    if (!preg_match('/solar|einstrahlung|radiation|uv|led|dimm|\\blevel\\b/', $n)) { // „Sensor Multilevel“ (Z-Wave) ist kein Dimmer
+                        $out[] = [$id, $i['name'] . ' ' . ($i['ort'] ?? ''), 'hell', 1];
+                    }
+                }
+            }
+        }
+        return $out;
+    }
+
+    /** Der Raumsensor zum Gerätenamen: bester eindeutiger Treffer im selben Raum, sonst 0 (nicht raten). */
+    public static function raumSensorFuer(string $geraet, array $sensoren, string $art): int
+    {
+        $d = self::teile($geraet);
+        if ($d['raum'] === []) {
+            return 0;
+        }
+        $treffer = [];
+        foreach ($sensoren as $s) {
+            if ($s[2] !== $art) {
+                continue;
+            }
+            $c = self::teile($s[1]);
+            if (!self::gleicherRaum($d['raum'], $c['raum'])) {
+                continue;
+            }
+            if ($d['nr'] !== [] && $c['nr'] !== [] && array_intersect($d['nr'], $c['nr']) === []) {
+                continue;
+            }
+            if ($d['nr'] === [] && $c['nr'] !== []) {
+                continue; // „Kind I“-Sensor passt nicht zu einem Behang ohne Nummer
+            }
+            $treffer[] = [$s[3], $s[0]];
+        }
+        usort($treffer, fn($a, $b) => $b[0] <=> $a[0]);
+        return $treffer !== [] && (count($treffer) === 1 || $treffer[0][0] > $treffer[1][0]) ? $treffer[0][1] : 0;
+    }
+
     // ------------------------------------------------------------------ Sensoren
 
     /**
@@ -436,8 +508,11 @@ class VSCHErkennung
         if ($vorlage === self::V_HELLIGKEIT && $zahlV && !preg_match('/innen|indoor/', $n . ' ' . $ort)) {
             return ['HelligkeitID' => preg_match('/aussen|outdoor|outside|wetter|weather|dach|roof/', $n . ' ' . $ort) ? 10 : 5];
         }
+        if ($vorlage === self::V_SOLAR && $zahlV && !$ausgeschlossen) {
+            return ['HelligkeitID' => 12]; // Einstrahlung (W/m²): das genaueste Maß für Sonne
+        }
         if ($vorlage === self::V_SOLAR || in_array($vorlage, self::V_RAUMTEMP, true)) {
-            return []; // Einstrahlung ist keine Helligkeit, Raumtemperatur keine Außentemperatur
+            return []; // Raumtemperatur ist keine Außentemperatur
         }
         $aussen = preg_match('/aussen|outdoor|outside|wetter|weather|dach|roof/', $n . ' ' . $ort) === 1;
         $zahl = in_array($typ, [1, 2], true);
@@ -459,9 +534,13 @@ class VSCHErkennung
                 $s['RegenID'] = 1 + $station;
             }
         }
-        // Helligkeit: nur Lux außen; Einstrahlung (W/m²) und Innenraumsensoren nie
-        if ($zahl && $aussen && (str_contains($p, 'illumination') || preg_match('/helligkeit|lux|illumin|brightness/', $n))
-            && !preg_match('/solar|einstrahlung|radiation|uv|led/', $n)) {
+        // Sonne: Einstrahlung (W/m²) vor Lux außen; Innenraumsensoren, UV und Tageswerte nie
+        $tagesWert = preg_match('/max|tag|day|durchschnitt|avg|mittel|\\bmw\\b|minute|stunde|hour|summe|sum|energie|energy|kwh/', $n) === 1;
+        if ($zahl && preg_match('/solar|einstrahlung|radiation|strahlung|irradi/', $n) && !preg_match('/\buv|led|pv|modul|panel/', $n) && !$tagesWert
+            && ($aussen || $station > 0 || str_contains($p, 'illumination') || str_contains($p, 'radiation'))) {
+            $s['HelligkeitID'] = 4 + $station;
+        } elseif ($zahl && $aussen && (str_contains($p, 'illumination') || preg_match('/helligkeit|lux|illumin|brightness/', $n))
+            && !preg_match('/solar|einstrahlung|radiation|uv|led/', $n) && !$tagesWert) {
             $s['HelligkeitID'] = 1 + $station;
         }
         // Temperatur: Außentemperatur mit Temperaturprofil, keine abgeleiteten Werte oder Sollwerte

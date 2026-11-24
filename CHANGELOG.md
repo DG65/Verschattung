@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 (in Entwicklung)
+
+- **Wann beschatten – mit Messwerten statt nur nach Sonnenstand** (Dietmar 24.11.: „Woran machst Du fest, dass nun Sonne auf der Fassade ist?“):
+  - **Einstrahlung in W/m²** mit Schieberegler „Beschatten ab“/„Beenden unter“ (Vorgabe 250/150 W/m²). Der Regler reicht bis zum Klarhimmelwert der eigenen Breite; darunter steht, was dort im Juni und im Dezember mittags möglich ist (48° N: ≈ 930 / 280 W/m²). Lux-Sensoren werden umgerechnet (1 W/m² ≈ 120 lx); die Einheit der Variable entscheidet. Unter dem Sensorfeld steht der umgerechnete Wert.
+  - **Sommer oder Winter aus Außen- und Raumtemperatur:** beschatten, wenn der Raum zu warm ist (Schieberegler, Vorgabe 24 °C) oder draußen Sommer ist (Schieberegler, Vorgabe 18 °C). Im Winter bleibt der Behang oben und die Sonne wärmt das Haus. Hysterese 0,5 K.
+  - **Raumhelligkeit nur zum Herunterfahren** (Schieberegler 0–20 W/m², Vorgabe 1,5): Erreicht die Sonne den Raum nicht, bleibt der Behang oben; das Hochfahren hängt nie davon ab.
+  - Begründungen im Status nennen die Werte, z. B. „Sonne auf der Fassade, aber nur 180 W/m² (Beschattung ab 250 W/m²)“ oder „außen kühl (6,4 °C), Raum 22,0 °C: Die Sonne darf das Haus wärmen“.
+- **Erkennung:** Einstrahlung der Wetterstation (auch Vorlage „Solar“) geht vor Lux außen; Mittelwerte („MW 15 Minuten“) werden übergangen. Neu je Behang: **Raumtemperatur** und **Raumhelligkeit** über den Raumnamen (Nummern trennen: Kind I ≠ Kind II; Sollwerte, Gerätetemperatur des Aktors und Wetterstation nie). Live gegen die eigene Anlage geprüft: sechs von sechs Raumtemperaturen richtig.
+- Assistent Schritt 7 und Formular „Feinheiten“ neu mit Schiebereglern; die Auswahl „immer / nur hell / nur warm“ entfällt. Die alten Eigenschaften HellAn/HellAus/TemperaturMin sind ungenutzt; die Temperaturvariable gilt jetzt als **Außen**temperatur.
+- Live-Befunde 24.11.: Die Froggit-„Solar Einstrahlung“ liefert Lux (Juli-Spitze 104 169 lx ≈ 870 W/m²), nicht W/m². Raumsensoren messen hinter Glas wenig: Sonne im Raum ≈ 200–2 100 lx, Wolken 30–100 lx.
+
+### aus 0.3.3 (nie veröffentlicht)
+
+
+- **Wetterschutz über WarnHub klar erkennbar:** Wertet WarnHub die Wetterstation aus und ist „WarnHub nutzen“ an, steht im Formular und im Assistenten „Der Wetterschutz kommt von WarnHub: Wetterstation „…“ (Wind, Regen) und amtliche Warnungen. Hier ist nichts einzutragen – die Windgrenzen werden in WarnHub eingestellt.“ Eigener Windsensor, Windgrenzen, Regensensor, Böenvorhersage und „Markisen ohne Wetterquelle“ sind dann ausgeblendet (im Assistenten auch die externe Sperre). Haken „WarnHub nutzen“ raus → die Felder erscheinen wieder. Keine Doppelauswertung (Dietmar 24.11.).
+
 ## 0.3.2 (in Entwicklung)
 
 - Fassaden ohne Gerät werden beim „OK“ des Assistenten auf „nicht aktiv“ gesetzt. Sie bleiben in der Liste – kommt später ein Behang dazu, reicht ein Häkchen. Vorschau und Zusammenfassung nennen nur noch aktive Fassaden, der Grundriss zeigt die ungenutzten blass, die Probefahrt bietet nur Fassaden mit Geräten an (mit Namen, z. B. „B · Süd“).

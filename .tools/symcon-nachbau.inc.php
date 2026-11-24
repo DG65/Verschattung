@@ -37,7 +37,7 @@ function IPS_VariableExists($id): bool { return isset($GLOBALS['OBJ'][(int)$id])
 function IPS_GetVariable($id): array
 {
     $o = $GLOBALS['OBJ'][(int)$id];
-    return ['VariableType' => $o['type'], 'VariableProfile' => '', 'VariableCustomProfile' => $o['profile'], 'VariablePresentation' => [], 'VariableCustomPresentation' => [], 'VariableUpdated' => $o['updated'] ?? 0];
+    return ['VariableType' => $o['type'], 'VariableProfile' => '', 'VariableCustomProfile' => $o['profile'], 'VariablePresentation' => isset($o['suffix']) ? ['SUFFIX' => $o['suffix']] : [], 'VariableCustomPresentation' => [], 'VariableUpdated' => $o['updated'] ?? 0];
 }
 function GetValueFormatted($id): string { $v = $GLOBALS['OBJ'][(int)$id]['value']; return is_bool($v) ? ($v ? 'true' : 'false') : str_replace('.', ',', (string)$v); }
 function IPS_GetVariableList(): array { return array_keys(array_filter($GLOBALS['OBJ'], fn($o) => $o['kind'] === 2)); }

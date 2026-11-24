@@ -18,7 +18,7 @@ Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später je
 3. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, bis zu vier Fensterkontakte). **Von Hand wird nur je Gerät die Fassade gewählt** (oder „nicht verschatten“) – mit „Für alle übernehmen“ in einem Klick. Steht die Richtung schon im Objektbaum (Ordner „Südseite“, Info-Feld „Ausrichtung: Süd“), ist sie vorbelegt.
 4. **Probefahrt** – je Fassade herunter und wieder hoch, noch bevor etwas gespeichert ist.
 5. **Wetterschutz** – nur bei Markisen/Raffstores: WarnHub, eigener Windsensor, Regensensor, Böenvorhersage.
-6. **Wann beschatten** – immer bei Sonne, nur wenn es hell ist, oder nur an warmen Tagen.
+6. **Wann beschatten** – mit Messwerten und Schiebereglern: Einstrahlung (W/m², der Regler zeigt, was auf der eigenen Breite bei klarem Himmel möglich ist), Sommer ab Außentemperatur, Raum zu warm ab, Raumhelligkeit.
 7. **Fertig** – Zusammenfassung mit den Sonnenzeiten von heute. „OK“ füllt das Formular, danach mit **„Änderungen übernehmen“** bestätigen.
 
 Der Assistent speichert nichts selbst – die Einstellungen gehören dem Nutzer. Für Feinarbeit bleibt das Formular darunter.
@@ -54,7 +54,10 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 ## Wie entschieden wird
 
 - **Sonne auf der Fassade:** Die Sonne steht höchstens 80° seitlich der Fassadenrichtung und mindestens 1° über dem Gelände-Horizont. Der Sonnenstand wird im Modul selbst berechnet (NOAA).
-- **Optional** Helligkeit (Beschatten ab / Beenden unter, mit Hysterese) und Temperatur (Beschatten erst ab).
+- **Scheint die Sonne wirklich?** Einstrahlung in W/m² (Wetterstation bevorzugt; Lux-Sensoren werden umgerechnet, 1 W/m² ≈ 120 lx – die Einheit der Variable entscheidet). Beschatten ab / Beenden unter mit Hysterese, Vorgabe 250 / 150 W/m². Klarer Himmel mittags auf 48° N: etwa 930 W/m² im Juni, 280 W/m² im Dezember.
+- **Sommer oder Winter:** Beschattet wird, wenn der Raum zu warm ist (Raumtemperatur je Behang, Vorgabe 24 °C) **oder** draußen Sommer ist (Außentemperatur, Vorgabe 18 °C). Im Winter – außen kühl, Raum nicht zu warm – bleibt der Behang oben und die Sonne wärmt das Haus. Ohne Temperaturen beschattet das Modul immer bei Sonne.
+- **Raumhelligkeit nur zum Herunterfahren:** Bleibt der Helligkeitssensor im Raum unter der Schwelle (Vorgabe 1,5 W/m² ≈ 180 lx), erreicht die Sonne den Raum nicht und der Behang bleibt oben. Hochgefahren wird nie danach – mit heruntergefahrenem Behang ist der Raum ohnehin dunkel.
+- Raumtemperatur und Raumhelligkeit erkennt das Modul je Behang über den Raumnamen (Spalten „Raumtemperatur“, „Raumhelligkeit“ der Geräteliste).
 - **Verzögerungen** (Standard 3 min bis Beschatten, 15 min bis Ende) verhindern Hin- und Herfahren.
 - **Raffstores:** Die Lamellen werden so gestellt, dass direkte Sonne gerade nicht durchkommt (Cut-off nach dem Profilwinkel), und erst ab 8° Änderung nachgeführt.
 - **Handbedienung hat Vorrang:** Wer ein Gerät von Hand fährt, hat Ruhe, bis sich die Sonnenlage ändert.

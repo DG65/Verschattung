@@ -42,9 +42,8 @@ trait VSCHAssistent
         $optFassade[] = ['caption' => $this->t('do not shade'), 'value' => '-'];
         $optProbe = array_slice($optFassade, 1, 12);
         $hatLocation = $this->standortInstanz() !== null;
-        $wann = $this->ReadPropertyInteger('TemperaturID') > 0 && $this->ReadPropertyFloat('TemperaturMin') > 0 ? 2
-            : ($this->ReadPropertyInteger('HelligkeitID') > 0 ? 1 : 0);
         $warnHub = function_exists('WHUB_GetActiveWarnings') && IPS_GetInstanceListByModuleID(self::WARNHUB_GUID) !== [];
+        $deckt = $this->warnHubDecktStation();
 
         $optRichtung = [['caption' => $this->t('South'), 'value' => 'S'], ['caption' => $this->t('West'), 'value' => 'W'],
             ['caption' => $this->t('East'), 'value' => 'O'], ['caption' => $this->t('North'), 'value' => 'N']];
@@ -65,7 +64,7 @@ trait VSCHAssistent
                         ], array_map(fn($r) => ['caption' => $this->t(['N' => 'North', 'O' => 'East', 'S' => 'South', 'W' => 'West'][$r]), 'name' => 'R' . $r,
                             'width' => '70px', 'edit' => ['type' => 'CheckBox']], ['N', 'O', 'S', 'W']),
                         array_map(fn($k) => ['caption' => $k, 'name' => $k, 'visible' => false, 'save' => true],
-                            ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung']))],
+                            ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung', 'RaumTemp', 'RaumHell']))],
                     ['type' => 'CheckBox', 'name' => 'WInfoSchreiben', 'caption' => $this->t('Also write to device info field'), 'value' => false],
                     ['type' => 'Label', 'caption' => $this->t('Optional: writes the line "Orientation: South" into the info field of each device, so other modules can read it. Other text there stays.')],
                 ],
@@ -128,6 +127,8 @@ trait VSCHAssistent
                         ['caption' => $this->t('Contact 2'), 'name' => 'Kontakt2', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
                         ['caption' => $this->t('Contact 3'), 'name' => 'Kontakt3', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
                         ['caption' => $this->t('Contact 4'), 'name' => 'Kontakt4', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Room temperature'), 'name' => 'RaumTemp', 'width' => '160px', 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Room brightness'), 'name' => 'RaumHell', 'width' => '160px', 'edit' => ['type' => 'SelectVariable']],
                         ['caption' => 'Position', 'name' => 'Position', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats (optional)'), 'name' => 'Lamelle', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats 0 % = closed'), 'name' => 'LamelleUmgekehrt', 'visible' => false, 'save' => true],
@@ -159,39 +160,24 @@ trait VSCHAssistent
             [
                 'name' => 'wetter', 'caption' => $this->t('Step 6 of 8 · Weather protection'),
                 'items' => [
-                    ['type' => 'Label', 'name' => 'WWetterText', 'caption' => $this->t('Awnings and venetian blinds retract on wind and severe weather. Choose at least one source.')],
-                    ['type' => 'CheckBox', 'name' => 'WWarnHub', 'caption' => $warnHub ? $this->t('Use WarnHub warnings') : $this->t('WarnHub (not installed)'),
+                    ['type' => 'Label', 'name' => 'WWarnHubDeckt', 'visible' => $deckt, 'caption' => $this->warnHubDecktText()],
+                    ['type' => 'Label', 'name' => 'WWetterText', 'visible' => !$deckt, 'caption' => $this->t('Awnings and venetian blinds retract on wind and severe weather. Choose at least one source.')],
+                    ['type' => 'CheckBox', 'name' => 'WWarnHub', 'onChange' => 'VSCH_UIWetterSicht($id, (bool)$WWarnHub, true);', 'caption' => $warnHub ? $this->t('Use WarnHub warnings') : $this->t('WarnHub (not installed)'),
                         'value' => $this->ReadPropertyBoolean('WarnHubNutzen') && $warnHub, 'enabled' => $warnHub],
-                    ['type' => 'SelectVariable', 'name' => 'WWind', 'caption' => $this->t('Wind gust (own sensor)')] + $this->auswahlWert('WindID'),
-                    ['type' => 'Label', 'name' => 'WWindInfo', 'caption' => $this->verbindungsText('WindID', $this->ReadPropertyInteger('WindID'), ['hinweise' => []])],
-                    ['type' => 'SelectVariable', 'name' => 'WRegen', 'caption' => $this->t('Rain sensor (optional)')] + $this->auswahlWert('RegenID'),
-                    ['type' => 'Label', 'name' => 'WRegenInfo', 'caption' => $this->verbindungsText('RegenID', $this->ReadPropertyInteger('RegenID'), ['hinweise' => []])],
-                    ['type' => 'SelectVariable', 'name' => 'WSperre', 'caption' => $this->t('External lock (optional)')] + $this->auswahlWert('SperreID'),
-                    ['type' => 'Label', 'name' => 'WSperreInfo', 'caption' => $this->verbindungsText('SperreID', $this->ReadPropertyInteger('SperreID'), ['hinweise' => []])],
-                    ['type' => 'CheckBox', 'name' => 'WNetzWetter', 'caption' => $this->t('Gust forecast from the internet'), 'value' => $this->ReadPropertyBoolean('NetzWetter')],
-                    ['type' => 'CheckBox', 'name' => 'WMarkiseOhne', 'caption' => $this->t('Extend awnings without weather source'), 'value' => $this->ReadPropertyBoolean('MarkiseOhneWetter')],
+                    ['type' => 'SelectVariable', 'name' => 'WWind', 'visible' => !$deckt, 'caption' => $this->t('Wind gust (own sensor)')] + $this->auswahlWert('WindID'),
+                    ['type' => 'Label', 'name' => 'WWindInfo', 'visible' => !$deckt, 'caption' => $this->verbindungsText('WindID', $this->ReadPropertyInteger('WindID'), ['hinweise' => []])],
+                    ['type' => 'SelectVariable', 'name' => 'WRegen', 'visible' => !$deckt, 'caption' => $this->t('Rain sensor (optional)')] + $this->auswahlWert('RegenID'),
+                    ['type' => 'Label', 'name' => 'WRegenInfo', 'visible' => !$deckt, 'caption' => $this->verbindungsText('RegenID', $this->ReadPropertyInteger('RegenID'), ['hinweise' => []])],
+                    ['type' => 'SelectVariable', 'name' => 'WSperre', 'visible' => !$deckt, 'caption' => $this->t('External lock (optional)')] + $this->auswahlWert('SperreID'),
+                    ['type' => 'Label', 'name' => 'WSperreInfo', 'visible' => !$deckt, 'caption' => $this->verbindungsText('SperreID', $this->ReadPropertyInteger('SperreID'), ['hinweise' => []])],
+                    ['type' => 'CheckBox', 'name' => 'WNetzWetter', 'visible' => !$deckt, 'caption' => $this->t('Gust forecast from the internet'), 'value' => $this->ReadPropertyBoolean('NetzWetter')],
+                    ['type' => 'CheckBox', 'name' => 'WMarkiseOhne', 'visible' => !$deckt, 'caption' => $this->t('Extend awnings without weather source'), 'value' => $this->ReadPropertyBoolean('MarkiseOhneWetter')],
                 ],
             ],
             [
                 'name' => 'wann', 'caption' => $this->t('Step 7 of 8 · When to shade'),
-                'items' => [
-                    ['type' => 'RadioButtonGroup', 'name' => 'WWann', 'value' => $wann, 'width' => '600px', 'options' => [
-                        ['caption' => $this->t('Whenever the sun shines on the facade'), 'value' => 0],
-                        ['caption' => $this->t('Only when it is bright'), 'value' => 1, 'items' => [
-                            ['type' => 'SelectVariable', 'name' => 'WHell', 'caption' => $this->t('Brightness (outdoor, lux)')] + $this->auswahlWert('HelligkeitID'),
-                            ['type' => 'Label', 'name' => 'WHellInfo', 'caption' => $this->verbindungsText('HelligkeitID', $this->ReadPropertyInteger('HelligkeitID'), ['hinweise' => []])],
-                            ['type' => 'NumberSpinner', 'name' => 'WHellAn', 'caption' => $this->t('Shade from'), 'suffix' => 'lx', 'minimum' => 0, 'value' => $this->ReadPropertyFloat('HellAn')],
-                        ]],
-                        ['caption' => $this->t('Only on warm days'), 'value' => 2, 'items' => [
-                            ['type' => 'SelectVariable', 'name' => 'WTemp', 'caption' => $this->t('Temperature')] + $this->auswahlWert('TemperaturID'),
-                            ['type' => 'Label', 'name' => 'WTempInfo', 'caption' => $this->verbindungsText('TemperaturID', $this->ReadPropertyInteger('TemperaturID'), ['hinweise' => []])],
-                            ['type' => 'NumberSpinner', 'name' => 'WTempMin', 'caption' => $this->t('Shade only from'), 'suffix' => '°C', 'digits' => 1,
-                                'value' => $this->ReadPropertyFloat('TemperaturMin') > 0 ? $this->ReadPropertyFloat('TemperaturMin') : 22.0],
-                        ]],
-                    ]],
-                ],
-                'validate' => 'return VSCH_UIAssistentPruefen($id, "wann", json_encode(["wann" => (int)$WWann, "hell" => (int)$WHell, "temp" => (int)$WTemp]));',
-                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", (int)$WWann);',
+                'items' => $this->sonnenFelder('W', ['hinweise' => []]),
+                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp]));',
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
@@ -203,7 +189,8 @@ trait VSCHAssistent
                 'nextPage' => -1,
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
-                    . '"wann" => (int)$WWann, "hell" => (int)$WHell, "hellAn" => (float)$WHellAn, "temp" => (int)$WTemp, "tempMin" => (float)$WTempMin]));',
+                    . '"hell" => (int)$WHell, "sonneAn" => (float)$WSonneAn, "temp" => (int)$WTemp, "aussenSommer" => (float)$WAussenSommer, '
+                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellAn" => (float)$WRaumHellAn]));',
             ],
         ];
         return [
@@ -289,14 +276,6 @@ trait VSCHAssistent
                     return $this->t('Please choose a facade (or "do not shade") for: %s', implode(', ', array_slice($offen, 0, 6)) . (count($offen) > 6 ? ' …' : ''));
                 }
                 return '';
-            case 'wann':
-                if ((int)($d['wann'] ?? 0) === 1 && (int)($d['hell'] ?? 0) === 0) {
-                    return $this->t('Please choose a brightness sensor or another option.');
-                }
-                if ((int)($d['wann'] ?? 0) === 2 && (int)($d['temp'] ?? 0) === 0) {
-                    return $this->t('Please choose a temperature sensor or another option.');
-                }
-                return '';
         }
         return '';
     }
@@ -373,14 +352,7 @@ trait VSCHAssistent
             // sichtbar machen, woher der Wert kommt und dass er lebt
             $this->UpdateFormField($feld . 'Info', 'caption', $this->verbindungsText($rolle, $id, $sens));
         }
-        if ($this->ReadPropertyInteger('HelligkeitID') === 0 && $this->ReadPropertyInteger('TemperaturID') === 0 && $sens['HelligkeitID'] > 0) {
-            $this->UpdateFormField('WWann', 'value', 1);
-        }
-        $text = [$this->t('Awnings and venetian blinds retract on wind and severe weather. Choose at least one source.')];
-        if (isset($sens['hinweise']['WindID']) && $sens['hinweise']['WindID'] === 'warnhub') {
-            $text[] = $this->t('Your weather station is already evaluated by WarnHub – keep "Use WarnHub warnings" ticked.');
-        }
-        $this->UpdateFormField('WWetterText', 'caption', implode(' ', $text));
+        // Wertet WarnHub die Wetterstation aus, sagt das die Seite ausdrücklich (WWarnHubDeckt) – hier nichts weiter
     }
 
     /** Zeilen für Schritt 1: gespeicherte Geräte (Richtung aus ihrer Fassade) + neu erkannte (Richtung aus Objektbaum/Name). */
@@ -500,7 +472,7 @@ trait VSCHAssistent
     }
 
     /** Seite 7: was der Assistent eingerichtet hat, mit den Sonnenzeiten von heute. */
-    public function UIAssistentZusammenfassung(string $fassadenJson, string $geraeteJson, int $wann): void
+    public function UIAssistentZusammenfassung(string $fassadenJson, string $geraeteJson, string $sensorJson = '{}'): void
     {
         $fassaden = array_values(array_filter($this->entwurf('fassaden', $fassadenJson), fn($f) => (bool)($f['Aktiv'] ?? true)));
         $geraete = $this->entwurf('geraete', $geraeteJson);
@@ -515,8 +487,18 @@ trait VSCHAssistent
         if ($aus > 0) {
             $zeilen[] = $this->t('Not shaded: %d', $aus);
         }
-        $zeilen[] = $wann === 1 ? $this->t('Shades when the sun is on the facade and it is bright.')
-            : ($wann === 2 ? $this->t('Shades when the sun is on the facade on warm days.') : $this->t('Shades whenever the sun is on the facade.'));
+        $s = json_decode($sensorJson, true) ?: [];
+        $raumT = count(array_filter($geraete, fn($g) => ($g['Fassade'] ?? '') !== '-' && (int)($g['RaumTemp'] ?? 0) > 0));
+        $raumH = count(array_filter($geraete, fn($g) => ($g['Fassade'] ?? '') !== '-' && (int)($g['RaumHell'] ?? 0) > 0));
+        $zeilen[] = (int)($s['hell'] ?? 0) > 0 ? $this->t('Shades when the sun is on the facade and the irradiance is high enough.')
+            : $this->t('Shades whenever the sun is on the facade (no irradiance sensor).');
+        $zeilen[] = (int)($s['temp'] ?? 0) > 0 || $raumT > 0
+            ? ((int)($s['temp'] ?? 0) > 0 ? $this->t('Summer/winter from the outdoor temperature and %d room temperatures.', $raumT)
+                : $this->t('Summer/winter from %d room temperatures (no outdoor temperature).', $raumT))
+            : $this->t('No temperatures: also shades in winter.');
+        if ($raumH > 0) {
+            $zeilen[] = $this->t('%d rooms confirm the sun with their brightness sensor.', $raumH);
+        }
         $zeilen[] = $this->vorschauText(self::nurGenutzteAktiv($fassaden, $geraete), -1, 'heute');
         $this->UpdateFormField('WZusammenfassung', 'caption', implode("\n", $zeilen));
     }
@@ -538,13 +520,17 @@ trait VSCHAssistent
         $this->UpdateFormField('SperreID', 'value', (int)($d['sperre'] ?? 0));
         $this->UpdateFormField('NetzWetter', 'value', (bool)($d['netz'] ?? false));
         $this->UpdateFormField('MarkiseOhneWetter', 'value', (bool)($d['ohne'] ?? false));
-        $wann = (int)($d['wann'] ?? 0);
-        $this->UpdateFormField('HelligkeitID', 'value', $wann === 1 ? (int)($d['hell'] ?? 0) : 0);
-        if ($wann === 1 && (float)($d['hellAn'] ?? 0) > 0) {
-            $this->UpdateFormField('HellAn', 'value', (float)$d['hellAn']);
+        $this->UpdateFormField('HelligkeitID', 'value', (int)($d['hell'] ?? 0));
+        $this->UpdateFormField('TemperaturID', 'value', (int)($d['temp'] ?? 0));
+        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellAn' => 'RaumHellAn'] as $q => $feld) {
+            if (isset($d[$q])) {
+                $this->UpdateFormField($feld, 'value', (float)$d[$q]);
+            }
         }
-        $this->UpdateFormField('TemperaturID', 'value', $wann === 2 ? (int)($d['temp'] ?? 0) : 0);
-        $this->UpdateFormField('TemperaturMin', 'value', $wann === 2 ? (float)($d['tempMin'] ?? 0) : 0.0);
+        if (isset($d['sonneAn'])) {
+            // Hysterese: Ende bei 60 % der Schwelle – Wolken lassen den Behang nicht gleich hochfahren
+            $this->UpdateFormField('SonneAus', 'value', (float)(round(0.6 * (float)$d['sonneAn'] / 10) * 10));
+        }
         $info = 0;
         if ((bool)($d['info'] ?? false)) {
             $info = $this->ausrichtungInsInfo($geraete, $fassaden);
