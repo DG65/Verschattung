@@ -580,6 +580,17 @@ $SS = VSCHErkennung::sensoren([
     810 => ['name' => 'WarnHub', 'ort' => '', 'modul' => VSCHErkennung::WARNHUB_GUID, 'vars' => [[811, 'Sturmwarnung aktiv', 'storm', 0, '~Alert', false], [812, 'Wind', 'w', 2, '~WindSpeed.kmh', false]]]], []);
 check('I40 Sperre: KNX-Windalarm wird als externe Sperre erkannt', $SS['SperreID'] === 801 && $SS['RegenID'] === 802, json_encode($SS));
 check('I41 Variablen von WarnHub selbst werden nie als Sensor genommen', $SS['WindID'] === 0);
+// Ausrichtung aus dem Objektbaum
+check('I42 Richtung aus Ordnername („Südseite“, „Fassade West“, „Ostflügel“)', VSCHErkennung::richtungAusText('Südseite / EG / Zuhause') === 180.0
+    && VSCHErkennung::richtungAusText('Fassade West') === 270.0 && VSCHErkennung::richtungAusText('Ostflügel') === 90.0 && VSCHErkennung::richtungAusText('Nordwest') === 315.0);
+check('I43 Richtung aus Info-Feld, auch als Gradzahl', VSCHErkennung::richtungAusText('Ausrichtung: Süd') === 180.0 && VSCHErkennung::richtungAusText('Ausrichtung: 166°') === 166.0
+    && VSCHErkennung::richtungAusText('Orientation 250') === 250.0);
+check('I44 keine Richtung in „Kost“, „Wohnen“, „Jalousien“', VSCHErkennung::richtungAusText('Kostbar Wohnen Jalousien') === null);
+check('I44b Gradzahl ohne „Ausrichtung“ zählt nicht („Anzeige um 180° drehen“), allein schon („166°“)', VSCHErkennung::richtungAusText('Anzeige um 180° drehen') === null && VSCHErkennung::richtungAusText('166°') === 166.0);
+check('I45 Fassade zum Azimut, höchstens 45° daneben', VSCHErkennung::fassadeZuAzimut(180.0, [['Kennung' => 'A', 'Azimut' => 76], ['Kennung' => 'B', 'Azimut' => 166]]) === 'B'
+    && VSCHErkennung::fassadeZuAzimut(0.0, [['Kennung' => 'B', 'Azimut' => 166]]) === '');
+$K = ['name' => 'Jalousie Wohnen', 'ort' => 'Jalousien', 'modul' => $zw, 'kontext' => ['Südseite / Zuhause'], 'vars' => [[901, 'Position', 'IntensityVariable', 1, '~Shutter', true]]];
+check('I46 Behang in Ordner „Südseite“: Hinweis 180°', (VSCHErkennung::geraete([900 => $K], [])[0]['AzHinweis'] ?? null) === 180.0);
 check('I33 Kontaktrichtung aus Darstellung „Geschlossen“', VSCHErkennung::kontaktUmgekehrt('', 'Status STATE', 'Geschlossen'));
 check('I34 Kontaktrichtung aus Darstellung „Open“', !VSCHErkennung::kontaktUmgekehrt('~Window.Reversed', 'x', 'Open'));
 
@@ -593,8 +604,8 @@ foreach ($form['actions'] as $a) {
     }
 }
 $seiten = $wiz['popup']['pages'] ?? [];
-check('J1 PopupAlert „Assistent“ mit 7 Seiten in fester Reihenfolge', $wiz !== null && $wiz['type'] === 'PopupAlert'
-    && array_column($seiten, 'name') === ['standort', 'haus', 'geraete', 'probe', 'wetter', 'wann', 'fertig'], json_encode(array_column($seiten, 'name')));
+check('J1 PopupAlert „Assistent“ mit 8 Seiten in fester Reihenfolge', $wiz !== null && $wiz['type'] === 'PopupAlert'
+    && array_column($seiten, 'name') === ['ausrichtung', 'standort', 'haus', 'geraete', 'probe', 'wetter', 'wann', 'fertig'], json_encode(array_column($seiten, 'name')));
 check('J2 öffnet sich bei eingerichteter Instanz nicht von selbst', ($wiz['visible'] ?? true) === false);
 $m3 = new VerschattungTest(33333);
 $m3->Create();
@@ -663,12 +674,17 @@ check('J16 nur Rollläden: Wetterschutz-Seite wird übersprungen', $m->UIAssiste
     && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => 'A']])) === 'wetter'
     && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => '-']])) === 'wann');
 check('J17 Fassade aus dem Gerätenamen („Rollladen Süd“)', Verschattung::fassadeAusName('Rollladen Süd', $fx) === 'A' && Verschattung::fassadeAusName('Jalousie Wohnen', $fx) === '');
+// Geräte vorbefüllen; Ausrichtung aus Link-Ordner
+mkinst(990, 'Südseite', 0); $GLOBALS['OBJ'][990]['kind'] = 0;
+$GLOBALS['OBJ'][991] = ['kind' => 6, 'name' => 'Kind I', 'parent' => 990, 'ident' => '', 'target' => 950];
 // Geräte vorbefüllen
 $m->fieldUpdates = [];
 $m->UIAssistentGeraete(json_encode($fx), '[]', 0, '');
 $f = array_column($m->fieldUpdates, 2, 0);
 $wg = json_decode($f['WGeraete'] ?? '[]', true);
 check('J18 Seite 3 wird mit erkannten Geräten gefüllt', in_array(951, array_column($wg, 'Position'), true) && isset($f['WLegende']) && strpos($f['WLegende'], 'A = Süd') === 0, json_encode(array_column($wg, 'Position')));
+$kind = array_values(array_filter($wg, fn($g) => $g['Position'] === 951));
+check('J31 Link im Ordner „Südseite“ → Fassade A (Süd) vorbelegt', ($kind[0]['Fassade'] ?? '') === 'A', json_encode($kind));
 // Übernehmen (Entwurf wie im echten Ablauf: Seite 2/3 haben ihn gemerkt)
 $m->UIAssistentOeffnen();
 $m->UIAssistentMerken('fassaden', json_encode($fx));
@@ -692,6 +708,35 @@ $m->UIAssistentMerken('geraete', json_encode([['Name' => 'Kind', 'Fassade' => 'B
 $m->fieldUpdates = [];
 $m->UIAssistentProbe(json_encode([['Name' => 'Kind', 'Fassade' => 'B', 'Typ' => 'raffstore', 'Position' => 951, 'Lamelle' => 952]]), 'B', true);
 check('J24 Probefahrt fährt Gerät aus dem Assistenten (ungespeichert)', in_array(951, array_column($GLOBALS['BEFEHLE'], 0), true), json_encode($GLOBALS['BEFEHLE']));
+$m->fieldUpdates = [];
+$m->UIAssistentAlle(json_encode([['Name' => 'X', 'Fassade' => ''], ['Name' => 'Y', 'Fassade' => 'A']]), 'B');
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J30 „Für alle übernehmen“ setzt alle Geräte auf die Fassade', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade') === ['B', 'B']);
+// Schritt 1: Ausrichtung ankreuzen
+check('J32 Kreuze → Azimut: eine Richtung, Ecke, Unsinn', Verschattung::richtungAusKreuzen(['S']) === 180.0 && Verschattung::richtungAusKreuzen(['S', 'W']) === 225.0
+    && Verschattung::richtungAusKreuzen(['W', 'N']) === 315.0 && Verschattung::richtungAusKreuzen(['N', 'S']) === null && Verschattung::richtungAusKreuzen(['N', 'O', 'S']) === null);
+check('J33 Prüfung: gegenüberliegende Kreuze blockieren mit Gerätename', strpos($m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'Küche', 'RN' => true, 'RS' => true]])), 'Küche') !== false);
+check('J34 Prüfung: kein einziges Kreuz blockiert, ein Kreuz geht durch', $m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'A']])) !== ''
+    && $m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'A', 'RS' => true], ['Name' => 'B']])) === '');
+$m->fieldUpdates = [];
+$m->UIAssistentAlleRichtung(json_encode([['Name' => 'A', 'RN' => true], ['Name' => 'B']]), 'S');
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J35 „Alle ankreuzen“ setzt genau Süd bei allen', array_map(fn($z) => [$z['RN'], $z['RS']], json_decode($f['WAusrichtung'] ?? '[]', true)) === [[false, true], [false, true]]);
+// Kreuze → Fassade nach Hauserkennung, kein Kreuz = nicht verschatten
+$m->UIAssistentOeffnen();
+$m->UIAssistentMerken('ausrichtung', json_encode([['Name' => 'Süd1', 'Position' => 951, 'Typ' => 'raffstore', 'RS' => true], ['Name' => 'Ohne', 'Position' => 952, 'Typ' => 'rollladen']]));
+$m->fieldUpdates = [];
+$m->UIAssistentGeraete(json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 76], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 166]]), '[]', 0, '');
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J36 Süd angekreuzt → Fassade B (166°), ohne Kreuz → nicht verschatten', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade', 'Name') === ['Süd1' => 'B', 'Ohne' => '-'], $f['WGeraete'] ?? '');
+// Info-Feld nur mit Häkchen
+$GLOBALS['OBJ'][950]['info'] = 'Bitte nicht anfassen';
+$m->UIAssistentUebernehmen(json_encode(['art' => 0, 'info' => false]));
+check('J37 ohne Häkchen bleibt das Info-Feld unangetastet', $GLOBALS['OBJ'][950]['info'] === 'Bitte nicht anfassen');
+$msg = $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'info' => true]));
+check('J38 mit Häkchen: „Ausrichtung: Süd“ angehängt, alter Text bleibt', $GLOBALS['OBJ'][950]['info'] === "Bitte nicht anfassen\nAusrichtung: Süd" && strpos($msg, 'Info-Feld von 1') !== false, $GLOBALS['OBJ'][950]['info'] . ' | ' . $msg);
+$m->UIAssistentUebernehmen(json_encode(['art' => 0, 'info' => true]));
+check('J39 zweimal übernehmen ersetzt die Zeile statt sie zu verdoppeln', substr_count($GLOBALS['OBJ'][950]['info'], 'Ausrichtung:') === 1);
 $m->UIAssistentOeffnen();
 check('J26 erneutes Öffnen verwirft den alten Entwurf', $m->UIAssistentWeiter(json_encode([['Typ' => 'rollladen', 'Fassade' => 'A']])) === 'wann');
 $ff = json_decode($m->GetConfigurationForm(), true);

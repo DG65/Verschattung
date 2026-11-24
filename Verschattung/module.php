@@ -694,6 +694,12 @@ class Verschattung extends IPSModule
         }
         unset($g);
         $neu = VSCHErkennung::geraete($inst, $vergeben);
+        $fassaden = $this->listeWerte($this->ReadPropertyString('Fassaden'));
+        foreach ($neu as &$n) {
+            $n['Fassade'] = VSCHErkennung::fassadeZuAzimut($n['AzHinweis'], $fassaden);
+            unset($n['AzHinweis']);
+        }
+        unset($n);
         $mitKontakt = count(array_filter($neu, fn($g) => $g['Kontakt'] > 0));
         $this->UpdateFormField('Geraete', 'values', json_encode(array_merge($geraete, $neu)));
 
@@ -779,6 +785,12 @@ class Verschattung extends IPSModule
     /** Momentaufnahme aller Instanzen mit ihren Variablen (Grundlage der Erkennung). */
     private function momentaufnahme(): array
     {
+        // Ordner, in denen Links auf ein Objekt liegen (für die Ausrichtung aus dem Objektbaum)
+        $linkOrdner = [];
+        foreach (IPS_GetLinkList() as $l) {
+            $ziel = (int)(IPS_GetLink($l)['TargetID'] ?? 0);
+            $linkOrdner[$ziel][] = $this->ordnerText(IPS_GetParent($l));
+        }
         $out = [];
         foreach (IPS_GetInstanceList() as $i) {
             if ($i === $this->InstanceID) {
@@ -795,10 +807,32 @@ class Verschattung extends IPSModule
             if ($vars !== []) {
                 $p = IPS_GetParent($i);
                 $mi = IPS_GetInstance($i)['ModuleInfo'];
-                $out[$i] = ['name' => IPS_GetName($i), 'ort' => $p > 0 ? IPS_GetName($p) : '', 'modul' => $mi['ModuleID'], 'modulName' => (string)($mi['ModuleName'] ?? ''), 'vars' => $vars];
+                $kontext = [(string)(IPS_GetObject($i)['ObjectInfo'] ?? ''), $this->ordnerText($p)];
+                foreach ($vars as $v) {
+                    $kontext[] = (string)(IPS_GetObject($v[0])['ObjectInfo'] ?? '');
+                    foreach ($linkOrdner[$v[0]] ?? [] as $t) {
+                        $kontext[] = $t;
+                    }
+                }
+                foreach ($linkOrdner[$i] ?? [] as $t) {
+                    $kontext[] = $t;
+                }
+                $out[$i] = ['name' => IPS_GetName($i), 'ort' => $p > 0 ? IPS_GetName($p) : '', 'modul' => $mi['ModuleID'], 'modulName' => (string)($mi['ModuleName'] ?? ''),
+                    'vars' => $vars, 'kontext' => array_values(array_filter($kontext, fn($t) => $t !== ''))];
             }
         }
         return $out;
+    }
+
+    /** Namen eines Ordners und seiner zwei übergeordneten Ordner („Fassade Süd / EG / Zuhause“). */
+    private function ordnerText(int $id): string
+    {
+        $teile = [];
+        for ($n = 0; $id > 0 && $n < 3; $n++) {
+            $teile[] = IPS_GetName($id);
+            $id = IPS_GetParent($id);
+        }
+        return implode(' / ', $teile);
     }
 
     /** Was WarnHub schon an Wetterstation auswertet (dann ordnet die Verschattung Wind/Regen nicht doppelt zu). */

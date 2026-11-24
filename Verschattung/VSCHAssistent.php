@@ -30,6 +30,7 @@ trait VSCHAssistent
     private function assistentFormular(array $fassaden, array $optTyp): array
     {
         $geraete = $this->listeWerte($this->ReadPropertyString('Geraete'));
+        $offen = $fassaden === [] && $geraete === [];
         $liste = function (string $feld): string {
             return '$' . $feld . 'A = []; foreach ($' . $feld . ' as $x) { $' . $feld . 'A[] = $x; } ';
         };
@@ -45,9 +46,35 @@ trait VSCHAssistent
             : ($this->ReadPropertyInteger('HelligkeitID') > 0 ? 1 : 0);
         $warnHub = function_exists('WHUB_GetActiveWarnings') && IPS_GetInstanceListByModuleID(self::WARNHUB_GUID) !== [];
 
+        $optRichtung = [['caption' => $this->t('South'), 'value' => 'S'], ['caption' => $this->t('West'), 'value' => 'W'],
+            ['caption' => $this->t('East'), 'value' => 'O'], ['caption' => $this->t('North'), 'value' => 'N']];
         $seiten = [
             [
-                'name' => 'standort', 'caption' => $this->t('Step 1 of 7 · Location'),
+                'name' => 'ausrichtung', 'caption' => $this->t('Step 1 of 8 · Orientation'),
+                'items' => [
+                    ['type' => 'Label', 'caption' => $this->t('Tick for each device where its windows face. Two neighbouring ticks = corner (e.g. South + West). No tick = do not shade.')],
+                    ['type' => 'RowLayout', 'items' => [
+                        ['type' => 'Select', 'name' => 'WAlleRichtung', 'caption' => $this->t('Tick all devices'), 'options' => $optRichtung, 'value' => 'S'],
+                        ['type' => 'Button', 'caption' => $this->t('Apply to all'),
+                            'onClick' => $liste('WAusrichtung') . 'VSCH_UIAssistentAlleRichtung($id, json_encode($WAusrichtungA), (string)$WAlleRichtung);'],
+                    ]],
+                    ['type' => 'List', 'name' => 'WAusrichtung', 'rowCount' => 8, 'add' => false, 'delete' => false, 'values' => $this->assistentAusrichtungZeilen($fassaden, $offen),
+                        'columns' => array_merge([
+                            ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'save' => true],
+                            ['caption' => $this->t('Type'), 'name' => 'TypText', 'width' => '160px', 'save' => true],
+                        ], array_map(fn($r) => ['caption' => $this->t(['N' => 'North', 'O' => 'East', 'S' => 'South', 'W' => 'West'][$r]), 'name' => 'R' . $r,
+                            'width' => '70px', 'edit' => ['type' => 'CheckBox']], ['N', 'O', 'S', 'W']),
+                        array_map(fn($k) => ['caption' => $k, 'name' => $k, 'visible' => false, 'save' => true],
+                            ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung']))],
+                    ['type' => 'CheckBox', 'name' => 'WInfoSchreiben', 'caption' => $this->t('Also write to device info field'), 'value' => false],
+                    ['type' => 'Label', 'caption' => $this->t('Optional: writes the line "Orientation: South" into the info field of each device, so other modules can read it. Other text there stays.')],
+                ],
+                'validate' => $liste('WAusrichtung') . 'return VSCH_UIAssistentPruefen($id, "ausrichtung", json_encode($WAusrichtungA));',
+                'onConfirm' => $liste('WAusrichtung') . 'VSCH_UIAssistentMerken($id, "ausrichtung", json_encode($WAusrichtungA));',
+                'onUndo' => '// nichts rückgängig zu machen',
+            ],
+            [
+                'name' => 'standort', 'caption' => $this->t('Step 2 of 8 · Location'),
                 'items' => [
                     ['type' => 'Label', 'caption' => $this->t('Where is the house? The sun position is calculated for this point.')],
                     ['type' => 'RadioButtonGroup', 'name' => 'WStandortArt', 'value' => $this->eigenerStandort() || !$hatLocation ? 1 : 0, 'width' => '600px', 'options' => [
@@ -61,7 +88,7 @@ trait VSCHAssistent
                 'validate' => 'return VSCH_UIAssistentPruefen($id, "standort", json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ']));',
             ],
             [
-                'name' => 'haus', 'caption' => $this->t('Step 2 of 7 · House'),
+                'name' => 'haus', 'caption' => $this->t('Step 3 of 8 · House'),
                 'items' => [
                     ['type' => 'Label', 'caption' => $this->t('Click "Detect house": the facades come from official map data. Correct or add them in the list if needed.')],
                     ['type' => 'Button', 'caption' => $this->t('🏠 Detect house'),
@@ -80,10 +107,16 @@ trait VSCHAssistent
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
-                'name' => 'geraete', 'caption' => $this->t('Step 3 of 7 · Devices'),
+                'name' => 'geraete', 'caption' => $this->t('Step 4 of 8 · Devices'),
                 'items' => [
                     ['type' => 'Label', 'caption' => $this->t('All roller shutters, venetian blinds and awnings found. Choose the facade for each one – that is all.')],
+                    ['type' => 'Label', 'caption' => $this->t('Tip: put the devices in a folder named after the direction (e.g. "South side") or write "Orientation: South" in their info field – then the facade is filled in automatically.')],
                     ['type' => 'Label', 'name' => 'WLegende', 'caption' => $this->fassadenLegende($fassaden)],
+                    ['type' => 'RowLayout', 'items' => [
+                        ['type' => 'Select', 'name' => 'WAlleFassade', 'caption' => $this->t('All devices to facade'), 'options' => $optProbe, 'value' => 'A'],
+                        ['type' => 'Button', 'caption' => $this->t('Apply to all'),
+                            'onClick' => $liste('WGeraete') . 'VSCH_UIAssistentAlle($id, json_encode($WGeraeteA), (string)$WAlleFassade);'],
+                    ]],
                     ['type' => 'Image', 'name' => 'WGeraeteBild', 'image' => $this->grundrissBild($fassaden, -1, 'heute'), 'center' => true, 'width' => '300px'],
                     ['type' => 'List', 'name' => 'WGeraete', 'rowCount' => 8, 'add' => false, 'delete' => true, 'values' => $geraete, 'columns' => [
                         ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'edit' => ['type' => 'ValidationTextBox']],
@@ -109,7 +142,7 @@ trait VSCHAssistent
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
-                'name' => 'probe', 'caption' => $this->t('Step 4 of 7 · Test run'),
+                'name' => 'probe', 'caption' => $this->t('Step 5 of 8 · Test run'),
                 'items' => [
                     ['type' => 'Label', 'caption' => $this->t('Check the direction: "Shade" should lower the devices of the facade, "Back" raise them. If one moves the wrong way, go back and change its "0 % means" column.')],
                     ['type' => 'RowLayout', 'items' => [
@@ -124,7 +157,7 @@ trait VSCHAssistent
                 'nextPage' => 'return VSCH_UIAssistentWeiter($id, "");',
             ],
             [
-                'name' => 'wetter', 'caption' => $this->t('Step 5 of 7 · Weather protection'),
+                'name' => 'wetter', 'caption' => $this->t('Step 6 of 8 · Weather protection'),
                 'items' => [
                     ['type' => 'Label', 'name' => 'WWetterText', 'caption' => $this->t('Awnings and venetian blinds retract on wind and severe weather. Choose at least one source.')],
                     ['type' => 'CheckBox', 'name' => 'WWarnHub', 'caption' => $warnHub ? $this->t('Use WarnHub warnings') : $this->t('WarnHub (not installed)'),
@@ -140,7 +173,7 @@ trait VSCHAssistent
                 ],
             ],
             [
-                'name' => 'wann', 'caption' => $this->t('Step 6 of 7 · When to shade'),
+                'name' => 'wann', 'caption' => $this->t('Step 7 of 8 · When to shade'),
                 'items' => [
                     ['type' => 'RadioButtonGroup', 'name' => 'WWann', 'value' => $wann, 'width' => '600px', 'options' => [
                         ['caption' => $this->t('Whenever the sun shines on the facade'), 'value' => 0],
@@ -162,21 +195,21 @@ trait VSCHAssistent
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
-                'name' => 'fertig', 'caption' => $this->t('Step 7 of 7 · Done'),
+                'name' => 'fertig', 'caption' => $this->t('Step 8 of 8 · Done'),
                 'items' => [
                     ['type' => 'Label', 'name' => 'WZusammenfassung', 'caption' => ''],
                     ['type' => 'Label', 'caption' => $this->t('"OK" fills in the form. Then confirm with "Apply changes" – only then does the module start.')],
                 ],
                 'nextPage' => -1,
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
-                    . '"warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
+                    . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"wann" => (int)$WWann, "hell" => (int)$WHell, "hellAn" => (float)$WHellAn, "temp" => (int)$WTemp, "tempMin" => (float)$WTempMin]));',
             ],
         ];
         return [
             'type' => 'PopupAlert', 'name' => 'Assistent',
-            'visible' => $fassaden === [] && $geraete === [],
-            'popup' => ['caption' => $this->t('Setup assistant'), 'width' => '960px', 'closeCaption' => $this->t('Cancel'), 'initialPage' => 'standort', 'pages' => $seiten],
+            'visible' => $offen,
+            'popup' => ['caption' => $this->t('Setup assistant'), 'width' => '960px', 'closeCaption' => $this->t('Cancel'), 'initialPage' => 'ausrichtung', 'pages' => $seiten],
         ];
     }
 
@@ -208,7 +241,9 @@ trait VSCHAssistent
     public function UIAssistentOeffnen(): void
     {
         $this->WriteAttributeString('AssistentEntwurf', '{}');
-        $this->UpdateFormField('Assistent', 'popup.initialPage', 'standort');
+        // Liste der ersten Seite erst beim Öffnen füllen (Erkennung kostet Zeit, nicht bei jedem Formularaufruf)
+        $this->UpdateFormField('WAusrichtung', 'values', json_encode($this->assistentAusrichtungZeilen($this->listeWerte($this->ReadPropertyString('Fassaden')), true)));
+        $this->UpdateFormField('Assistent', 'popup.initialPage', 'ausrichtung');
         $this->UpdateFormField('Assistent', 'visible', true);
     }
 
@@ -217,6 +252,20 @@ trait VSCHAssistent
     {
         $d = json_decode($daten, true) ?: [];
         switch ($seite) {
+            case 'ausrichtung':
+                $falsch = [];
+                $irgendeins = false;
+                foreach ($d as $z) {
+                    $r = self::kreuze($z);
+                    $irgendeins = $irgendeins || $r !== [];
+                    if (self::richtungAusKreuzen($r) === null && $r !== []) {
+                        $falsch[] = (string)($z['Name'] ?? '?');
+                    }
+                }
+                if ($falsch !== []) {
+                    return $this->t('Only one direction or two neighbouring ones (e.g. South + West) for: %s', implode(', ', array_slice($falsch, 0, 6)));
+                }
+                return $irgendeins || $d === [] ? '' : $this->t('Please tick at least one device – otherwise nothing will be shaded.');
             case 'standort':
                 if ((int)($d['art'] ?? 0) === 1 && $this->assistentKoordinaten(1, (string)($d['standort'] ?? '')) === null) {
                     return $this->t('Please choose the location of the house on the map.');
@@ -271,14 +320,31 @@ trait VSCHAssistent
     {
         $this->koordinatenAssistent = $this->assistentKoordinaten($art, $standort);
         $fassaden = $this->listeWerte($fassadenJson);
-        $geraete = $this->listeWerte($geraeteJson);
         $inst = $this->momentaufnahme();
-        $neu = VSCHErkennung::geraete($inst, array_map(fn($g) => (int)($g['Position'] ?? 0), $geraete));
-        $alle = array_merge($geraete, $neu);
-        foreach ($alle as &$g) {
-            $g['Fassade'] = (string)($g['Fassade'] ?? '') === '' ? self::fassadeAusName((string)($g['Name'] ?? ''), $fassaden) : (string)$g['Fassade'];
+        $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
+        if (isset($e['ausrichtung']) && is_array($e['ausrichtung'])) {
+            // Schritt 1 hat die Ausrichtung angekreuzt: daraus die Fassade (nächste innerhalb 45°), kein Kreuz = nicht verschatten
+            $alle = [];
+            $neu = $e['ausrichtung'];
+            foreach ($e['ausrichtung'] as $z) {
+                $az = self::richtungAusKreuzen(self::kreuze($z));
+                $g = array_diff_key($z, array_flip(['RN', 'RO', 'RS', 'RW', 'TypText']));
+                $g['Fassade'] = $az === null ? '-' : VSCHErkennung::fassadeZuAzimut($az, $fassaden);
+                $g['Az'] = $az;
+                $alle[] = $g;
+            }
+        } else {
+            $geraete = $this->listeWerte($geraeteJson);
+            $neu = VSCHErkennung::geraete($inst, array_map(fn($g) => (int)($g['Position'] ?? 0), $geraete));
+            $alle = array_merge($geraete, $neu);
+            foreach ($alle as &$g) {
+                if ((string)($g['Fassade'] ?? '') === '') {
+                    $g['Fassade'] = VSCHErkennung::fassadeZuAzimut($g['AzHinweis'] ?? null, $fassaden) ?: self::fassadeAusName((string)($g['Name'] ?? ''), $fassaden);
+                }
+                unset($g['AzHinweis']);
+            }
+            unset($g);
         }
-        unset($g);
         $this->UpdateFormField('WGeraete', 'values', json_encode($alle));
         $this->UIAssistentMerken('fassaden', json_encode($fassaden));
         $this->UIAssistentMerken('geraete', json_encode($alle));
@@ -286,7 +352,7 @@ trait VSCHAssistent
         $this->UpdateFormField('WGeraeteBild', 'image', $this->grundrissBild($fassaden, -1, 'heute'));
         $this->UpdateFormField('WGeraeteHinweis', 'caption', $neu === []
             ? $this->t('Missing a device? Add it later in the device list of the form with "+".')
-            : $this->t('%d devices detected (%d with window contact).', count($neu), count(array_filter($neu, fn($g) => $g['Kontakt'] > 0))));
+            : $this->t('%d devices detected (%d with window contact).', count($neu), count(array_filter($neu, fn($g) => (int)($g['Kontakt'] ?? 0) > 0))));
 
         $sens = VSCHErkennung::sensoren($inst, $this->warnHubWetterstation());
         foreach (['WindID' => 'WWind', 'RegenID' => 'WRegen', 'SperreID' => 'WSperre', 'HelligkeitID' => 'WHell', 'TemperaturID' => 'WTemp'] as $rolle => $feld) {
@@ -306,6 +372,94 @@ trait VSCHAssistent
             $text[] = $this->t('Your weather station is already evaluated by WarnHub – keep "Use WarnHub warnings" ticked.');
         }
         $this->UpdateFormField('WWetterText', 'caption', implode(' ', $text));
+    }
+
+    /** Zeilen für Schritt 1: gespeicherte Geräte (Richtung aus ihrer Fassade) + neu erkannte (Richtung aus Objektbaum/Name). */
+    private function assistentAusrichtungZeilen(array $fassaden, bool $erkennen): array
+    {
+        $typText = ['rollladen' => $this->t('Roller shutter'), 'raffstore' => $this->t('Venetian blind'), 'markise' => $this->t('Awning')];
+        $az = array_column($fassaden, 'Azimut', 'Kennung');
+        $zeilen = [];
+        foreach ($this->listeWerte($this->ReadPropertyString('Geraete')) as $g) {
+            $zeilen[] = self::mitKreuzen($g, isset($az[$g['Fassade'] ?? '']) ? (float)$az[$g['Fassade']] : null, $typText);
+        }
+        if ($erkennen) {
+            foreach (VSCHErkennung::geraete($this->momentaufnahme(), array_map(fn($g) => (int)($g['Position'] ?? 0), $zeilen)) as $g) {
+                $zeilen[] = self::mitKreuzen($g, $g['AzHinweis'] ?? VSCHErkennung::richtungAusText((string)$g['Name']), $typText);
+            }
+        }
+        return $zeilen;
+    }
+
+    /** Gerätezeile um Kreuze N/O/S/W ergänzen (Ecken: zwei Kreuze). */
+    private static function mitKreuzen(array $g, ?float $az, array $typText): array
+    {
+        unset($g['AzHinweis']);
+        $g += ['RN' => false, 'RO' => false, 'RS' => false, 'RW' => false];
+        $g['TypText'] = $typText[$g['Typ'] ?? ''] ?? (string)($g['Typ'] ?? '');
+        if ($az !== null) {
+            $az = fmod($az + 360, 360);
+            $mitte = ['N' => 0, 'O' => 90, 'S' => 180, 'W' => 270];
+            foreach ($mitte as $r => $m) {
+                $d = abs(fmod(abs($az - $m) + 180, 360) - 180);
+                $g['R' . $r] = $d <= 67.5; // Hauptrichtung bis ±22,5°, Ecke 22,5–67,5° → zwei Kreuze
+            }
+            // genau auf der Hauptrichtung: nur ein Kreuz
+            foreach ($mitte as $r => $m) {
+                if (abs(fmod(abs($az - $m) + 180, 360) - 180) <= 22.5) {
+                    foreach ($mitte as $r2 => $m2) {
+                        $g['R' . $r2] = $r2 === $r;
+                    }
+                }
+            }
+        }
+        return $g;
+    }
+
+    /** Angekreuzte Richtungen einer Zeile, z. B. ['S', 'W']. */
+    private static function kreuze(array $z): array
+    {
+        return array_values(array_filter(['N', 'O', 'S', 'W'], fn($r) => (bool)($z['R' . $r] ?? false)));
+    }
+
+    /** Azimut aus Kreuzen: eine Richtung oder zwei benachbarte (Ecke); sonst null. */
+    public static function richtungAusKreuzen(array $r): ?float
+    {
+        $m = ['N' => 0.0, 'O' => 90.0, 'S' => 180.0, 'W' => 270.0];
+        sort($r);
+        if (count($r) === 1) {
+            return $m[$r[0]];
+        }
+        if (count($r) === 2) {
+            $ecken = ['N,O' => 45.0, 'O,S' => 135.0, 'S,W' => 225.0, 'N,W' => 315.0];
+            return $ecken[implode(',', $r)] ?? null;
+        }
+        return null;
+    }
+
+    /** Schritt 1: alle Geräte auf eine Richtung ankreuzen. */
+    public function UIAssistentAlleRichtung(string $json, string $richtung): void
+    {
+        $z = $this->listeWerte($json);
+        foreach ($z as &$g) {
+            foreach (['N', 'O', 'S', 'W'] as $r) {
+                $g['R' . $r] = $r === $richtung;
+            }
+        }
+        unset($g);
+        $this->UpdateFormField('WAusrichtung', 'values', json_encode($z));
+    }
+
+    /** Seite 3: alle Geräte auf eine Fassade (häufig: nur die Sonnenseite ist motorisiert). Einzelne danach per Zahnrad ändern. */
+    public function UIAssistentAlle(string $geraeteJson, string $fassade): void
+    {
+        $g = $this->listeWerte($geraeteJson);
+        foreach ($g as &$z) {
+            $z['Fassade'] = $fassade;
+        }
+        unset($z);
+        $this->UpdateFormField('WGeraete', 'values', json_encode($g));
+        $this->UIAssistentMerken('geraete', json_encode($g));
     }
 
     /** Seite 4: Probefahrt mit den Geräten aus dem Assistenten (noch nicht gespeichert). */
@@ -381,10 +535,44 @@ trait VSCHAssistent
         }
         $this->UpdateFormField('TemperaturID', 'value', $wann === 2 ? (int)($d['temp'] ?? 0) : 0);
         $this->UpdateFormField('TemperaturMin', 'value', $wann === 2 ? (float)($d['tempMin'] ?? 0) : 0.0);
+        $info = 0;
+        if ((bool)($d['info'] ?? false)) {
+            $info = $this->ausrichtungInsInfo($geraete, $fassaden);
+        }
         $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($fassaden, 0, 'heute'));
         $this->UpdateFormField('GeoStatus', 'caption', $this->geoStatus() !== '' ? '🔗 ' . $this->geoStatus() : $this->t('Not detected yet.'));
         $this->UpdateFormField('Quellen', 'caption', $this->quellenText());
-        return $this->t('The form is filled in: %d facades, %d devices. Now click "Apply changes".', count($fassaden), count($geraete));
+        return $this->t('The form is filled in: %d facades, %d devices. Now click "Apply changes".', count($fassaden), count($geraete))
+            . ($info > 0 ? "\n" . $this->t('Orientation noted in the info field of %d devices.', $info) : '');
+    }
+
+    /**
+     * Nur auf ausdrücklichen Wunsch (Häkchen in Schritt 1): „Ausrichtung: Süd“ ins Info-Feld der Geräteinstanz schreiben.
+     * Eine vorhandene „Ausrichtung:“-Zeile wird ersetzt, übriger Text bleibt. Rückgabe: Anzahl geänderter Geräte.
+     */
+    private function ausrichtungInsInfo(array $geraete, array $fassaden): int
+    {
+        $az = array_column($fassaden, 'Azimut', 'Kennung');
+        $n = 0;
+        foreach ($geraete as $g) {
+            $p = (int)($g['Position'] ?? 0);
+            $richtung = isset($g['Az']) && $g['Az'] !== null ? (float)$g['Az'] : (isset($az[$g['Fassade'] ?? '']) ? (float)$az[$g['Fassade']] : null);
+            if ($p <= 0 || !IPS_VariableExists($p) || $richtung === null) {
+                continue;
+            }
+            $ziel = IPS_GetParent($p);
+            if ($ziel <= 0 || !IPS_InstanceExists($ziel)) {
+                $ziel = $p;
+            }
+            $zeile = 'Ausrichtung: ' . $this->richtungName($richtung);
+            $alt = (string)(IPS_GetObject($ziel)['ObjectInfo'] ?? '');
+            $neu = preg_match('/^(Ausrichtung|Orientation):.*$/mi', $alt) ? preg_replace('/^(Ausrichtung|Orientation):.*$/mi', $zeile, $alt) : trim($alt . "\n" . $zeile);
+            if ($neu !== $alt) {
+                IPS_SetInfo($ziel, (string)$neu);
+                $n++;
+            }
+        }
+        return $n;
     }
 
     // ------------------------------------------------------------------ Hilfen

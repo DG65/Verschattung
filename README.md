@@ -10,11 +10,12 @@ Die Verschattung fährt Rollläden, Raffstores und Markisen, wenn die Sonne auf 
 
 ## Einrichtung mit dem Assistenten
 
-Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später jederzeit über „🧭 Einrichtungsassistent starten“. Er führt in sieben Schritten durch alles:
+Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später jederzeit über „🧭 Einrichtungsassistent starten“. Er führt in acht Schritten durch alles:
 
+0. **Ausrichtung** – je Behang ankreuzen, wohin seine Fenster schauen (Nord/Ost/Süd/West, zwei Kreuze = Ecke, keins = nicht verschatten); „Für alle übernehmen“ setzt alle in einem Klick. Optional landet die Angabe auch im Info-Feld der Geräte („Ausrichtung: Süd“), damit andere Module sie lesen.
 1. **Standort** – aus der Standort-Instanz oder auf der Karte gewählt.
 2. **Haus** – „Haus erkennen“ holt die Fassaden aus amtlichen Kartendaten; korrigieren oder ergänzen geht in der Liste.
-3. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, Fensterkontakt). **Von Hand wird nur je Gerät die Fassade gewählt** (oder „nicht verschatten“).
+3. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, bis zu vier Fensterkontakte). **Von Hand wird nur je Gerät die Fassade gewählt** (oder „nicht verschatten“) – mit „Für alle übernehmen“ in einem Klick. Steht die Richtung schon im Objektbaum (Ordner „Südseite“, Info-Feld „Ausrichtung: Süd“), ist sie vorbelegt.
 4. **Probefahrt** – je Fassade herunter und wieder hoch, noch bevor etwas gespeichert ist.
 5. **Wetterschutz** – nur bei Markisen/Raffstores: WarnHub, eigener Windsensor, Regensensor, Böenvorhersage.
 6. **Wann beschatten** – immer bei Sonne, nur wenn es hell ist, oder nur an warmen Tagen.

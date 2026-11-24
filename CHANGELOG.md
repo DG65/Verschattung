@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 (in Entwicklung)
+
+- **Neuer erster Schritt im Assistenten: Ausrichtung ankreuzen.** Je Behang ein Kreuz bei Nord, Ost, Süd oder West – direkt in der Zeile, ohne Dialog; zwei benachbarte Kreuze = Ecke (z. B. Süd + West), kein Kreuz = nicht verschatten. „Alle Geräte ankreuzen: Süd → Für alle übernehmen“ in einem Klick. Vorbelegt aus Objektbaum/Info-Feld/Name. Nach „Haus erkennen“ ordnet der Assistent jedes Gerät der passenden Fassade zu (höchstens 45° daneben); die Geräteseite ist nur noch Kontrolle. Der Assistent hat jetzt 8 Schritte.
+- **Häkchen „Auch ins Info-Feld der Geräte schreiben“** (standardmäßig aus): schreibt „Ausrichtung: Süd“ ins Info-Feld der Geräteinstanz, damit andere Module sie lesen. Eine vorhandene Ausrichtungszeile wird ersetzt, übriger Text bleibt.
+
+## 0.2.5 (in 0.3.0 enthalten)
+
+- **Ausrichtung aus dem Objektbaum:** Liegt ein Behang (oder ein Link auf ihn) in einem Ordner mit Himmelsrichtung („Südseite“, „Fassade West“, „Ostflügel“) oder steht im Info-Feld „Ausrichtung: Süd“ bzw. „Ausrichtung: 166°“, wird die Fassade automatisch vorgeschlagen – im Assistenten und bei „Geräte und Sensoren erkennen“. Gradzahlen zählen nur mit „Ausrichtung“ davor oder allein (live: „Anzeige um 180° drehen“ wird nicht gelesen).
+- **Assistent, Schritt 3: „Alle Geräte auf Fassade … → Für alle übernehmen“** – ein Klick, wenn alle motorischen Behänge an einer Seite hängen; Ausnahmen danach per Zahnrad.
+- Hintergrund: Ein Lernen der Ausrichtung aus Raumhelligkeit oder Behang-Positionen im Archiv wurde gemessen und verworfen (trennt nicht verlässlich).
+
 ## 0.2.4 (in Entwicklung)
 
 - **Bis zu vier Fenster-/Türkontakte je Behang** (Spalten „Kontakt 2–4“). Ist einer davon offen, fährt der Behang nicht herunter. Hintergrund (Live-Befund 24.11.): Im Schlafzimmer hängen „Fenster Links“ und „Fenster Rechts“ an einem Fenster, und eine Fensterfront kann noch mehr Flügel haben.

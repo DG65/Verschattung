@@ -7,6 +7,8 @@ declare(strict_types=1);
  *
  * Arbeitet nur auf einer Momentaufnahme (reine Arrays), damit alles ohne Symcon prüfbar ist.
  * Instanz: ['name' => string, 'ort' => string (Name der übergeordneten Kategorie), 'modul' => GUID, 'modulName' => string,
+ *           'kontext' => [Texte, in denen eine Ausrichtung stehen kann: Info-Feld, Namen der Ordner über der Instanz
+ *                         und der Ordner, in denen Links auf sie liegen],
  *           'vars' => [[id, name, ident, typ (0 bool, 1 int, 2 float, 3 string), profil, aktion (bool), darstellung (GUID),
  *                       wahr (Beschriftung für true), vorlage (TEMPLATE-GUID), rollladen (['usage','open','close'] der Rollladen-Darstellung)], …]]
  *
@@ -72,7 +74,7 @@ class VSCHErkennung
             }
             $out[] = [
                 'Name' => $i['name'], 'Fassade' => '', 'Typ' => $typ ?? ($lam !== null ? 'raffstore' : 'rollladen'),
-                'Position' => $pos[0], 'Richtung' => 0,
+                'Position' => $pos[0], 'Richtung' => 0, 'AzHinweis' => self::ausrichtung($i),
                 'Lamelle' => $lam[0] ?? 0, 'LamelleUmgekehrt' => $lam !== null && stripos($lam[4], 'reversed') !== false,
                 'Kontakt' => ($k = self::kontakteFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $kontakte))[0] ?? 0,
                 'Kontakt2' => $k[1] ?? 0, 'Kontakt3' => $k[2] ?? 0, 'Kontakt4' => $k[3] ?? 0, 'Beschattung' => 0,
@@ -172,6 +174,61 @@ class VSCHErkennung
             }
         }
         return null;
+    }
+
+    /**
+     * Ausrichtung des Behangs aus dem Objektbaum, sonst null. Reihenfolge: Gerätename → Info-Feld
+     * („Ausrichtung: Süd“ oder „166°“) → Ordner über der Instanz bzw. Ordner mit Links auf sie („Südseite“, „Fassade West“).
+     */
+    public static function ausrichtung(array $i): ?float
+    {
+        foreach (array_merge([$i['name']], (array)($i['kontext'] ?? [])) as $text) {
+            $az = self::richtungAusText((string)$text);
+            if ($az !== null) {
+                return $az;
+            }
+        }
+        return null;
+    }
+
+    /** Himmelsrichtung (Wort oder Gradzahl mit °) in einem Text → Azimut, sonst null. */
+    public static function richtungAusText(string $text): ?float
+    {
+        // Gradzahl nur mit „Ausrichtung“ davor oder allein („166°“) – nicht „Anzeige um 180° drehen“ (Live-Befund 24.11.)
+        if (preg_match('/(?:ausrichtung|orientation)\D{0,3}(\d{1,3}(?:[.,]\d)?)\s*°?|^\s*(\d{1,3}(?:[.,]\d)?)\s*°\s*$/iu', $text, $m)) {
+            $g = (float)str_replace(',', '.', $m[1] !== '' ? $m[1] : $m[2]);
+            if ($g >= 0 && $g < 360) {
+                return $g;
+            }
+        }
+        $n = self::norm($text);
+        $worte = ['nordost' => 45, 'nordwest' => 315, 'suedost' => 135, 'suedwest' => 225, 'northeast' => 45, 'northwest' => 315,
+            'southeast' => 135, 'southwest' => 225, 'nord' => 0, 'north' => 0, 'ost' => 90, 'east' => 90, 'sued' => 180, 'south' => 180, 'west' => 270];
+        foreach ($worte as $wort => $az) {
+            // Wortanfang: „Südseite“, „Fassade West“, „Ostflügel“ – aber nicht „Kost“
+            if (preg_match('/(^|\s)' . $wort . '(en|seite|fassade|fluegel|front|wand|lich|lage)?(\s|$)/', $n)) {
+                return (float)$az;
+            }
+        }
+        return null;
+    }
+
+    /** Nächstliegende Fassade (Kennung) zu einem Azimut, höchstens 45° daneben, sonst ''. */
+    public static function fassadeZuAzimut(?float $az, array $fassaden): string
+    {
+        if ($az === null) {
+            return '';
+        }
+        $beste = '';
+        $abstand = 45.01;
+        foreach ($fassaden as $f) {
+            $d = abs(fmod(abs((float)$f['Azimut'] - $az) + 180, 360) - 180);
+            if ($d < $abstand) {
+                $abstand = $d;
+                $beste = (string)$f['Kennung'];
+            }
+        }
+        return $beste;
     }
 
     // ------------------------------------------------------------------ Fensterkontakte
