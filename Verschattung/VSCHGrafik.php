@@ -53,6 +53,47 @@ final class VSCHGrafik
             return false;
         };
         $o .= '<g clip-path="url(#k)">';
+        // Straßen unter den Gebäuden: Rand und Fläche in echter Breite, Namen einmal je Straße entlang der Achse
+        $strassen = (array)($haus['strassen'] ?? []);
+        usort($strassen, fn($a, $b) => (float)$a['b'] <=> (float)$b['b']);
+        foreach ([['#cbc6b8', 1.6], ['#ebe8df', 0.0]] as [$farbe, $rand]) {
+            foreach ($strassen as $st) {
+                $o .= '<polyline points="' . implode(' ', array_map($pt, (array)$st['p'])) . '" fill="none" stroke="' . $farbe
+                    . '" stroke-width="' . self::n(max(2.0, (float)$st['b'] * $s) + $rand) . '" stroke-linecap="round" stroke-linejoin="round"/>';
+            }
+        }
+        $beschriftet = [];
+        foreach ($strassen as $st) {
+            $name = (string)($st['name'] ?? '');
+            if ($name === '' || isset($beschriftet[$name]) || (float)$st['b'] < 3) {
+                continue;
+            }
+            $best = null;
+            $pts = (array)$st['p'];
+            for ($i = 0; $i + 1 < count($pts); $i++) {
+                $a = $pts[$i];
+                $b = $pts[$i + 1];
+                $mx = ($a[0] + $b[0]) / 2 * $s;
+                $my = ($a[1] + $b[1]) / 2 * $s;
+                $l = hypot($b[0] - $a[0], $b[1] - $a[1]) * $s;
+                if (abs($mx) < $bw / 2 - 40 && abs($my) < $w / 2 - 20 && $l > 60 && ($best === null || $l > $best[2])) {
+                    $best = [$a, $b, $l];
+                }
+            }
+            if ($best !== null) {
+                $beschriftet[$name] = true;
+                $wi = rad2deg(atan2(-($best[1][1] - $best[0][1]), $best[1][0] - $best[0][0]));
+                if ($wi > 90) {
+                    $wi -= 180;
+                } elseif ($wi < -90) {
+                    $wi += 180;
+                }
+                $x = $cx + ($best[0][0] + $best[1][0]) / 2 * $s;
+                $y = $c - ($best[0][1] + $best[1][1]) / 2 * $s;
+                $o .= '<text x="' . self::n($x) . '" y="' . self::n($y) . '" transform="rotate(' . self::n($wi) . ' ' . self::n($x) . ' ' . self::n($y) . ')" font-size="10" '
+                    . 'text-anchor="middle" dominant-baseline="central" fill="#6b6f66">' . htmlspecialchars($name) . '</text>';
+            }
+        }
         foreach ((array)($haus['nachbarn'] ?? []) as $n) {
             if ($sichtbar($n)) {
                 $o .= '<polygon points="' . implode(' ', array_map($pt, $n)) . '" fill="#d6dad2" stroke="#b6bbb3" stroke-width="0.8"/>';

@@ -404,6 +404,14 @@ $hausB = ['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'nachbarn' => [[[-50,
 $p420 = base64_decode(substr(VSCHGrafik::grundriss($hausB, [], [], -1, 'Europe/Berlin'), 26));
 $p1050 = base64_decode(substr(VSCHGrafik::grundriss($hausB, [], [], -1, 'Europe/Berlin', 1050), 26));
 check('F34 Lageplan breiter: gleiche Höhe und Maßstab, mehr Umgebung links/rechts', str_contains($p1050, 'viewBox="0 0 1050 420"') && substr_count($p1050, '<polygon') > substr_count($p420, '<polygon'));
+$abrufOsm = fn($url, $kopf = [], $post = null) => [200, json_encode(['elements' => [
+    ['tags' => ['highway' => 'residential', 'name' => 'Lindenweg'], 'geometry' => [['lat' => 48.3, 'lon' => 7.999], ['lat' => 48.3, 'lon' => 8.001]]],
+    ['tags' => ['highway' => 'construction'], 'geometry' => [['lat' => 48.3, 'lon' => 8.0], ['lat' => 48.301, 'lon' => 8.0]]]]])];
+$st = VSCHGeo::strassen(48.3001, 8.0, $abrufOsm);
+check('F35 Straßen aus OSM: Typ, Name, Breite, lokale Linie; Baustellen weg', count($st) === 1 && $st[0]['name'] === 'Lindenweg' && $st[0]['b'] == 5.5 && count($st[0]['p']) === 2 && abs($st[0]['p'][0][1] + 11.1) < 0.2, json_encode($st));
+check('F36 Straßen-Abruf gescheitert → leer, kein Fehler', VSCHGeo::strassen(48.3, 8.0, fn() => [504, '']) === []);
+$pS = base64_decode(substr(VSCHGrafik::grundriss(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'strassen' => [['typ' => 'residential', 'name' => 'Lindenweg', 'b' => 5.5, 'p' => [[-40, -12], [40, -12]]]]], [], [], -1, 'Europe/Berlin', 1050), 26));
+check('F37 Lageplan zeichnet Straße mit Namen', substr_count($pS, '<polyline') >= 2 && str_contains($pS, 'Lindenweg'));
 check('F28 Himmelsbild zeichnet Nachbargebäude', str_contains(base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 2], [180, 2]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont', $gh, 'Nachbarhaus'), 26)), 'Nachbarhaus'));
 
 // ---------------------------------------------------------------------------

@@ -107,6 +107,9 @@ trait VSCHKachel
         }
         $daten['haus'] = array_map(fn($p) => [round($p[0], 1), round($p[1], 1)], (array)($haus['eigen'] ?? []));
         $daten['nachbarn'] = array_map(fn($n) => array_map(fn($p) => [round($p[0], 1), round($p[1], 1)], $n), (array)($haus['nachbarn'] ?? []));
+        // Straßen im Nahbereich der Kachel (±30 m)
+        $daten['strassen'] = array_values(array_filter(array_map(fn($st) => ['b' => (float)$st['b'], 'p' => (array)$st['p']], (array)($haus['strassen'] ?? [])),
+            fn($st) => count(array_filter($st['p'], fn($p) => abs($p[0]) < 30 && abs($p[1]) < 30)) > 0));
 
         // Himmelsbogen: Bahn heute, Gelände, Gebäude, Sonnenzeit der Hauptfassade
         $bahn = VSCHSonne::bahn($pos[0], $pos[1], date('Y-m-d', $now), date_default_timezone_get(), 10);

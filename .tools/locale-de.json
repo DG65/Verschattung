@@ -358,5 +358,6 @@
     "5. Only what the module lowered itself is raised again, and only by day. Closing in the evening is up to you.": "5. Hochgefahren wird nur, was das Modul selbst heruntergefahren hat, und nur bei Tag. Abends schließt das Modul nichts.",
     "6. Door open → not lowered. Window tilted → at most to the ventilation position.": "6. Tür offen → nicht herunter. Fenster gekippt → höchstens bis zur Lüftungsposition.",
     "7. Switch \"Automatic\" per device: off → the device is left alone. Only emergency and weather protection still move it.": "7. Schalter „Automatik“ je Behang: aus → der Behang hat Ruhe. Nur Notfall und Wetterschutz fahren ihn dann noch.",
-    "8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.": "8. Notfall (Rauchmelder) → alle Behänge hoch. Wind, Regen, Sturm → Markisen und Raffstores fahren ein. Beides immer, auch bei ausgeschalteter Automatik."
+    "8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.": "8. Notfall (Rauchmelder) → alle Behänge hoch. Wind, Regen, Sturm → Markisen und Raffstores fahren ein. Beides immer, auch bei ausgeschalteter Automatik.",
+    "Streets: © OpenStreetMap contributors (ODbL)": "Straßen: © OpenStreetMap-Mitwirkende (ODbL)"
 }

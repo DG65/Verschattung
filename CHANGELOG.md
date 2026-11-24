@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.2 (in Entwicklung)
+
+- **Straßen im Lageplan** (Dietmar 24.11.): Straßen und Wege aus OpenStreetMap im Umkreis von 120 m, in echter Breite je Straßenart (z. B. Wohnstraße 5,5 m, Zufahrt 3,5 m, Fußweg 1,8 m), unter den Gebäuden, mit Straßennamen entlang der Achse. Auch auf der Kachel (Nahbereich). Geholt werden sie mit „Haus erkennen“; einmal neu erkennen, damit sie erscheinen. Quellenvermerk „Straßen: © OpenStreetMap-Mitwirkende (ODbL)“.
+
+
 ## 0.8.1 (in Entwicklung)
 
 - **Lageplan nutzt die Breite** (Dietmar 24.11.): gleiche Höhe und gleicher Maßstab, aber links und rechts mehr Umgebung – im Assistenten (Schritt „Haus“, 900 px) und im Formular (900 px). Nachbarn, die vorher am Rand abgeschnitten waren, sind jetzt zu sehen.

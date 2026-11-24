@@ -183,6 +183,45 @@ final class VSCHGeo
         return $out;
     }
 
+    /** Straßenbreite in m je OSM-Typ (für den Lageplan). */
+    public const STRASSE_BREITE = ['motorway' => 12, 'trunk' => 10, 'primary' => 8, 'secondary' => 7, 'tertiary' => 6.5, 'unclassified' => 5.5,
+        'residential' => 5.5, 'living_street' => 5, 'service' => 3.5, 'track' => 3, 'pedestrian' => 3, 'footway' => 1.8, 'path' => 1.5,
+        'cycleway' => 1.8, 'steps' => 1.5, 'bridleway' => 1.8];
+
+    /**
+     * Straßen und Wege im Umkreis (OpenStreetMap, Overpass), nur für den Lageplan.
+     * Rückgabe [['typ' => highway, 'name' => string, 'b' => Breite m, 'p' => [[x,y],…] lokal in m], …]; Fehler → [].
+     */
+    public static function strassen(float $lat, float $lon, callable $abruf, float $umkreis = 120.0): array
+    {
+        $q = '[out:json][timeout:40];way["highway"](around:' . (int)$umkreis . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
+        $body = '';
+        foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'] as $server) {
+            [$code, $body] = $abruf($server, ['Content-Type: application/x-www-form-urlencoded'], 'data=' . rawurlencode($q));
+            if ($code === 200) {
+                break;
+            }
+            $body = '';
+        }
+        $j = $body === '' ? null : json_decode($body, true);
+        $out = [];
+        foreach ((array)($j['elements'] ?? []) as $el) {
+            $typ = (string)($el['tags']['highway'] ?? '');
+            if (!isset(self::STRASSE_BREITE[$typ])) {
+                continue; // Baustellen, Planungen, Bahnsteige …
+            }
+            $p = [];
+            foreach ((array)($el['geometry'] ?? []) as $g) {
+                $l = self::lokal($lat, $lon, (float)$g['lat'], (float)$g['lon']);
+                $p[] = [round($l[0], 1), round($l[1], 1)];
+            }
+            if (count($p) >= 2) {
+                $out[] = ['typ' => $typ, 'name' => (string)($el['tags']['name'] ?? ''), 'b' => self::STRASSE_BREITE[$typ], 'p' => $p];
+            }
+        }
+        return $out;
+    }
+
     /** Schweiz: fertige Fassaden aus „Sonnenfassade“ (BFE). Konvention dort: 0 = Süd, −90 = Ost → Kompass = Wert + 180. */
     public static function schweiz(float $lat, float $lon, callable $abruf): array
     {

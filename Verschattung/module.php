@@ -997,8 +997,13 @@ class Verschattung extends IPSModule
         if (!$haus['ok']) {
             return ['ok' => false, 'werte' => [], 'text' => $this->t('No house found: %s', $haus['meldung']) . ' ' . $this->t('You can enter the facades by hand in the list.')];
         }
+        // Straßen für den Lageplan (OpenStreetMap); fehlt der Dienst, bleibt der Plan ohne Straßen
+        $strassen = VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
+            return $this->abruf($url, $kopf, $post);
+        });
         $this->WriteAttributeString('Haus', json_encode([
-            'eigen' => $haus['eigen'], 'nachbarn' => $haus['nachbarn'], 'nachbarInfo' => $haus['nachbarInfo'] ?? [], 'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
+            'eigen' => $haus['eigen'], 'nachbarn' => $haus['nachbarn'], 'nachbarInfo' => $haus['nachbarInfo'] ?? [], 'strassen' => $strassen,
+            'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
             'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1],
         ]));
         $werte = [];
@@ -1606,7 +1611,8 @@ class Verschattung extends IPSModule
     private function quellenText(): string
     {
         $h = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
-        $q = array_filter([(string)($h['lizenz'] ?? ''), ($this->horizontPunkte() !== [] ? 'PVGIS © European Union' : '')]);
+        $q = array_filter([(string)($h['lizenz'] ?? ''), ($this->horizontPunkte() !== [] ? 'PVGIS © European Union' : ''),
+            ((array)($h['strassen'] ?? []) !== [] ? $this->t('Streets: © OpenStreetMap contributors (ODbL)') : '')]);
         return $q === [] ? $this->t('Sources are shown here after detection.') : $this->t('Sources: %s', implode(' · ', $q));
     }
 

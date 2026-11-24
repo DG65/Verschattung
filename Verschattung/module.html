@@ -8,11 +8,11 @@
      (UpdateVisualizationValue bzw. Abruf ?json=1 auf der IPSView-Seite). Bedienung nur: Automatik an/aus. -->
 <style>
 :root{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--sonne:#f5a623;--sonnebg:rgba(245,166,35,.16);
-  --behang:#8a6d4b;--kuehl:#2f80ed;--heiz:#e2574c;--neutral:#8e8e93;--haus:#8e8e93;--nachbar:#dcdce1;--erde:#c9cfc4;--geb:#8e968a}
+  --behang:#8a6d4b;--kuehl:#2f80ed;--heiz:#e2574c;--neutral:#8e8e93;--haus:#8e8e93;--nachbar:#dcdce1;--strasse:#f7f6f1;--strasserand:#d9d5ca;--erde:#c9cfc4;--geb:#8e968a}
 @media (prefers-color-scheme:dark){:root{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);
-  --haus:#aeaeb2;--nachbar:#3a3a3c;--erde:#5b6157;--geb:#7d8579}}
-body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--haus:#8e8e93;--nachbar:#dcdce1;--erde:#c9cfc4;--geb:#8e968a}
-body.dunkel{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);--haus:#aeaeb2;--nachbar:#3a3a3c;--erde:#5b6157;--geb:#7d8579}
+  --haus:#aeaeb2;--nachbar:#3a3a3c;--strasse:#4a4a4d;--strasserand:#5c5c60;--erde:#5b6157;--geb:#7d8579}}
+body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--haus:#8e8e93;--nachbar:#dcdce1;--strasse:#f7f6f1;--strasserand:#d9d5ca;--erde:#c9cfc4;--geb:#8e968a}
+body.dunkel{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);--haus:#aeaeb2;--nachbar:#3a3a3c;--strasse:#4a4a4d;--strasserand:#5c5c60;--erde:#5b6157;--geb:#7d8579}
 html,body{margin:0;height:100%;background:transparent;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 body{box-sizing:border-box;padding:var(--margin-top,14px) var(--margin-side,14px) var(--margin-bottom,14px)}
 .kachel{box-sizing:border-box;height:100%;display:flex;flex-direction:column;gap:10px;overflow:auto}
@@ -145,6 +145,11 @@ function grundriss() {
   var m = (Math.min(W, H) / 2 - 26) / r;
   function P(p) { return (cx + p[0] * m).toFixed(1) + ',' + (cy - p[1] * m).toFixed(1); }
   function poly(ps) { return ps.map(P).join(' '); }
+  [['var(--strasserand)', 1.4], ['var(--strasse)', 0]].forEach(function (lage) {
+    (daten.strassen || []).forEach(function (st) {
+      o += '<polyline points="' + poly(st.p) + '" fill="none" stroke="' + lage[0] + '" stroke-width="' + (Math.max(1.5, st.b * m) + lage[1]).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    });
+  });
   (daten.nachbarn || []).forEach(function (n) {
     if (n.some(function (p) { return Math.abs(p[0]) <= r && Math.abs(p[1]) <= r; })) { o += '<polygon points="' + poly(n) + '" fill="var(--nachbar)"/>'; }
   });
