@@ -132,7 +132,6 @@
             "South-west": "Südwest",
             "West": "West",
             "North-west": "Nordwest",
-            "Grey: terrain horizon (PVGIS, true to scale). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.": "Grau: Gelände-Horizont (PVGIS, maßstabsgetreu). Farbiges Band: der Himmelsausschnitt, aus dem die gewählte Fassade Sonne bekommt. Ob dann tatsächlich beschattet wird, hängt noch von Helligkeit und Temperatur ab.",
             "Horizon": "Horizont",
             "Night": "Nacht",
             "1 device of facade %s is moving. If it moves the wrong way, change its \"0 %% means\" column.": "1 Gerät der Fassade %s fährt. Fährt es falsch herum, dessen Spalte „0 %% bedeutet“ ändern.",
@@ -307,7 +306,9 @@
             "Verschattung": "DG65-Toolkit Verschattung",
             "Sun on the facade, but it does not reach the room (%d lx)": "Sonne auf der Fassade, erreicht den Raum aber nicht (%d lx)",
             "Sun reaches the room from (lx)": "Sonne erreicht den Raum ab (lx)",
-            "If the brightness sensor of the room (column \"Room brightness\") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.": "Bleibt der Helligkeitssensor des Raums (Spalte „Raumhelligkeit“) darunter, erreicht die Sonne diesen Raum nicht und der Behang bleibt oben. Das Hochfahren hängt nie davon ab: Mit heruntergefahrenem Behang ist der Raum ohnehin dunkel. Raumsensoren messen deutlich weniger als draußen: Sonne im Raum etwa 200–2000 lx, Wolken unter 100 lx."
+            "If the brightness sensor of the room (column \"Room brightness\") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.": "Bleibt der Helligkeitssensor des Raums (Spalte „Raumhelligkeit“) darunter, erreicht die Sonne diesen Raum nicht und der Behang bleibt oben. Das Hochfahren hängt nie davon ab: Mit heruntergefahrenem Behang ist der Raum ohnehin dunkel. Raumsensoren messen deutlich weniger als draußen: Sonne im Raum etwa 200–2000 lx, Wolken unter 100 lx.",
+            "Show neighbouring buildings": "Nachbargebäude anzeigen",
+            "Light grey: terrain horizon (PVGIS, true to scale). Dark grey: neighbouring buildings (model: storeys × 3 m, without data 2 storeys, 45° gable roof). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on irradiance and temperature.": "Hellgrau: Gelände-Horizont (PVGIS, maßstabsgetreu). Dunkelgrau: Nachbargebäude (Modell: Geschosse × 3 m, ohne Angabe 2 Geschosse, Satteldach 45°). Farbiges Band: der Himmelsausschnitt, aus dem die gewählte Fassade Sonne bekommt. Ob dann tatsächlich beschattet wird, hängt noch von Einstrahlung und Temperatur ab."
         }
     }
 }

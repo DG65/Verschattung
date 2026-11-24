@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2 (in Entwicklung)
+
+- **Vorschau: Nachbargebäude ein- und ausblenden** (Dietmar 24.11.). Das Häkchen „Nachbargebäude anzeigen“ wirkt auf das Himmelsbild und auf die Sonnenzeiten darunter; die Steuerung rechnet immer mit den Gebäuden. Die Erklärzeile unter dem Bild nennt jetzt Hellgrau (Gelände) und Dunkelgrau (Nachbargebäude).
+
+
 ## 0.6.1 (in Entwicklung)
 
 - **Raumhelligkeit in Lux** (Dietmar 24.11.: „eher in Lux, damit kann man mehr anfangen“): Schieberegler „Sonne erreicht den Raum ab“ 0–2000 lx, Vorgabe 150 lx (Archiv: Sonne im Raum 200–2100 lx, Wolken 30–100 lx). Neue Eigenschaft `RaumHellLux`; der alte W/m²-Wert wird nicht übernommen. Sensoren in W/m² werden umgerechnet (× 120).

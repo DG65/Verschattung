@@ -522,6 +522,16 @@ function WPTEST_GetFunctions(int $id): array { return [['contractType' => 'heatp
 $we = new ReflectionMethod($m, 'wpErkennen'); $we->setAccessible(true);
 check('G47 Wärmepumpe: Betriebsart aus dem heatpump-Vertrag gefunden', $we->invoke($m) === 990301);
 unset($GLOBALS['MODULINFO']['{WPTEST}']);
+// Vorschau: Nachbargebäude ein- und ausblenden
+$m->attrs['Haus'] = json_encode(['eigen' => [], 'nachbarn' => [[[-5, -10], [5, -10], [5, -18], [-5, -18]]], 'fassaden' => []]);
+$m->fieldUpdates = [];
+$m->UIVorschau(json_encode([['Kennung' => 'A', 'Name' => 'Süd', 'Azimut' => 180, 'Aktiv' => true]]), 0, 'heute', true);
+$mit = base64_decode(substr(array_column($m->fieldUpdates, 2, 0)['Himmel'] ?? '', 26));
+$m->fieldUpdates = [];
+$m->UIVorschau(json_encode([['Kennung' => 'A', 'Name' => 'Süd', 'Azimut' => 180, 'Aktiv' => true]]), 0, 'heute', false);
+$ohne = base64_decode(substr(array_column($m->fieldUpdates, 2, 0)['Himmel'] ?? '', 26));
+check('G48 Vorschau: Nachbargebäude ein- und ausblendbar', str_contains($mit, 'Nachbargebäude') && !str_contains($ohne, 'Nachbargebäude'));
+$m->attrs['Haus'] = '{}';
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

@@ -921,15 +921,15 @@ class Verschattung extends IPSModule
     }
 
     /** Vorschau neu zeichnen (Fassade/Tag gewählt oder Liste geändert). */
-    public function UIVorschau(string $fassadenJson, int $auswahl, string $tag): void
+    public function UIVorschau(string $fassadenJson, int $auswahl, string $tag, bool $gebaeude = true): void
     {
         $werte = $this->listeWerte($fassadenJson);
         if ($werte === []) {
             $werte = $this->listeWerte($this->ReadPropertyString('Fassaden'));
         }
         $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($werte, $auswahl, $tag));
-        $this->UpdateFormField('Himmel', 'image', $this->himmelBild($werte, $auswahl, $tag));
-        $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, $auswahl, $tag));
+        $this->UpdateFormField('Himmel', 'image', $this->himmelBild($werte, $auswahl, $tag, $gebaeude));
+        $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, $auswahl, $tag, $gebaeude));
     }
 
     /**
@@ -1258,7 +1258,7 @@ class Verschattung extends IPSModule
         $tage = [['caption' => $this->t('Today'), 'value' => 'heute'], ['caption' => $this->t('21 June'), 'value' => 'juni'], ['caption' => $this->t('21 December'), 'value' => 'dezember']];
         // Listen kommen im Skript als Symcon-Listenobjekt an: erst in ein Array kopieren (Muster aus Automat, live bewährt)
         // Live-Befund 24.11.: $Fassaden fehlt im Aktionsbereich, solange die Fassadenliste nicht geladen ist → gespeicherte Fassaden nehmen
-        $vorschauAufruf = '$f = []; foreach (($Fassaden ?? []) as $x) { $f[] = $x; } VSCH_UIVorschau($id, json_encode($f), (int)$VorschauFassade, (string)$VorschauTag);';
+        $vorschauAufruf = '$f = []; foreach (($Fassaden ?? []) as $x) { $f[] = $x; } VSCH_UIVorschau($id, json_encode($f), (int)$VorschauFassade, (string)$VorschauTag, (bool)($VorschauGebaeude ?? true));';
 
         $elements = [];
         if (!$this->ReadAttributeBoolean('PurposeIntroGone')) {
@@ -1403,10 +1403,11 @@ class Verschattung extends IPSModule
                 }, $optFassade, array_keys($optFassade)), 'onChange' => $vorschauAufruf],
                 ['type' => 'Select', 'name' => 'VorschauTag', 'caption' => 'Day', 'value' => 'heute', 'options' => $tage, 'onChange' => $vorschauAufruf],
                 ['type' => 'Button', 'caption' => 'Redraw', 'onClick' => $vorschauAufruf],
+                ['type' => 'CheckBox', 'name' => 'VorschauGebaeude', 'caption' => 'Show neighbouring buildings', 'value' => true, 'onChange' => $vorschauAufruf],
             ]],
             ['type' => 'Image', 'name' => 'Himmel', 'image' => $this->himmelBild($fassaden, 0, 'heute'), 'center' => true, 'width' => '560px'],
             ['type' => 'Label', 'name' => 'Vorschau', 'caption' => $this->vorschauText($fassaden, 0, 'heute')],
-            ['type' => 'Label', 'caption' => 'Grey: terrain horizon (PVGIS, true to scale). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on brightness and temperature.'],
+            ['type' => 'Label', 'caption' => 'Light grey: terrain horizon (PVGIS, true to scale). Dark grey: neighbouring buildings (model: storeys × 3 m, without data 2 storeys, 45° gable roof). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on irradiance and temperature.'],
         ]];
 
         $actions[] = ['type' => 'Label', 'caption' => $this->t('Current state: %s', (string)@$this->GetValue('Status'))];
@@ -1434,7 +1435,7 @@ class Verschattung extends IPSModule
         return VSCHGrafik::grundriss($haus, $this->fassadenMitKanten($fassaden, $haus), $bahn, $auswahl, date_default_timezone_get());
     }
 
-    private function himmelBild(array $fassaden, int $auswahl, string $tag): string
+    private function himmelBild(array $fassaden, int $auswahl, string $tag, bool $gebaeude = true): string
     {
         $pos = $this->koordinaten();
         $bahnen = [];
@@ -1447,10 +1448,10 @@ class Verschattung extends IPSModule
         $f = $fassaden[$auswahl] ?? null;
         return VSCHGrafik::himmel($bahnen, $this->horizontPunkte(), $f !== null ? (float)$f['Azimut'] : null,
             VSCHGrafik::FARBEN[$auswahl % count(VSCHGrafik::FARBEN)], date_default_timezone_get(), $this->t('Horizon'),
-            $f !== null ? $this->gebaeudeHorizont((float)$f['Azimut']) : [], $this->t('Neighbouring buildings'));
+            $f !== null && $gebaeude ? $this->gebaeudeHorizont((float)$f['Azimut']) : [], $this->t('Neighbouring buildings'));
     }
 
-    private function vorschauText(array $fassaden, int $auswahl, string $tag): string
+    private function vorschauText(array $fassaden, int $auswahl, string $tag, bool $gebaeude = true): string
     {
         $pos = $this->koordinaten();
         if ($pos === null || $fassaden === []) {
@@ -1462,7 +1463,7 @@ class Verschattung extends IPSModule
             if (!(bool)($f['Aktiv'] ?? true)) {
                 continue; // Fassade ohne Gerät: keine Sonnenzeiten
             }
-            $fenster = VSCHGrafik::sonnenfenster($bahn, $this->hindernisPunkte((float)$f['Azimut']), (float)$f['Azimut']);
+            $fenster = VSCHGrafik::sonnenfenster($bahn, $gebaeude ? $this->hindernisPunkte((float)$f['Azimut']) : $this->horizontPunkte(), (float)$f['Azimut']);
             $zeit = $fenster === [] ? $this->t('no direct sun') : implode(' + ', array_map(function ($w) {
                 return date('H:i', $w[0]) . '–' . date('H:i', $w[1]);
             }, $fenster));
