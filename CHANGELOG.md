@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 (in Entwicklung)
+
+- **Kachel** (Dietmar 24.11.): Haus von oben mit Nachbargebäuden, beschienene Fassaden in Sonnenfarbe und die Sonne in ihrer Richtung; daneben der Himmel von heute mit Sonnenbahn, Sonnenzeit der Hauptfassade (kräftig), Gelände-Horizont, Nachbarhäusern und der Sonne jetzt. Der Himmel zeigt blau, heiter, wolkig, bedeckt, Regen, Dämmerung oder Nacht – aus der gemessenen Einstrahlung im Vergleich zum klaren Himmel und dem Regensensor. Kopfzeile: Einstrahlung, Außentemperatur, Lage (Kühlen/Heizen/Behaglich, Wärmepumpe), Automatik an/aus, Hinweis bei Notfall oder Wetterschutz. Je Behang ein Symbol der echten Stellung (Rollladen-Höhe, Lamellenwinkel, Markise), Prozent und Grund; ein Tipp zeigt den ganzen Entscheidungsweg.
+- **IPSView:** dieselbe Seite unter `/hook/verschattung<ID>` für ein WebView-Element (nur Anzeige, aktualisiert sich jede Minute, `?bg=` für die Hintergrundfarbe; ohne Angabe hell oder dunkel nach Gerätemodus). Beim Löschen der Instanz wird der Eintrag im WebHook-Control wieder entfernt.
+- **Raumhelligkeit als Regelgröße** (Dietmar 24.11.): Ziel-Helligkeit im Raum (Schieberegler, 0 = aus; je Behang Spalte „Ziel-Helligkeit“). Wenn weder Heizen noch Kühlen nötig ist, regelt der Behang auf den Helligkeitssensor des Raums: zu hell (über Ziel × 1,25) → ein Schritt weiter zu, zu dunkel (unter Ziel × 0,75) → ein Schritt weiter auf, höchstens alle 2 Minuten. Raffstores mit Lamellen: Behang unten, geregelt wird der Lamellenwinkel in 15°-Schritten; sonst die Behanghöhe in 10-%-Schritten. Ist der Raum ohnehin dunkler als das Ziel, fährt nichts herunter; ganz offen und weiter zu dunkel → Beschattung endet. Kühlbedarf: volle Beschattung, Heizbedarf: Behang oben.
+- Die Prognose liefert derzeit keine Bewölkung (nur PV-Ertrag und Temperatur); der Himmel kommt deshalb aus der Messung.
+
+
 ## 0.6.3 (in Entwicklung)
 
 - **Garagen, Schuppen und andere Nebengebäude** zählen als eingeschossig mit Flachdach (3 m). Erkannt an der ALKIS-Gebäudefunktion (BW liefert z. B. Wohnhaus, Garage, Schuppen, Scheune), am OSM-Gebäudetyp (`building=garage`, `shed` …) oder an einer Grundfläche unter 40 m². Live-Befund 24.11.: Ums Haus stehen 8 Garagen und 4 Schuppen, die vorher als zweigeschossige Häuser galten (eine Garage 6,9 m vor der Südfassade verdeckte so 35°).

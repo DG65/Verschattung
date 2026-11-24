@@ -66,6 +66,13 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 - **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür. Meldet ein Griff „gekippt“ oder ist die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ gestellt, fährt er höchstens bis zur Lüftungsposition.
 - **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch, auch nachts und bei ausgeschalteter Automatik.
 - **„❓ Warum?“** zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten, ohne dass etwas fährt.
+- **Ziel-Helligkeit im Raum (optional):** Ist weder Heizen noch Kühlen nötig, regelt der Behang auf die eingestellte Helligkeit (z. B. 200 lx) – zu hell: weiter zu (Raffstores: Lamellen), zu dunkel: weiter auf, ein Schritt alle 2 Minuten.
+
+## Kachel und IPSView
+
+Die Kachel zeigt das Haus von oben mit der beschienenen Fassade und der Sonne, den Himmel von heute (blau, Wolken, Regen oder Nacht aus der gemessenen Einstrahlung) mit Sonnenbahn, Horizont und Nachbarhäusern, und jeden Behang mit Stellung und Grund. Ein Tipp auf einen Behang zeigt den Entscheidungsweg; die Automatik lässt sich auf der Kachel schalten.
+
+Für IPSView: ein WebView-Element mit der Adresse `http://<Symcon-IP>:3777/hook/verschattung<Instanz-ID>` anlegen (optional `?bg=1c1c1e`). Die Seite zeigt nur an und aktualisiert sich jede Minute.
 
 ## Wetterschutz
 

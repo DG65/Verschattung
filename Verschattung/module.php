@@ -26,10 +26,12 @@ require_once __DIR__ . '/VSCHLogik.php';
 require_once __DIR__ . '/VSCHGrafik.php';
 require_once __DIR__ . '/VSCHErkennung.php';
 require_once __DIR__ . '/VSCHAssistent.php';
+require_once __DIR__ . '/VSCHKachel.php';
 
 class Verschattung extends IPSModule
 {
     use VSCHAssistent;
+    use VSCHKachel;
 
     /** Standort, den der Assistent gerade prüft (überlagert Eigenschaft/Standort-Instanz). */
     private ?array $koordinatenAssistent = null;
@@ -61,6 +63,7 @@ class Verschattung extends IPSModule
     public function Create()
     {
         parent::Create();
+        $this->SetVisualizationType(1); // Kachel (module.html)
         $this->RegisterPropertyString('Standort', '{"latitude":0,"longitude":0}');
         $this->RegisterPropertyString('Fassaden', '[]');
         $this->RegisterPropertyString('Geraete', '[]');
@@ -77,6 +80,8 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('RaumHellAn', 1.5); // bis 0.6.0 in W/m², ungenutzt
         // ab 0.6.1 in Lux (Dietmar 24.11.: „eher in Lux, damit kann man mehr anfangen“); Archiv: Sonne im Raum 200–2100 lx, Wolken 30–100 lx
         $this->RegisterPropertyFloat('RaumHellLux', 150);
+        // ab 0.7.0: Raumhelligkeit als Regelgröße (Ziel-Lux, 0 = aus; je Behang übersteuerbar)
+        $this->RegisterPropertyFloat('ZielLux', 0);
         // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
         $this->RegisterPropertyFloat('HeizGrenze', 21);
         $this->RegisterPropertyInteger('WPModusID', 0);
@@ -139,6 +144,7 @@ class Verschattung extends IPSModule
                 $this->RegisterMessage($id, VM_UPDATE); // Rauchmelder: sofort, nicht erst im Minutentakt
             }
         }
+        $this->registriereHook(); // dieselbe Kachel als Seite für IPSView
         $ok = $this->koordinaten() !== null && $this->geraete() !== [];
         $this->SetTimerInterval('Tick', $ok ? 60 * 1000 : 0);
         $this->SetStatus($this->koordinaten() === null ? 201 : 102);
@@ -305,7 +311,10 @@ class Verschattung extends IPSModule
                 'schutz' => $schutzAktionen === [] ? null : VSCHLogik::schutz($schutzAktionen, array_values(array_filter([$g['Position'], $g['Lamelle']])),
                     IPS_GetParent($g['Position']), $schutzMerk, $now, 60 * $this->ReadPropertyInteger('Haltezeit')),
             ];
-            $ger = ['typ' => $g['Typ'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe];
+            $zielLux = (int)$g['ZielLux'] > 0 ? (float)$g['ZielLux'] : $this->ReadPropertyFloat('ZielLux');
+            $istLux = $zielLux > 0 ? $this->lux((int)$g['RaumHell']) : null;
+            $ger = ['typ' => $g['Typ'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
+                'regel' => $istLux !== null ? ['ziel' => $zielLux, 'ist' => $istLux] : null];
             $r = VSCHLogik::entscheide($ger, $u, (array)($z[$k] ?? []), $zeiten, $now);
             $wege[$g['Name']] = $r['weg'];
             if ($probe) {
@@ -330,6 +339,7 @@ class Verschattung extends IPSModule
         if ($this->GetValue('Status') !== $status) {
             $this->SetValue('Status', $status);
         }
+        $this->kachelAktualisieren($wege);
         return $wege;
     }
 
@@ -1317,6 +1327,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Room brightness', 'name' => 'RaumHell', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Contact open', 'name' => 'BeiOffen', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'Select', 'options' => [
                         ['caption' => 'do not lower (door)', 'value' => 0], ['caption' => 'ventilation position (window)', 'value' => 2]]]],
+                    ['caption' => 'Target brightness (lx)', 'name' => 'ZielLux', 'width' => '170px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 5000]],
                     ['caption' => 'Sun max. into room (cm)', 'name' => 'Tiefe', 'width' => '190px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1000]],
                     ['caption' => 'Window height (cm)', 'name' => 'FensterHoehe', 'width' => '170px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 600]],
                     ['caption' => 'Sill height (cm)', 'name' => 'Bruestung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 300]],
@@ -1378,6 +1389,11 @@ class Verschattung extends IPSModule
                 ['type' => 'NumberSpinner', 'name' => 'VerzoegerungAus', 'caption' => 'Delay before ending', 'suffix' => 'min', 'minimum' => 0, 'maximum' => 120],
             ]],
             ['type' => 'Label', 'name' => 'VerzoegerungAnHint', 'caption' => 'Prevents moving back and forth with passing clouds.'],
+        ]];
+
+        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📱  Tile and IPSView', 'items' => [
+            ['type' => 'Label', 'caption' => 'The tile shows the house from above with the sunlit facades, today\'s sky with sun, horizon and neighbouring buildings, clouds or blue sky from the measured irradiance, and every device with its position and the reason. Tap a device to see the whole decision path. The tile can switch the automatic on and off.'],
+            ['type' => 'Label', 'caption' => $this->t('IPSView or browser: create a WebView element and enter http://<Symcon-IP>:3777%s as the address (optionally ?bg=1c1c1e for a background colour). The page refreshes itself every minute and only shows, it does not operate anything.', $this->hookPfad())],
         ]];
 
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '⚖️  License', 'items' => [
@@ -1648,6 +1664,9 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'caption' => '💡 ' . $this->t('Room brightness: only for lowering')],
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' lx', 'name' => $p . 'RaumHellLux', 'caption' => $this->t('Sun reaches the room from (lx)'), 'minimum' => 0, 'maximum' => 2000, 'stepSize' => 10, 'width' => '600px'] + $wert('RaumHellLux'),
             ['type' => 'Label', 'name' => $p . 'RaumHellHint', 'caption' => $this->t('If the brightness sensor of the room (column "Room brightness") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.')],
+            ['type' => 'Label', 'caption' => '🎯 ' . $this->t('Target brightness in the room')],
+            ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' lx', 'name' => $p . 'ZielLux', 'caption' => $this->t('Keep the room at (lx, 0 = off)'), 'minimum' => 0, 'maximum' => 1000, 'stepSize' => 10, 'width' => '600px'] + $wert('ZielLux'),
+            ['type' => 'Label', 'name' => $p . 'ZielLuxHint', 'caption' => $this->t('When neither heating nor cooling is needed, the device follows the brightness sensor of the room: brighter than the target → a bit further down (venetian blinds: slats closed further), darker → a bit further open, one step every 2 minutes. When cooling, it shades fully; when heating, it stays up. Per device the column "Target brightness" overrides this value. Lights switched on in the room count as brightness too.')],
         ]);
     }
 
@@ -1738,7 +1757,7 @@ class Verschattung extends IPSModule
                 'LamelleUmgekehrt' => (bool)($g['LamelleUmgekehrt'] ?? false), 'Kontakt' => (int)($g['Kontakt'] ?? 0), 'Kontakt2' => (int)($g['Kontakt2'] ?? 0),
                 'Kontakt3' => (int)($g['Kontakt3'] ?? 0), 'Kontakt4' => (int)($g['Kontakt4'] ?? 0),
                 'RaumTemp' => (int)($g['RaumTemp'] ?? 0), 'RaumHell' => (int)($g['RaumHell'] ?? 0),
-                'BeiOffen' => (int)($g['BeiOffen'] ?? 0), 'Tiefe' => (int)($g['Tiefe'] ?? 0),
+                'BeiOffen' => (int)($g['BeiOffen'] ?? 0), 'Tiefe' => (int)($g['Tiefe'] ?? 0), 'ZielLux' => (int)($g['ZielLux'] ?? 0),
                 'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0),
                 'Beschattung' => $besch > 0 ? $besch : VSCHLogik::VORGABEN[$typ]['beschattung'],
                 'key' => 'g' . (int)($g['Position'] ?? 0),

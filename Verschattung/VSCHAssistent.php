@@ -65,7 +65,7 @@ trait VSCHAssistent
                             'width' => '70px', 'edit' => ['type' => 'CheckBox']], ['N', 'O', 'S', 'W']),
                         array_map(fn($k) => ['caption' => $k, 'name' => $k, 'visible' => false, 'save' => true],
                             ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung', 'RaumTemp', 'RaumHell',
-                                'BeiOffen', 'Tiefe', 'FensterHoehe', 'Bruestung']))],
+                                'BeiOffen', 'Tiefe', 'FensterHoehe', 'Bruestung', 'ZielLux']))],
                     ['type' => 'CheckBox', 'name' => 'WInfoSchreiben', 'caption' => $this->t('Also write to device info field'), 'value' => false],
                     ['type' => 'Label', 'caption' => $this->t('Optional: writes the line "Orientation: South" into the info field of each device, so other modules can read it. Other text there stays.')],
                 ],
@@ -136,6 +136,7 @@ trait VSCHAssistent
                         ['caption' => $this->t('Shading position (%)'), 'name' => 'Beschattung', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Contact open'), 'name' => 'BeiOffen', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Sun max. into room (cm)'), 'name' => 'Tiefe', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Target brightness (lx)'), 'name' => 'ZielLux', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Window height (cm)'), 'name' => 'FensterHoehe', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Sill height (cm)'), 'name' => 'Bruestung', 'visible' => false, 'save' => true],
                     ]],
@@ -199,7 +200,7 @@ trait VSCHAssistent
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"hell" => (int)$WHell, "sonneAn" => (float)$WSonneAn, "temp" => (int)$WTemp, "aussenSommer" => (float)$WAussenSommer, '
-                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellLux" => (float)$WRaumHellLux, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
+                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellLux" => (float)$WRaumHellLux, "zielLux" => (float)$WZielLux, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
             ],
         ];
         return [
@@ -400,7 +401,7 @@ trait VSCHAssistent
     private function gespeichertErgaenzen(array $g, array $inst): array
     {
         $g += ['Richtung' => 0, 'Lamelle' => 0, 'LamelleUmgekehrt' => false, 'Kontakt' => 0, 'Kontakt2' => 0, 'Kontakt3' => 0, 'Kontakt4' => 0,
-            'Beschattung' => 0, 'RaumTemp' => 0, 'RaumHell' => 0, 'BeiOffen' => 0, 'Tiefe' => 0, 'FensterHoehe' => 0, 'Bruestung' => 0];
+            'Beschattung' => 0, 'RaumTemp' => 0, 'RaumHell' => 0, 'BeiOffen' => 0, 'Tiefe' => 0, 'FensterHoehe' => 0, 'Bruestung' => 0, 'ZielLux' => 0];
         $p = (int)($g['Position'] ?? 0);
         if ($p <= 0 || !IPS_VariableExists($p)) {
             return $g;
@@ -589,7 +590,7 @@ trait VSCHAssistent
             $melder = $d['notfall'] ? VSCHErkennung::rauchmelder($this->momentaufnahme()) : [];
             $this->UpdateFormField('Notfall', 'values', json_encode(array_map(fn($m) => ['Melder' => $m], $melder)));
         }
-        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellLux' => 'RaumHellLux', 'heizGrenze' => 'HeizGrenze'] as $q => $feld) {
+        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellLux' => 'RaumHellLux', 'zielLux' => 'ZielLux', 'heizGrenze' => 'HeizGrenze'] as $q => $feld) {
             if (isset($d[$q])) {
                 $this->UpdateFormField($feld, 'value', (float)$d[$q]);
             }

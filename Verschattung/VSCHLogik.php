@@ -121,6 +121,19 @@ final class VSCHLogik
                 $warum = (string)($u['klimaGrund'] ?? '');
             } elseif ($klima === 'kuehlen') {
                 $warum = (string)($u['klimaGrund'] ?? $warum);
+            } elseif (is_array($g['regel'] ?? null)) {
+                // Raumhelligkeit als Regelgröße (Dietmar 24.11.): beschatten nur, solange der Raum heller als das Ziel ist
+                [$ziel, $ist] = [(float)$g['regel']['ziel'], (float)$g['regel']['ist']];
+                $zr = (array)($z['regel'] ?? []);
+                if (!(bool)$z['soll'] && $ist <= $ziel * self::REGEL_OBEN) {
+                    $wunsch = false;
+                    $warum = VSCHText::t('Room %d lx, target %d lx: the sun may come in', (int)round($ist), (int)round($ziel));
+                } elseif ((bool)$z['soll'] && self::regelOffen($typ === 'raffstore' && (bool)($g['lamellen'] ?? false), $zr) && $ist < $ziel * self::REGEL_UNTEN) {
+                    $wunsch = false;
+                    $warum = VSCHText::t('Room %d lx, target %d lx: fully open again', (int)round($ist), (int)round($ziel));
+                } else {
+                    $warum = VSCHText::t('Room brightness control: room %d lx, target %d lx', (int)round($ist), (int)round($ziel));
+                }
             } elseif (is_array($tiefe)) {
                 if ((float)$tiefe[0] <= 0.02) {
                     $wunsch = false;
@@ -136,7 +149,7 @@ final class VSCHLogik
         }
         // Raumhelligkeit nur zum Herunterfahren: fällt die Sonne wirklich in diesen Raum? (Hochfahren nicht danach,
         // sonst Hin und Her – ist der Behang unten, wird der Raum dunkel.)
-        if ($wunsch && !(bool)$z['soll'] && ($u['raumHell'] ?? null) === false) {
+        if ($wunsch && !(bool)$z['soll'] && ($u['raumHell'] ?? null) === false && !is_array($g['regel'] ?? null)) {
             $wunsch = false;
             $warum = (string)($u['raumHellGrund'] ?? VSCHText::t('The sun does not reach the room'));
             $weg[] = $warum;
@@ -186,8 +199,19 @@ final class VSCHLogik
                 $warum .= ' · ' . VSCHText::t('window open: ventilation position %d %%', (int)round($l * 100));
             }
             $lamelle = ($typ === 'raffstore' && ($g['lamellen'] ?? false)) ? self::lamellenWinkel((float)$g['profil']) : null;
+            if (is_array($g['regel'] ?? null) && $klima !== 'kuehlen') {
+                $r = self::regel($typ, (bool)($g['lamellen'] ?? false), (float)$g['regel']['ziel'], (float)$g['regel']['ist'], (array)($z['regel'] ?? []), $now);
+                $z['regel'] = $r['zr'];
+                if ($r['lamelle'] !== null) {
+                    $lamelle = $r['lamelle'];
+                } else {
+                    $anteil = min($anteil ?? 1.0, $r['anteil']);
+                }
+                $weg[] = $r['text'];
+            }
             return $fertig('beschatten', $lamelle, $warum, ['wir' => true] + $z, $anteil);
         }
+        unset($z['regel']); // Regelung beginnt beim nächsten Beschatten neu
         if ($z['wir'] && ($u['tag'] ?? true)) {
             return $fertig('offen', null, $warum, ['wir' => false] + $z);
         }
@@ -401,5 +425,79 @@ final class VSCHLogik
     public static function luxZuWm2(float $lux): float
     {
         return $lux / 120;
+    }
+
+    // ------------------------------------------------------------------ Raumhelligkeit als Regelgröße
+
+    public const REGEL_OBEN = 1.25;   // über Ziel × 1,25: weiter zu
+    public const REGEL_UNTEN = 0.75;  // unter Ziel × 0,75: weiter auf
+    public const REGEL_S = 120;       // Abstand zwischen zwei Schritten: Sensor und Behang sollen sich setzen
+    public const REGEL_SCHRITT = 0.1; // Behanghöhe je Schritt (Anteil)
+    public const REGEL_LAMELLE = 15.0; // Lamellenwinkel je Schritt (°)
+
+    /**
+     * Ein Regelschritt auf die Ziel-Helligkeit im Raum. Raffstore mit Lamellen: Behang unten, geregelt wird der Lamellenwinkel
+     * (0° waagerecht … 90° zu). Sonst: die Behanghöhe (Anteil 0 … 1). Höchstens alle REGEL_S Sekunden ein Schritt.
+     * $zr: ['a' => Anteil, 'l' => Lamelle, 'ts' => letzter Schritt]. Rückgabe ['anteil', 'lamelle', 'zr', 'text'].
+     */
+    public static function regel(string $typ, bool $lamellen, float $ziel, float $ist, array $zr, int $now): array
+    {
+        $mitLamellen = $typ === 'raffstore' && $lamellen;
+        if (!isset($zr['ts'])) {
+            $zr = ['a' => 0.5, 'l' => 45.0, 'ts' => 0]; // Start in der Mitte
+        }
+        $richtung = 0;
+        if ($now - (int)$zr['ts'] >= self::REGEL_S) {
+            if ($ist > $ziel * self::REGEL_OBEN) {
+                $richtung = 1;
+            } elseif ($ist < $ziel * self::REGEL_UNTEN) {
+                $richtung = -1;
+            }
+        }
+        if ($richtung !== 0) {
+            if ($mitLamellen) {
+                $zr['l'] = max(0.0, min(90.0, (float)$zr['l'] + $richtung * self::REGEL_LAMELLE));
+            } else {
+                $zr['a'] = round(max(0.0, min(1.0, (float)$zr['a'] + $richtung * self::REGEL_SCHRITT)), 2);
+            }
+            $zr['ts'] = $now;
+        }
+        $stellung = $mitLamellen ? VSCHText::t('slats %d°', (int)$zr['l']) : VSCHText::t('%d %% down', (int)round($zr['a'] * 100));
+        $text = $richtung > 0 ? VSCHText::t('too bright: further closed (%s)', $stellung)
+            : ($richtung < 0 ? VSCHText::t('too dark: further opened (%s)', $stellung) : VSCHText::t('brightness fits: %s', $stellung));
+        return ['anteil' => $mitLamellen ? null : (float)$zr['a'], 'lamelle' => $mitLamellen ? (float)$zr['l'] : null, 'zr' => $zr, 'text' => $text];
+    }
+
+    /** Steht die Regelung ganz offen (Behang oben bzw. Lamellen waagerecht)? */
+    public static function regelOffen(bool $mitLamellen, array $zr): bool
+    {
+        if (!isset($zr['ts'])) {
+            return false;
+        }
+        return $mitLamellen ? (float)($zr['l'] ?? 45) <= 0.0 : (float)($zr['a'] ?? 0.5) <= 0.0;
+    }
+
+    /**
+     * Himmel jetzt aus der gemessenen Einstrahlung im Vergleich zum klaren Himmel (Klarheitsindex k) und dem Regensensor.
+     * Rückgabe ['art' => sonnig|heiter|wolkig|bedeckt|regen|daemmerung|nacht|unbekannt, 'k' => ?float, 'text' => Schlüssel].
+     */
+    public static function himmel(?float $wm2, float $alt, ?bool $regen): array
+    {
+        if ($alt <= 0) {
+            return ['art' => 'nacht', 'k' => null, 'text' => 'night'];
+        }
+        if ($regen === true) {
+            return ['art' => 'regen', 'k' => null, 'text' => 'rain'];
+        }
+        if ($alt < 4) {
+            return ['art' => 'daemmerung', 'k' => null, 'text' => 'twilight'];
+        }
+        if ($wm2 === null) {
+            return ['art' => 'unbekannt', 'k' => null, 'text' => 'no sensor'];
+        }
+        $k = $wm2 / max(1.0, self::klarHimmel($alt));
+        $art = $k >= 0.75 ? 'sonnig' : ($k >= 0.5 ? 'heiter' : ($k >= 0.25 ? 'wolkig' : 'bedeckt'));
+        $text = ['sonnig' => 'clear sky', 'heiter' => 'mostly sunny', 'wolkig' => 'partly cloudy', 'bedeckt' => 'overcast'][$art];
+        return ['art' => $art, 'k' => round($k, 2), 'text' => $text];
     }
 }

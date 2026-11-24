@@ -198,6 +198,25 @@ $rw = VSCHLogik::entscheide(['typ' => 'rollladen'] + $G, ['notfall' => 'Rauchmel
 check('D44 Notfall: hoch, auch nachts, bei Handbedienung und ausgeschalteter Automatik', $rw['ziel'] === 'offen' && $rw['z']['hand'] === null && str_contains($rw['grund'], 'Rauchmelder Küche'));
 $rw = VSCHLogik::entscheide($G, ['weg' => ['Sonne 180°']] + $U, [], $T, $t0);
 check('D45 Entscheidungsweg: Messwerte vorn, Ergebnis mit Pfeil am Ende', $rw['weg'][0] === 'Sonne 180°' && str_starts_with(end($rw['weg']), '→ '), json_encode($rw['weg']));
+// Raumhelligkeit als Regelgröße (0.7.0)
+$GR = ['typ' => 'rollladen', 'lamellen' => false] + $G;
+$UN = ['klima' => 'neutral', 'klimaGrund' => 'behaglich'] + $U;
+$rw = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 150]] + $GR, $UN, [], $T, $t0);
+check('D50 Regelung: Raum dunkler als Ziel → Sonne darf herein', $rw['z']['kandidat'] === null && str_contains($rw['grund'], '150 lx'), $rw['grund']);
+$rw = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $GR, $UN, [], $T, $t0);
+check('D51 Regelung: Raum zu hell → beschatten (nach Verzögerung)', $rw['z']['kandidat'] === true);
+$rw = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $GR, $UN, ['soll' => true, 'wir' => true], $T, $t0);
+check('D52 Regelung Rollladen: Start Mitte, zu hell → ein Schritt weiter zu (60 %)', $rw['ziel'] === 'beschatten' && abs((float)$rw['anteil'] - 0.6) < 0.001, json_encode([$rw['anteil'], $rw['z']['regel'] ?? null]));
+$rw2 = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $GR, $UN, $rw['z'], $T, $t0 + 60);
+check('D53 Regelung: höchstens alle 2 min ein Schritt', abs((float)$rw2['anteil'] - 0.6) < 0.001);
+$rw3 = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 100]] + $GR, $UN, $rw['z'], $T, $t0 + 130);
+check('D54 Regelung: zu dunkel → ein Schritt weiter auf (50 %)', abs((float)$rw3['anteil'] - 0.5) < 0.001);
+$rwL = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $G, $UN, ['soll' => true, 'wir' => true], $T, $t0);
+check('D55 Regelung Raffstore: Behang unten, Lamellen 45° → 60°', $rwL['ziel'] === 'beschatten' && $rwL['anteil'] === null && $rwL['lamelle'] == 60.0, json_encode([$rwL['anteil'], $rwL['lamelle']]));
+$rwO = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 100]] + $GR, $UN, ['soll' => true, 'wir' => true, 'regel' => ['a' => 0.0, 'l' => 0.0, 'ts' => 0]], $T, $t0);
+check('D56 Regelung ganz offen und noch zu dunkel → Beschatten endet', $rwO['z']['kandidat'] === false);
+$rwK = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $GR, ['klima' => 'kuehlen', 'klimaGrund' => 'warm'] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D57 Kühlbedarf: volle Beschattung, keine Helligkeitsregelung', $rwK['ziel'] === 'beschatten' && $rwK['anteil'] === null);
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -545,6 +564,26 @@ $m->UIVorschau(json_encode([['Kennung' => 'A', 'Name' => 'Süd', 'Azimut' => 180
 $ohne = base64_decode(substr(array_column($m->fieldUpdates, 2, 0)['Himmel'] ?? '', 26));
 check('G48 Vorschau: Nachbargebäude ein- und ausblendbar', str_contains($mit, 'Nachbargebäude') && !str_contains($ohne, 'Nachbargebäude'));
 $m->attrs['Haus'] = '{}';
+// Kachel (0.7.0)
+check('G49 Himmel aus Einstrahlung: klar, heiter, wolkig, bedeckt, Regen, Nacht', VSCHLogik::himmel(800, 50, null)['art'] === 'sonnig' && VSCHLogik::himmel(500, 50, null)['art'] === 'heiter'
+    && VSCHLogik::himmel(300, 50, null)['art'] === 'wolkig' && VSCHLogik::himmel(100, 50, null)['art'] === 'bedeckt' && VSCHLogik::himmel(800, 50, true)['art'] === 'regen'
+    && VSCHLogik::himmel(800, -5, null)['art'] === 'nacht' && VSCHLogik::himmel(null, 30, null)['art'] === 'unbekannt');
+$html = $m->GetVisualizationTile();
+preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $html, $km);
+$kd = json_decode($km[1] ?? 'null', true);
+check('G50 Kachel: Seite mit Daten (Sonne, Bahn, Geräte mit Stellung und Weg, Texte)', is_array($kd) && isset($kd['sonne'], $kd['bahn'], $kd['texte']['Automatic']) && count($kd['geraete']) >= 1
+    && array_key_exists('zu', $kd['geraete'][0]) && $kd['geraete'][0]['weg'] !== [] && $kd['bedienbar'] === true, json_encode(array_keys((array)$kd)));
+$m->kachel = [];
+$m->Tick();
+$vor = count($m->kachel);
+$m->Tick();
+check('G51 Kachel wird im Regeltakt aktualisiert, ohne Änderung nicht erneut', $vor === 1 && count($m->kachel) === 1, (string)$vor);
+$_GET = ['json' => 1, 'bg' => '1c1c1e'];
+ob_start(); $m->ProcessHookData(); $hj = json_decode((string)ob_get_clean(), true);
+check('G52 IPSView-Seite: nur Anzeige, Hintergrund übernommen', ($hj['bedienbar'] ?? true) === false && ($hj['bg'] ?? '') === '#1c1c1e');
+$_GET = [];
+ob_start(); $m->ProcessHookData(); $hh = (string)ob_get_clean();
+check('G53 IPSView-Seite lädt sich jede Minute neu', str_contains($hh, 'setInterval') && str_contains($hh, 'verschattung12345?json=1'));
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

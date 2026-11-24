@@ -124,6 +124,12 @@ class IPSModule
     public function SendDebug(string $a, string $b, int $c): void { $this->debug[] = "$a: $b"; }
     public function LogMessage(string $m, int $t): void { $this->logged[] = [$t, $m]; }
     public function UpdateFormField(string $n, string $p, $v): void { $this->fieldUpdates[] = [$n, $p, $v]; }
+    public array $kachel = [];
+    public array $puffer = [];
+    public function SetVisualizationType(int $t): void {}
+    public function UpdateVisualizationValue($v): void { $this->kachel[] = $v; }
+    public function SetBuffer(string $n, string $v): void { $this->puffer[$n] = $v; }
+    public function GetBuffer(string $n): string { return $this->puffer[$n] ?? ''; }
     public function GetIDForIdent(string $ident) { return IPS_GetObjectIDByIdent($ident, $this->InstanceID); }
     public function MaintainVariable(string $ident, string $name, int $type, string $profile, int $pos, bool $keep): void
     {
