@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.2 (in Entwicklung)
+
+- **Behoben:** 0.7.1 brach mit „end(): Argument #1 could not be passed by reference“ ab, sobald ein Behang noch keinen Grund hatte (frisch angelegte Instanz, Behang an inaktiver Fassade). Betroffen waren Kachel, IPSView-Seite und – bei solchen Behängen – auch der Regeltakt. Live-Befund 24.11. 21:52; neuer Test G54 deckt den Fall ab.
+
+
 ## 0.7.1 (in Entwicklung)
 
 - Live-Test 0.7.0 (24.11. abends, Test-Instanz angelegt und entfernt): IPSView-Seite läuft dunkel und hell (`?bg=ffffff`) – Nachthimmel mit Sternen, Gelände, Nachbarhäuser, Sonnenzeiten der Südfassade (09:00–09:40 + 14:00–15:50), Entscheidungsweg per Tipp. Verbessert:

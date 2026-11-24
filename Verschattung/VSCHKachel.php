@@ -49,6 +49,15 @@ trait VSCHKachel
             . '.then(function(r){return r.text();}).then(function(t){handleMessage(t);}).catch(function(){});},60000);</script>';
     }
 
+    /** Grund aus dem Regeltakt, sonst die letzte Zeile des Probelaufs (ohne Pfeil). */
+    private function kachelGrund(string $grund, array $weg): string
+    {
+        if ($grund !== '' || $weg === []) {
+            return $grund;
+        }
+        return ltrim((string)$weg[count($weg) - 1], '→ ');
+    }
+
     private function kopf(string $typ): void
     {
         if (!headers_sent()) {
@@ -168,8 +177,8 @@ trait VSCHKachel
                 $lam = $lm > 0 ? round($g['LamelleUmgekehrt'] ? 90 * (1 - $lv / $lm) : 90 * $lv / $lm) : null;
             }
             $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'zu' => $zu === null ? null : round(max(0, min(1, $zu)), 2),
-                'lamelle' => $lam, 'grund' => (string)($z[$g['key']]['grund'] ?? '') !== '' ? (string)$z[$g['key']]['grund']
-                    : ltrim((string)end($wege[$g['Name']] ?? ['']), '→ '), 'weg' => $wege[$g['Name']] ?? []];
+                'lamelle' => $lam, 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
+                'weg' => $wege[$g['Name']] ?? []];
         }
         if ($mitTexten) {
             $daten['texte'] = $this->kachelTexte();

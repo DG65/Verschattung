@@ -573,6 +573,11 @@ preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $html, $km);
 $kd = json_decode($km[1] ?? 'null', true);
 check('G50 Kachel: Seite mit Daten (Sonne, Bahn, Geräte mit Stellung und Weg, Texte)', is_array($kd) && isset($kd['sonne'], $kd['bahn'], $kd['texte']['Automatic']) && count($kd['geraete']) >= 1
     && array_key_exists('zu', $kd['geraete'][0]) && $kd['geraete'][0]['weg'] !== [] && $kd['bedienbar'] === true, json_encode(array_keys((array)$kd)));
+$z0 = $m->attrs['Zustand'];
+$m->attrs['Zustand'] = '{}'; // frisch angelegt: noch kein Grund im Zustand (Live-Befund 0.7.1: end() auf Ausdruck → Abbruch)
+$frisch = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $fm) ? $fm[1] : 'null', true);
+check('G54 Kachel ohne bisherigen Regeltakt: Grund aus dem Probelauf, kein Abbruch', is_array($frisch) && ($frisch['geraete'][0]['grund'] ?? '') !== '', json_encode($frisch['geraete'][0] ?? null));
+$m->attrs['Zustand'] = $z0;
 $m->kachel = [];
 $m->Tick();
 $vor = count($m->kachel);
