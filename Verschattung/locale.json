@@ -370,7 +370,23 @@
             "terrain": "Gelände",
             "neighbouring buildings": "Nachbargebäude",
             "sun now": "Sonne jetzt",
-            "hidden by the surroundings": "von der Umgebung verdeckt"
+            "hidden by the surroundings": "von der Umgebung verdeckt",
+            "Solar heat today": "Sonnenwärme heute",
+            "Heat kept out today": "Hitze abgehalten heute",
+            "into the house": "ins Haus",
+            "kept out": "abgehalten",
+            "estimated": "geschätzt",
+            "Window area not entered – 2 m² assumed per device": "Fensterfläche nicht eingetragen – je Behang 2 m² angenommen",
+            "Clear sky with all devices open: about %s kWh today": "Bei klarem Himmel und offenen Behängen heute etwa %s kWh",
+            "now": "jetzt",
+            "yesterday": "gestern",
+            "Window area (m²)": "Fensterfläche (m²)",
+            "Solar heat through the windows": "Sonnenwärme durch die Fenster",
+            "Glazing": "Verglasung",
+            "double glazing (g 0.6)": "Zweifachverglasung (g 0,6)",
+            "triple glazing (g 0.5)": "Dreifachverglasung (g 0,5)",
+            "solar control glass (g 0.35)": "Sonnenschutzglas (g 0,35)",
+            "The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column \"Window area\", empty = 2 m²) and the glazing.": "Die Kachel zeigt, wie viel Wärme die Sonne heute ins Haus bringt und wie viel die Behänge abhalten. Geschätzt aus dem Einstrahlungssensor, dem Sonnenstand, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m²) und der Verglasung."
         }
     }
 }

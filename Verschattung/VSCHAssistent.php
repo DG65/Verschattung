@@ -65,7 +65,7 @@ trait VSCHAssistent
                             'width' => '70px', 'edit' => ['type' => 'CheckBox']], ['N', 'O', 'S', 'W']),
                         array_map(fn($k) => ['caption' => $k, 'name' => $k, 'visible' => false, 'save' => true],
                             ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung', 'RaumTemp', 'RaumHell',
-                                'BeiOffen', 'Tiefe', 'FensterHoehe', 'Bruestung', 'ZielLux']))],
+                                'BeiOffen', 'Tiefe', 'FensterHoehe', 'Bruestung', 'ZielLux', 'Flaeche']))],
                     ['type' => 'CheckBox', 'name' => 'WInfoSchreiben', 'caption' => $this->t('Also write to device info field'), 'value' => false],
                     ['type' => 'Label', 'caption' => $this->t('Optional: writes the line "Orientation: South" into the info field of each device, so other modules can read it. Other text there stays.')],
                 ],
@@ -139,6 +139,7 @@ trait VSCHAssistent
                         ['caption' => $this->t('Target brightness (lx)'), 'name' => 'ZielLux', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Window height (cm)'), 'name' => 'FensterHoehe', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Sill height (cm)'), 'name' => 'Bruestung', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Window area (m²)'), 'name' => 'Flaeche', 'visible' => false, 'save' => true],
                     ]],
                     ['type' => 'Label', 'name' => 'WGeraeteHinweis', 'caption' => $this->t('Missing a device? Add it later in the device list of the form with "+".')],
                 ],
@@ -401,7 +402,7 @@ trait VSCHAssistent
     private function gespeichertErgaenzen(array $g, array $inst): array
     {
         $g += ['Richtung' => 0, 'Lamelle' => 0, 'LamelleUmgekehrt' => false, 'Kontakt' => 0, 'Kontakt2' => 0, 'Kontakt3' => 0, 'Kontakt4' => 0,
-            'Beschattung' => 0, 'RaumTemp' => 0, 'RaumHell' => 0, 'BeiOffen' => 0, 'Tiefe' => 0, 'FensterHoehe' => 0, 'Bruestung' => 0, 'ZielLux' => 0];
+            'Beschattung' => 0, 'RaumTemp' => 0, 'RaumHell' => 0, 'BeiOffen' => 0, 'Tiefe' => 0, 'FensterHoehe' => 0, 'Bruestung' => 0, 'ZielLux' => 0, 'Flaeche' => 0];
         $p = (int)($g['Position'] ?? 0);
         if ($p <= 0 || !IPS_VariableExists($p)) {
             return $g;

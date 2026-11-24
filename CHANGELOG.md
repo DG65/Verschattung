@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 (in Entwicklung)
+
+- **Sonnenwärme in kWh** (Idee 1, Dietmar 24.11.: „Der Behang ist die günstigste Raum-Heiz- und Kühlmethode“ – jetzt sieht man, wie viel):
+  - Neue Karte auf der Kachel unter der Lage: heute **ins Haus** und **abgehalten** (im Sommer zuerst „abgehalten“), Balken gegen „bei klarem Himmel und offenen Behängen möglich“, Leistung jetzt, gestern. „geschätzt“, solange Fensterflächen fehlen. Je Behang die Wärme von heute in seiner Karte.
+  - Rechnung in `VSCHLogik`: gemessene Globalstrahlung nach Erbs in direkt/diffus geteilt, auf die senkrechte Fassade umgerechnet (direkt nur, wenn Horizont und Nachbarn frei sind; Messung bei tiefer Sonne auf 115 % des klaren Himmels begrenzt), × Fensterfläche × Glasanteil 0,7 × g-Wert × Durchlass des Behangs in seiner Stellung.
+  - Neue Gerätespalte **Fensterfläche (m²)**, leer = 2 m²; neue Einstellung **Verglasung** in den Feinheiten (Vorgabe Dreifach, g 0,5).
+  - Neue Variablen **Sonnenwärme heute** und **Hitze abgehalten heute** (kWh, um Mitternacht neu; Archiv nach Wunsch selbst einschalten).
+
+
 ## 0.9.0 (in Entwicklung)
 
 - **Kachel neu** im Stil der übrigen NRG-Stack-Kacheln (Karten, ruhige Typografie, klare Zahlen, keine Illustration; Dietmar 24.11.: die erste Fassung mit gemalter Fassade war „naive Kunst“):

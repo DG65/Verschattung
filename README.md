@@ -72,7 +72,9 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 
 ## Kachel und IPSView
 
-Die Kachel zeigt das Haus von oben mit der beschienenen Fassade und der Sonne, den Himmel von heute (blau, Wolken, Regen oder Nacht aus der gemessenen Einstrahlung) mit Sonnenbahn, Horizont und Nachbarhäusern, und jeden Behang mit Stellung und Grund. Ein Tipp auf einen Behang zeigt den Entscheidungsweg; die Automatik lässt sich auf der Kachel schalten.
+Die Kachel zeigt die Lage in einem Satz („Winter: Die Sonne heizt mit“) mit Einstrahlung, Außentemperatur und Sonnenzeiten, die Sonnenwärme von heute, ein Sonnenstandsdiagramm mit Horizont und Nachbarhäusern (per Klick ausblendbar), den Tagesverlauf und jeden Behang als Karte mit Stellung und Grund. Ein Tipp auf einen Behang zeigt den Entscheidungsweg; die Automatik lässt sich auf der Kachel schalten, gesamt und je Behang.
+
+**Sonnenwärme:** Wie viel Wärme die Sonne heute durch die Fenster ins Haus bringt und wie viel die Behänge abhalten (kWh), dazu die Leistung jetzt, der Vortag und was bei klarem Himmel mit offenen Behängen heute möglich wäre. Geschätzt aus dem Einstrahlungssensor (aufgeteilt in direkt und diffus), dem Sonnenstand samt Horizont und Nachbarn, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m², Rahmenanteil 30 %), der Verglasung (Feinheiten: Zweifach g 0,6 · Dreifach g 0,5 · Sonnenschutzglas g 0,35) und der Stellung jedes Behangs (Rollladen und Raffstore zu ≈ 5 %, Raffstore mit waagrechten Lamellen ≈ 50 %, Markise ≈ 30 % Durchlass). Die Tageswerte stehen auch in den Variablen „Sonnenwärme heute“ und „Hitze abgehalten heute“. Ohne Einstrahlungssensor entfällt die Schätzung.
 
 Für IPSView: ein WebView-Element mit der Adresse `http://<Symcon-IP>:3777/hook/verschattung<Instanz-ID>` anlegen (optional `?bg=1c1c1e`). Die Seite zeigt nur an und aktualisiert sich jede Minute.
 

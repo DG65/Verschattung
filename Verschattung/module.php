@@ -87,6 +87,7 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('ZielLux', 0);
         // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
         $this->RegisterPropertyFloat('HeizGrenze', 21);
+        $this->RegisterPropertyFloat('GWert', 0.5); // Gesamtenergiedurchlass der Verglasung: 2-fach 0,6 · 3-fach 0,5 · Sonnenschutzglas 0,35
         $this->RegisterPropertyInteger('WPModusID', 0);
         $this->RegisterPropertyFloat('Lueftung', 70);
         $this->RegisterPropertyString('Notfall', '[]'); // Raumsensoren messen hinter Glas wenig: Sonne im Raum ≈ 2–18 W/m², Wolken < 1 (Archiv 24.11.)
@@ -127,6 +128,9 @@ class Verschattung extends IPSModule
         }
         $this->MaintainVariable('Status', $this->t('Status'), VARIABLETYPE_STRING, '', 2, true);
         $this->schalterJeBehang();
+        $kwh = ['PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION, 'SUFFIX' => ' kWh', 'DIGITS' => 1];
+        $this->MaintainVariable('WaermeHeute', $this->t('Solar heat today'), VARIABLETYPE_FLOAT, $kwh, 3, true);
+        $this->MaintainVariable('AbgehaltenHeute', $this->t('Heat kept out today'), VARIABLETYPE_FLOAT, $kwh, 4, true);
 
         foreach ($this->GetMessageList() as $sender => $msgs) {
             foreach ($msgs as $m) {
@@ -345,6 +349,7 @@ class Verschattung extends IPSModule
             return $wege;
         }
         $z['_w'] = $this->wetterLage();
+        $this->waermeZaehlen($now, $this->waerme($sonne, $hid > 0 && IPS_VariableExists($hid) ? $this->wm2($hid) : null, $z), $z);
         $this->verlaufMerken($now, $hid > 0 && IPS_VariableExists($hid) ? $this->wm2($hid) : null, $z);
         $z['_schutz'] = $schutzMerk;
         $this->WriteAttributeString('Zustand', json_encode($z));
@@ -397,6 +402,73 @@ class Verschattung extends IPSModule
     {
         if (@$this->GetIDForIdent('Aktiv' . $position) !== false) {
             $this->RequestAction('Aktiv' . $position, $aktiv);
+        }
+    }
+
+    /**
+     * Sonnenwärme jetzt (W) je Behang: Einstrahlung auf die Fassade × Fensterfläche × g-Wert × Abminderung durch den Behang, wie er gerade steht.
+     * Ohne Einstrahlungssensor null – geschätzt wird nur aus Messwerten, nicht aus dem klaren Himmel.
+     */
+    private function waerme(array $sonne, ?float $ghi, array $z): ?array
+    {
+        if ($ghi === null) {
+            return null;
+        }
+        $fassaden = $this->fassadenMap();
+        $horizont = $this->horizontPunkte();
+        $hoehe = [];
+        $rein = 0.0;
+        $offen = 0.0;
+        $je = [];
+        foreach ($this->geraete() as $g) {
+            $f = $fassaden[$g['Fassade']] ?? null;
+            if ($f === null || $g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
+                continue;
+            }
+            $faz = (float)($f['Azimut'] ?? 180);
+            $fk = (string)$g['Fassade'];
+            $hoehe[$fk] ??= max(VSCHHorizont::hoehe($horizont, $sonne['az']), VSCHHorizont::hoehe($this->hindernisPunkte($faz), $sonne['az']));
+            $an = VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $faz, $hoehe[$fk], (bool)($z['_f'][$fk] ?? false));
+            $i = VSCHLogik::fassadeEinstrahlung($ghi, $sonne['alt'], $sonne['az'], $faz, $an);
+            [$zu, $lam] = $this->istStellung($g);
+            $w = VSCHLogik::sonnenwaerme($i, $g['Flaeche'], $this->ReadPropertyFloat('GWert'), VSCHLogik::abminderung($g['Typ'], $zu, $lam));
+            $je[$g['key']] = [round($w['rein']), round($w['offen'])];
+            $rein += $w['rein'];
+            $offen += $w['offen'];
+        }
+        return ['rein' => $rein, 'offen' => $offen, 'je' => $je];
+    }
+
+    /** Tageszähler (Wh) im Zustand und als Variablen in kWh; um Mitternacht wird gestern gemerkt und neu begonnen. */
+    private function waermeZaehlen(int $now, ?array $w, array &$z): void
+    {
+        $a = (array)($z['_waerme'] ?? []);
+        $tag = date('Y-m-d', $now);
+        if (($a['tag'] ?? '') !== $tag) {
+            $a = ['tag' => $tag, 'ts' => $now, 'rein' => 0.0, 'ab' => 0.0, 'je' => [],
+                'gestern' => isset($a['tag']) ? ['rein' => (float)($a['rein'] ?? 0), 'ab' => (float)($a['ab'] ?? 0)] : ($a['gestern'] ?? null)];
+        }
+        $dt = max(0, min(300, $now - (int)($a['ts'] ?? $now)));
+        $a['ts'] = $now;
+        if ($w !== null) {
+            $a['rein'] = (float)$a['rein'] + $w['rein'] * $dt / 3600;
+            $a['ab'] = (float)$a['ab'] + ($w['offen'] - $w['rein']) * $dt / 3600;
+            foreach ($w['je'] as $k => $v) {
+                $a['je'][$k] = round((float)($a['je'][$k] ?? 0) + $v[0] * $dt / 3600, 1);
+            }
+            $a['jetzt'] = (int)round($w['rein']);
+            $a['jetztAb'] = (int)round($w['offen'] - $w['rein']);
+        } else {
+            unset($a['jetzt'], $a['jetztAb']);
+        }
+        $a['rein'] = round((float)$a['rein'], 1);
+        $a['ab'] = round((float)$a['ab'], 1);
+        $z['_waerme'] = $a;
+        foreach (['WaermeHeute' => $a['rein'], 'AbgehaltenHeute' => $a['ab']] as $ident => $wh) {
+            $kwh = round($wh / 1000, 2);
+            if (@$this->GetIDForIdent($ident) !== false && abs((float)$this->GetValue($ident) - $kwh) >= 0.01) {
+                $this->SetValue($ident, $kwh);
+            }
         }
     }
 
@@ -1444,6 +1516,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Sun max. into room (cm)', 'name' => 'Tiefe', 'width' => '190px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1000]],
                     ['caption' => 'Window height (cm)', 'name' => 'FensterHoehe', 'width' => '170px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 600]],
                     ['caption' => 'Sill height (cm)', 'name' => 'Bruestung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 300]],
+                    ['caption' => 'Window area (m²)', 'name' => 'Flaeche', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 50, 'digits' => 1]],
                 ]],
             ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } $n = []; foreach (($Notfall ?? []) as $x) { $n[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID, (int)($WPModusID ?? 0), json_encode($n));'],
             ['type' => 'Label', 'name' => 'AutomatikJeBehangHint', 'caption' => 'Take a single device out of the automatic: below in "Automatic per device", on the tile or with the variable "Automatic <name>".'],
@@ -1783,7 +1856,7 @@ class Verschattung extends IPSModule
         if (!$a) {
             $felder[] = ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' W/m²', 'name' => 'SonneAus', 'caption' => $this->t('End below (W/m²)'), 'minimum' => 0, 'maximum' => $max, 'stepSize' => 10, 'width' => '600px'];
         }
-        return array_merge($felder, [
+        $felder = array_merge($felder, [
             ['type' => 'Label', 'name' => $p . 'SonneHint', 'caption' => $this->t('Clear sky at your latitude at noon: about %d W/m² in June, about %d W/m² in December. Thin clouds roughly halve it, overcast sky gives below 150 W/m². Lux sensors are converted (1 W/m² ≈ 120 lx).', $juni, $dez)],
             ['type' => 'Label', 'caption' => '🌡️ ' . $this->t('Summer or winter: temperatures')],
             ['type' => 'SelectVariable', 'name' => $p . ($a ? 'Temp' : 'TemperaturID'), 'caption' => $this->t('Outdoor temperature')] + $sel('TemperaturID'),
@@ -1801,6 +1874,14 @@ class Verschattung extends IPSModule
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' lx', 'name' => $p . 'ZielLux', 'caption' => $this->t('Keep the room at (lx, 0 = off)'), 'minimum' => 0, 'maximum' => 1000, 'stepSize' => 10, 'width' => '600px'] + $wert('ZielLux'),
             ['type' => 'Label', 'name' => $p . 'ZielLuxHint', 'caption' => $this->t('When neither heating nor cooling is needed, the device follows the brightness sensor of the room: brighter than the target → a bit further down (venetian blinds: slats closed further), darker → a bit further open, one step every 2 minutes. When cooling, it shades fully; when heating, it stays up. Per device the column "Target brightness" overrides this value. Lights switched on in the room count as brightness too.')],
         ]);
+        if (!$a) {
+            $felder[] = ['type' => 'Label', 'caption' => '🔆 ' . $this->t('Solar heat through the windows')];
+            $felder[] = ['type' => 'Select', 'name' => 'GWert', 'caption' => $this->t('Glazing'), 'width' => '600px', 'options' => [
+                ['caption' => $this->t('double glazing (g 0.6)'), 'value' => 0.6], ['caption' => $this->t('triple glazing (g 0.5)'), 'value' => 0.5],
+                ['caption' => $this->t('solar control glass (g 0.35)'), 'value' => 0.35]]];
+            $felder[] = ['type' => 'Label', 'caption' => $this->t('The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column "Window area", empty = 2 m²) and the glazing.')];
+        }
+        return $felder;
     }
 
     private function koordinaten(): ?array
@@ -1891,7 +1972,7 @@ class Verschattung extends IPSModule
                 'Kontakt3' => (int)($g['Kontakt3'] ?? 0), 'Kontakt4' => (int)($g['Kontakt4'] ?? 0),
                 'RaumTemp' => (int)($g['RaumTemp'] ?? 0), 'RaumHell' => (int)($g['RaumHell'] ?? 0),
                 'BeiOffen' => (int)($g['BeiOffen'] ?? 0), 'Tiefe' => (int)($g['Tiefe'] ?? 0), 'ZielLux' => (int)($g['ZielLux'] ?? 0),
-                'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0),
+                'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0), 'Flaeche' => (float)($g['Flaeche'] ?? 0),
                 'Beschattung' => $besch > 0 ? $besch : VSCHLogik::VORGABEN[$typ]['beschattung'],
                 'key' => 'g' . (int)($g['Position'] ?? 0),
             ];

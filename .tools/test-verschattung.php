@@ -232,6 +232,17 @@ $rw = VSCHLogik::entscheide(['beschattung' => 1.0, 'ist' => ['zu' => 0.3, 'lamel
 check('D62 Behang halb offen: wird beschattet', $rw['ziel'] === 'beschatten' && $rw['z']['wir'] === true);
 $rw = VSCHLogik::entscheide(['typ' => 'rollladen', 'lamellen' => false, 'beschattung' => 0.75, 'ist' => ['zu' => 1.0, 'lamelle' => null]] + $G, $U, ['soll' => true], $T, $t0);
 check('D63 Rollladen ganz zu, Beschattung 75 %: wird nicht auf 75 % hochgefahren', $rw['ziel'] === null);
+// Sonnenwärme (0.10.0)
+$sued = VSCHLogik::fassadeEinstrahlung(VSCHLogik::klarHimmel(15), 15, 180, 180, true);
+check('D64 Wintersonne 15° auf Südfassade: senkrecht mehr als waagrecht gemessen (500–800 W/m²)', $sued > 500 && $sued < 800, (string)round($sued));
+$nord = VSCHLogik::fassadeEinstrahlung(400, 15, 0, 180, false);
+check('D65 Sonne verdeckt/hinter der Fassade: nur diffus, deutlich weniger', $nord > 0 && $nord < 0.3 * $sued, (string)round($nord));
+check('D66 Zu hohe Messung bei tiefer Sonne wird auf klaren Himmel begrenzt', VSCHLogik::fassadeEinstrahlung(2000, 15, 180, 180, true) < 1000 && VSCHLogik::fassadeEinstrahlung(0, 30, 180, 180, true) == 0.0);
+check('D67 Abminderung: offen 1, Rollladen zu 0,05, Raffstore Lamellen waagrecht 0,5 / zu 0,05, Markise 0,3', VSCHLogik::abminderung('rollladen', 0.0, null) == 1.0
+    && abs(VSCHLogik::abminderung('rollladen', 1.0, null) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('raffstore', 1.0, 0.0) - 0.5) < 1e-9
+    && abs(VSCHLogik::abminderung('raffstore', 1.0, 90.0) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('markise', 1.0, null) - 0.3) < 1e-9);
+$sw = VSCHLogik::sonnenwaerme(500, 0, 0.5, 0.05);
+check('D68 Sonnenwärme: 500 W/m², Fläche leer = 2 m², Glasanteil 0,7, g 0,5 → 350 W offen, 17,5 W durch den geschlossenen Behang', abs($sw['offen'] - 350) < 0.01 && abs($sw['rein'] - 17.5) < 0.01, json_encode($sw));
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -631,6 +642,14 @@ $liste = null;
 array_walk_recursive($fm, function () {});
 foreach ($fm['actions'] as $act) { foreach ((array)($act['items'] ?? []) as $it) { if (($it['name'] ?? '') === 'Schalter') { $liste = $it; } } }
 check('G59 Liste „Automatik je Behang“ im Aktionsbereich mit Häkchen je Behang', $liste !== null && in_array(601, array_column($liste['values'], 'Position'), true) && str_contains($liste['onEdit'], 'VSCH_UISchalter'));
+$w0 = json_decode($m->attrs['Zustand'], true)['_waerme'] ?? null;
+check('G60 Sonnenwärme: Tageszähler im Zustand, Variablen „Sonnenwärme heute“ und „Hitze abgehalten heute“', is_array($w0) && isset($w0['tag'], $w0['rein'], $w0['ab'])
+    && @IPS_GetObjectIDByIdent('WaermeHeute', 12345) !== false && @IPS_GetObjectIDByIdent('AbgehaltenHeute', 12345) !== false, json_encode($w0));
+check('G61 Kachel: Wärmekarte mit klarem-Himmel-Vergleich, Wärme je Behang', array_key_exists('waerme', $kd2) && ($kd2['waerme'] === null || isset($kd2['waerme']['klar'])) && array_key_exists('waerme', $kd2['geraete'][0]), json_encode($kd2['waerme']));
+$fz = json_decode($m->GetConfigurationForm(), true);
+$fl = false; array_walk_recursive($fz, function ($v, $k) use (&$fl) { if ($k === 'name' && $v === 'Flaeche') { $fl = true; } });
+$gw = false; array_walk_recursive($fz, function ($v, $k) use (&$gw) { if ($k === 'name' && $v === 'GWert') { $gw = true; } });
+check('G62 Formular: Spalte Fensterfläche und Verglasung', $fl && $gw);
 $m->RequestAction('Aktiv601', true);
 $alt = $m->props['Geraete'];
 $m->props['Geraete'] = json_encode(array_values(array_filter(json_decode($alt, true), fn($g) => $g['Position'] !== 601)));
@@ -638,6 +657,18 @@ $m->ApplyChanges();
 check('G57 Behang aus der Liste entfernt → Schalter entfernt', @IPS_GetObjectIDByIdent('Aktiv601', 12345) === false);
 $m->props['Geraete'] = $alt;
 $m->ApplyChanges();
+// Sonnenwärme mit Sensor: zählt im Regeltakt, Tageswechsel merkt gestern
+$sicher = [$m->props['HelligkeitID'] ?? 0, $m->attrs['Zustand'], $GLOBALS['CLOCK']];
+$m->props['HelligkeitID'] = 987; // 412 W/m²
+$m->Tick(); $GLOBALS['CLOCK'] += 120; $m->Tick();
+$wz = json_decode($m->attrs['Zustand'], true)['_waerme'] ?? [];
+$kw = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $wm) ? $wm[1] : 'null', true);
+check('G63 Sonnenwärme mit Sensor: Leistung jetzt und Wh zählen, Kachel mit klarem Himmel', ($wz['jetzt'] ?? 0) > 0 && ($wz['rein'] ?? 0) + ($wz['ab'] ?? 0) > 0
+    && ($kw['waerme']['klar'] ?? 0) > 0 && abs((float)GetValue(IPS_GetObjectIDByIdent('WaermeHeute', 12345)) - round($wz['rein'] / 1000, 2)) < 0.011, json_encode([$wz, $kw['waerme'] ?? null]));
+$GLOBALS['CLOCK'] = strtotime('tomorrow 08:00', $GLOBALS['CLOCK']); $m->Tick();
+$wz2 = json_decode($m->attrs['Zustand'], true)['_waerme'] ?? [];
+check('G64 Mitternacht: gestern gemerkt, heute beginnt bei 0', ($wz2['gestern']['rein'] ?? -1) == $wz['rein'] && ($wz2['rein'] ?? -1) == 0 && $wz2['tag'] !== $wz['tag'], json_encode($wz2));
+[$m->props['HelligkeitID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = $sicher;
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

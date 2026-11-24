@@ -436,6 +436,63 @@ final class VSCHLogik
         return 1098 * $s * exp(-0.057 / $s);
     }
 
+    // ------------------------------------------------------------------ Sonnenwärme durchs Fenster
+
+    /** Fensterfläche, wenn nicht eingetragen (m²): typische Terrassentür/großes Fenster. */
+    public const FLAECHE_VORGABE = 2.0;
+    /** Glasanteil am Fenster (Rahmen abgezogen). */
+    public const GLASANTEIL = 0.7;
+
+    /**
+     * Einstrahlung auf eine senkrechte Fassade (W/m²) aus der gemessenen Globalstrahlung (horizontal).
+     * Aufteilung direkt/diffus nach Erbs über den Klarheitsindex; direkt nur, wenn die Sonne die Fassade trifft (Horizont/Nachbarn frei).
+     */
+    public static function fassadeEinstrahlung(float $ghi, float $alt, float $sonneAz, float $fassadeAz, bool $sonneAn): float
+    {
+        if ($ghi <= 0 || $alt <= 0) {
+            return 0.0;
+        }
+        $ghi = min($ghi, 1.15 * self::klarHimmel($alt)); // Lux-Umrechnung und Sensorlage liefern bei tiefer Sonne gern zu viel
+        $s = sin(deg2rad($alt));
+        $kt = max(0.0, min(1.0, $ghi / (1367 * $s)));
+        $df = $kt <= 0.22 ? 1 - 0.09 * $kt
+            : ($kt <= 0.8 ? 0.9511 - 0.1604 * $kt + 4.388 * $kt ** 2 - 16.638 * $kt ** 3 + 12.336 * $kt ** 4 : 0.165);
+        $diffus = $df * $ghi;
+        $direkt = 0.0;
+        if ($sonneAn && $alt >= 2) {
+            $normal = min(1000.0, ($ghi - $diffus) / $s);
+            $cos = cos(deg2rad($alt)) * cos(deg2rad(VSCHSonne::winkelAbstand($sonneAz, $fassadeAz)));
+            $direkt = max(0.0, $normal * $cos);
+        }
+        // diffuser Himmel halb sichtbar, Bodenreflexion 20 %
+        return $direkt + 0.5 * $diffus + 0.5 * 0.2 * $ghi;
+    }
+
+    /**
+     * Abminderung durch den Behang (Fc, 1 = offen): Rollladen zu ≈ 0,05, Raffstore zu ≈ 0,05 (Lamellen waagrecht ≈ 0,5), Markise ≈ 0,3.
+     * $zu 0..1, $lamelle 0..90° (90 = zu) oder null.
+     */
+    public static function abminderung(string $typ, ?float $zu, ?float $lamelle): float
+    {
+        $zu = max(0.0, min(1.0, (float)$zu));
+        $voll = match ($typ) {
+            'markise' => 0.3,
+            'raffstore' => $lamelle === null ? 0.1 : 0.5 - 0.45 * max(0.0, min(90.0, $lamelle)) / 90,
+            default => 0.05,
+        };
+        return 1 - $zu * (1 - $voll);
+    }
+
+    /**
+     * Sonnenwärme durch ein Fenster (W): Fläche × Glasanteil × g-Wert × Einstrahlung auf die Fassade × Abminderung.
+     * Rückgabe ['rein' => mit Behang wie er steht, 'offen' => ohne Behang]; 'offen' − 'rein' hat der Behang abgehalten.
+     */
+    public static function sonnenwaerme(float $fassadeWm2, float $flaeche, float $g, float $fc): array
+    {
+        $offen = max(0.0, $fassadeWm2) * ($flaeche > 0 ? $flaeche : self::FLAECHE_VORGABE) * self::GLASANTEIL * $g;
+        return ['rein' => $offen * max(0.0, min(1.0, $fc)), 'offen' => $offen];
+    }
+
     /** Helligkeit in Lux ungefähr in W/m² (Sonnenlicht ≈ 120 lm/W). */
     public static function luxZuWm2(float $lux): float
     {

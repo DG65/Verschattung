@@ -171,6 +171,8 @@ trait VSCHKachel
         $daten['sperre'] = $notfall !== '' ? $this->t('Emergency: %s – all devices up', $notfall)
             : (in_array('einfahren', $wetter, true) ? $this->t('Weather protection active') : '');
 
+        $w = (array)($z['_waerme'] ?? []);
+        $w = ($w['tag'] ?? '') === date('Y-m-d', $now) ? $w : null;
         foreach ($geraete as $g) {
             if ($g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
@@ -184,9 +186,46 @@ trait VSCHKachel
                 'schalter' => 'Aktiv' . $g['Position'], 'aktiv' => $this->geraetAktiv($g),
                 'raumTemp' => $rt === null ? null : round($rt, 1), 'raumLux' => $rl === null ? null : (int)round($rl), 'zielLux' => $ziel > 0 ? (int)$ziel : null,
                 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
-                'weg' => $wege[$g['Name']] ?? []];
+                'weg' => $wege[$g['Name']] ?? [], 'waerme' => $w === null ? null : (int)round((float)($w['je'][$g['key']] ?? 0))];
         }
+        $daten['waerme'] = $this->kachelWaerme($w, $wm2 !== null, $bahn);
         return $daten;
+    }
+
+    /**
+     * Sonnenwärme für die Kachel: heute ins Haus, heute abgehalten, jetzt, gestern und was bei klarem Himmel mit offenen Behängen heute möglich wäre (alles Wh/W).
+     * null ohne Einstrahlungssensor.
+     */
+    private function kachelWaerme(?array $w, bool $sensor, array $bahn): ?array
+    {
+        if (!$sensor) {
+            return null;
+        }
+        $w ??= [];
+        $fassaden = $this->fassadenMap();
+        $horizont = $this->horizontPunkte();
+        $hind = [];
+        $klar = 0.0;
+        $gWert = $this->ReadPropertyFloat('GWert');
+        foreach ($this->geraete() as $g) {
+            $f = $fassaden[$g['Fassade']] ?? null;
+            if ($f === null || $g['Position'] <= 0) {
+                continue;
+            }
+            $faz = (float)($f['Azimut'] ?? 180);
+            $hind[$g['Fassade']] ??= $this->hindernisPunkte($faz);
+            foreach ($bahn as $p) {
+                if ($p[2] <= 0) {
+                    continue;
+                }
+                $hz = max(VSCHHorizont::hoehe($horizont, $p[1]), VSCHHorizont::hoehe($hind[$g['Fassade']], $p[1]));
+                $an = VSCHLogik::sonneAufFassade($p[1], $p[2], $faz, $hz, false);
+                $i = VSCHLogik::fassadeEinstrahlung(VSCHLogik::klarHimmel($p[2]), $p[2], $p[1], $faz, $an);
+                $klar += VSCHLogik::sonnenwaerme($i, $g['Flaeche'], $gWert, 1.0)['offen'] * 10 / 60; // Bahn im 10-min-Raster
+            }
+        }
+        return ['heute' => (float)($w['rein'] ?? 0), 'ab' => (float)($w['ab'] ?? 0), 'jetzt' => $w['jetzt'] ?? null, 'jetztAb' => $w['jetztAb'] ?? null,
+            'gestern' => $w['gestern'] ?? null, 'klar' => (int)round($klar), 'geschaetzt' => count(array_filter($this->geraete(), fn($g) => $g['Flaeche'] <= 0)) > 0];
     }
 
     /** Texte der Kachel (einzeln aufgeführt, damit der Prüfstand jede Übersetzung sieht). */
@@ -194,6 +233,14 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'Solar heat today' => $this->t('Solar heat today'),
+            'into the house' => $this->t('into the house'),
+            'kept out' => $this->t('kept out'),
+            'estimated' => $this->t('estimated'),
+            'Window area not entered – 2 m² assumed per device' => $this->t('Window area not entered – 2 m² assumed per device'),
+            'Clear sky with all devices open: about %s kWh today' => $this->t('Clear sky with all devices open: about %s kWh today'),
+            'now' => $this->t('now'),
+            'yesterday' => $this->t('yesterday'),
             'E' => $this->t('E'),
             'Heat pump' => $this->t('Heat pump'),
             'How the automatic works' => $this->t('How the automatic works'),

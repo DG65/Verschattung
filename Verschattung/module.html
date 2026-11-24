@@ -27,7 +27,17 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* Oben: Lage + Diagramm */
 .oben{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1.1fr);gap:12px;align-items:start}
 @media (max-width:620px){.oben{grid-template-columns:1fr}}
+.links{display:flex;flex-direction:column;gap:12px}
 .lage{display:flex;flex-direction:column;gap:14px}
+/* Sonnenwärme */
+.waerme .paar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.waerme .paar div{background:var(--karte2);border-radius:12px;padding:9px 11px}
+.waerme .paar b{display:block;font-size:22px;font-weight:600;line-height:1.1}
+.waerme .paar span{font-size:11px;color:var(--fg2)}
+.waerme .rein b{color:var(--heiz)} .waerme .ab b{color:var(--kuehl)}
+.waerme .balken{height:6px;border-radius:3px;background:var(--karte2);margin:12px 0 6px;overflow:hidden;display:flex}
+.waerme .balken i{display:block;height:100%}
+.waerme .klein{font-size:11px;color:var(--fg2);line-height:1.4}
 .lage .haupt{font-size:24px;font-weight:600;line-height:1.15}
 .lage .haupt.kuehlen{color:var(--kuehl)} .lage .haupt.heizen{color:var(--heiz)}
 .lage .unter{font-size:13px;color:var(--fg2);margin-top:3px}
@@ -177,6 +187,28 @@ function symbol(g) {
   return '<svg class="sym" viewBox="0 0 34 34">' + o + '</svg>';
 }
 
+// ------------------------------------------------ Sonnenwärme: was die Sonne heute ins Haus bringt und was die Behänge abhalten
+function kwh(wh) { return zahl(wh / 1000, wh >= 10000 ? 0 : 1); }
+function waermeKarte() {
+  var w = daten.waerme; if (!w) { return ''; }
+  var reinZuerst = daten.lage !== 'kuehlen';
+  var rein = '<div class="rein"><b class="zahl">' + kwh(w.heute) + ' kWh</b><span>' + esc(T('into the house')) + '</span></div>';
+  var ab = '<div class="ab"><b class="zahl">' + kwh(w.ab) + ' kWh</b><span>' + esc(T('kept out')) + '</span></div>';
+  var o = '<div class="karte waerme"><div class="titel">' + esc(T('Solar heat today')) + (w.geschaetzt ? '<span class="rechts chip" title="' + esc(T('Window area not entered – 2 m² assumed per device')) + '">' + esc(T('estimated')) + '</span>' : '') + '</div>'
+    + '<div class="paar">' + (reinZuerst ? rein + ab : ab + rein) + '</div>';
+  var max = Math.max(w.klar || 0, w.heute + w.ab);
+  if (max > 0) {
+    var bR = '<i style="width:' + f1(w.heute / max * 100) + '%;background:var(--heiz)"></i>', bA = '<i style="width:' + f1(w.ab / max * 100) + '%;background:var(--kuehl)"></i>';
+    o += '<div class="balken">' + (reinZuerst ? bR + bA : bA + bR) + '</div>'
+      + '<div class="klein">' + esc(T('Clear sky with all devices open: about %s kWh today').replace('%s', kwh(w.klar || 0))) + '</div>';
+  }
+  var z = [];
+  if (w.jetzt != null && (w.jetzt > 0 || w.jetztAb > 0)) { z.push(T('now') + ' <span class="wert zahl">' + zahl(w.jetzt) + ' W</span>' + (w.jetztAb > 0 ? ' · ' + esc(T('kept out')) + ' <span class="wert zahl">' + zahl(w.jetztAb) + ' W</span>' : '')); }
+  if (w.gestern) { var gR = '<span class="wert zahl" style="color:var(--heiz)">' + kwh(w.gestern.rein) + '</span>', gA = '<span class="wert zahl" style="color:var(--kuehl)">' + kwh(w.gestern.ab) + '</span>'; z.push(T('yesterday') + ' ' + (reinZuerst ? gR + ' / ' + gA : gA + ' / ' + gR) + ' kWh'); }
+  if (z.length) { o += '<div class="zeile" style="margin-top:8px;flex-wrap:wrap">' + z.join('<span style="margin:0 2px">·</span>') + '</div>'; }
+  return o + '</div>';
+}
+
 // ------------------------------------------------ Aufbau
 function zeichnen() {
   var k = document.getElementById('kachel'); if (!daten) { return; }
@@ -192,7 +224,7 @@ function zeichnen() {
   if (daten.sperre) { o += '<div class="hinweis">' + esc(daten.sperre) + '</div>'; }
   // Lage + Diagramm
   var anJetzt = fassaden.filter(function (f) { return f.sonne; }).map(function (f) { return f.name; });
-  o += '<div class="oben"><div class="karte lage"><div><div class="titel">' + esc(T('Shading')) + '<span class="rechts schalter">' + esc(T('Automatic'))
+  o += '<div class="oben"><div class="links"><div class="karte lage"><div><div class="titel">' + esc(T('Shading')) + '<span class="rechts schalter">' + esc(T('Automatic'))
     + ' <button class="toggle' + (daten.automatik ? ' an' : '') + '" id="auto"' + (daten.bedienbar ? '' : ' disabled') + '></button></span></div>'
     + '<div class="haupt ' + esc(daten.lage || '') + '">' + esc(daten.lageText || T('Shading')) + '</div>'
     + '<div class="unter">' + esc(anJetzt.length ? T('Sun on') + ' ' + anJetzt.join(', ') : T('No sun on the facades')) + (daten.wp ? ' · ' + esc(T('Heat pump') + ': ' + daten.wp) : '') + '</div></div>';
@@ -202,6 +234,7 @@ function zeichnen() {
   var t = daten.tag || {};
   o += '<div class="zeile">☀︎ <span class="wert">' + (t.auf ? uhr(t.auf) : '–') + '</span> – <span class="wert">' + (t.unter ? uhr(t.unter) : '–') + '</span>'
     + (fa ? '<span style="margin-left:auto">' + esc(fa.name) + ': <span class="wert">' + esc((fa.zeiten || []).map(function (z) { return uhr(z[0]) + '–' + uhr(z[1]); }).join(', ') || T('none')) + '</span></span>' : '') + '</div></div>';
+  o += waermeKarte() + '</div>';
   o += '<div class="karte diagramm"><div class="titel" style="align-self:stretch">' + esc(T('Sun path today')) + '<span class="rechts">'
     + ((fa && (fa.gebaeude || []).length) ? '<button class="chip" id="nachbarn">' + esc(nachbarnAn ? T('Neighbours on') : T('Neighbours off')) + '</button>' : '') + '</span></div>'
     + sonnenDiagramm(fa)
@@ -218,7 +251,7 @@ function zeichnen() {
       o += '<div class="geraet' + (gewaehlt === g._i ? ' gewaehlt' : '') + (g.aktiv === false ? ' aus' : '') + '" data-i="' + g._i + '"><div class="k">' + symbol(g)
         + '<span class="n">' + esc(g.name) + '</span><button class="toggle klein' + (g.aktiv === false ? '' : ' an') + '" data-s="' + g._i + '"' + (daten.bedienbar ? '' : ' disabled') + ' title="' + esc(T('Automatic')) + '"></button></div>'
         + '<div class="s">' + esc(st) + '</div><div class="g">' + esc(g.grund) + '</div><div class="m">'
-        + (g.raumTemp != null ? '<span class="zahl">' + zahl(g.raumTemp, 1) + ' °C</span>' : '') + (g.raumLux != null ? '<span class="zahl">' + zahl(g.raumLux) + ' lx' + (g.zielLux ? ' → ' + g.zielLux : '') + '</span>' : '') + '</div></div>';
+        + (g.raumTemp != null ? '<span class="zahl">' + zahl(g.raumTemp, 1) + ' °C</span>' : '') + (g.raumLux != null ? '<span class="zahl">' + zahl(g.raumLux) + ' lx' + (g.zielLux ? ' → ' + g.zielLux : '') + '</span>' : '') + (g.waerme > 50 ? '<span class="zahl" title="' + esc(T('Solar heat today')) + '">☀︎ ' + kwh(g.waerme) + ' kWh</span>' : '') + '</div></div>';
       if (gewaehlt === g._i && (g.weg || []).length) { o += '<div class="weg">' + esc(g.weg.join('\n')) + '</div>'; }
     });
     o += '</div></div>';

@@ -1,4 +1,5 @@
 <?php
+if (!defined('VARIABLE_PRESENTATION_VALUE_PRESENTATION')) { define('VARIABLE_PRESENTATION_VALUE_PRESENTATION', '{3319437D-7CDE-699D-750A-3C6A3841FA75}'); }
 // Nachgebildetes Symcon für den Prüfstand (Muster aus dem Automat-Prüfstand, auf das Nötige gekürzt).
 
 $GLOBALS['OBJ'] = [];
@@ -131,8 +132,9 @@ class IPSModule
     public function SetBuffer(string $n, string $v): void { $this->puffer[$n] = $v; }
     public function GetBuffer(string $n): string { return $this->puffer[$n] ?? ''; }
     public function GetIDForIdent(string $ident) { return IPS_GetObjectIDByIdent($ident, $this->InstanceID); }
-    public function MaintainVariable(string $ident, string $name, int $type, string $profile, int $pos, bool $keep): void
+    public function MaintainVariable(string $ident, string $name, int $type, $profile, int $pos, bool $keep): void
     {
+        $profile = is_array($profile) ? '' : $profile;
         $id = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
         if ($keep && $id === false) {
             mkvar($GLOBALS['NEXT']++, $type, [false, 0, 0.0, ''][$type], $name, $this->InstanceID, false, $profile, $ident);
