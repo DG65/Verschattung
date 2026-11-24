@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 (in Entwicklung)
+
+- Probefahrt im Assistenten wählt die Fassade mit den meisten Geräten vor (vorher immer A).
+- Konsolen-Test 0.3.0 (24.11.): Kreuze direkt in der Zeile, „Für alle übernehmen“ (Süd), Prüfungen (kein Kreuz; Nord + Süd) und die automatische Zuordnung aller sieben Behänge zu B · Süd nach „Haus erkennen“ live bestätigt; Info-Felder ohne Häkchen unverändert.
+
 ## 0.3.0 (in Entwicklung)
 
 - **Neuer erster Schritt im Assistenten: Ausrichtung ankreuzen.** Je Behang ein Kreuz bei Nord, Ost, Süd oder West – direkt in der Zeile, ohne Dialog; zwei benachbarte Kreuze = Ecke (z. B. Süd + West), kein Kreuz = nicht verschatten. „Alle Geräte ankreuzen: Süd → Für alle übernehmen“ in einem Klick. Vorbelegt aus Objektbaum/Info-Feld/Name. Nach „Haus erkennen“ ordnet der Assistent jedes Gerät der passenden Fassade zu (höchstens 45° daneben); die Geräteseite ist nur noch Kontrolle. Der Assistent hat jetzt 8 Schritte.

@@ -346,6 +346,12 @@ trait VSCHAssistent
             unset($g);
         }
         $this->UpdateFormField('WGeraete', 'values', json_encode($alle));
+        // Probefahrt: die Fassade mit den meisten Geräten vorwählen (Live-Befund 24.11.: stand auf A, alle Geräte an B)
+        $zahl = array_count_values(array_filter(array_map(fn($g) => (string)($g['Fassade'] ?? ''), $alle), fn($f) => $f !== '' && $f !== '-'));
+        if ($zahl !== []) {
+            arsort($zahl);
+            $this->UpdateFormField('WProbeFassade', 'value', (string)array_key_first($zahl));
+        }
         $this->UIAssistentMerken('fassaden', json_encode($fassaden));
         $this->UIAssistentMerken('geraete', json_encode($alle));
         $this->UpdateFormField('WLegende', 'caption', $this->fassadenLegende($fassaden));

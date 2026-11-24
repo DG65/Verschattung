@@ -729,6 +729,7 @@ $m->fieldUpdates = [];
 $m->UIAssistentGeraete(json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 76], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 166]]), '[]', 0, '');
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J36 Süd angekreuzt → Fassade B (166°), ohne Kreuz → nicht verschatten', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade', 'Name') === ['Süd1' => 'B', 'Ohne' => '-'], $f['WGeraete'] ?? '');
+check('J40 Probefahrt wählt die Fassade mit den meisten Geräten vor', ($f['WProbeFassade'] ?? '') === 'B');
 // Info-Feld nur mit Häkchen
 $GLOBALS['OBJ'][950]['info'] = 'Bitte nicht anfassen';
 $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'info' => false]));
