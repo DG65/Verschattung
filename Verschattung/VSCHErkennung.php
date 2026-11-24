@@ -22,6 +22,8 @@ declare(strict_types=1);
 class VSCHErkennung
 {
     /** Gruppensteuerung: schaltet nur andere Geräte, die ohnehin einzeln erkannt werden. */
+    /** So viele Fenster-/Türkontakte kann ein Behang haben (Fensterfront, Hebe-Schiebe-Tür mit mehreren Flügeln). */
+    public const MAX_KONTAKTE = 4;
     public const GRUPPE_GUID = '{F197064F-791F-0964-2B8E-563136E9B7B4}';
     /** WarnHub: seine eigenen Variablen sind keine Sensoren für die Verschattung (WarnHub wird direkt abgefragt). */
     public const WARNHUB_GUID = '{97621F9C-C61B-4A7F-9B03-C34BC58B04A6}';
@@ -72,7 +74,8 @@ class VSCHErkennung
                 'Name' => $i['name'], 'Fassade' => '', 'Typ' => $typ ?? ($lam !== null ? 'raffstore' : 'rollladen'),
                 'Position' => $pos[0], 'Richtung' => 0,
                 'Lamelle' => $lam[0] ?? 0, 'LamelleUmgekehrt' => $lam !== null && stripos($lam[4], 'reversed') !== false,
-                'Kontakt' => self::kontaktFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $kontakte), 'Beschattung' => 0,
+                'Kontakt' => ($k = self::kontakteFuer($i['name'] . ' ' . ($i['ort'] ?? ''), $kontakte))[0] ?? 0,
+                'Kontakt2' => $k[1] ?? 0, 'Kontakt3' => $k[2] ?? 0, 'Kontakt4' => $k[3] ?? 0, 'Beschattung' => 0,
             ];
         }
         return $out;
@@ -212,12 +215,24 @@ class VSCHErkennung
         return $out;
     }
 
-    /** Eindeutig passender Kontakt zum Gerätenamen, sonst 0 (z. B. zwei Fenster im Raum, Gerät ohne Seitenangabe). */
+    /** Erster passender Kontakt (Kurzform von kontakteFuer). */
     public static function kontaktFuer(string $geraet, array $kontakte): int
+    {
+        return self::kontakteFuer($geraet, $kontakte)[0] ?? 0;
+    }
+
+    /**
+     * Passende Fenster-/Türkontakte zum Gerätenamen: alle im selben Raum, höchstens MAX_KONTAKTE.
+     * Mehrere Kontakte gehören oft zu einem Behang (zwei Flügel, „gekippt“/„offen“, Fensterfront) – ist einer offen,
+     * gilt das Fenster als offen; ein Kontakt zu viel verhindert höchstens das Herunterfahren (die sichere Richtung).
+     * Seitenangaben/Nummern trennen, wenn beide Namen sie tragen. Mehr als MAX_KONTAKTE Treffer: leer, nicht raten.
+     * (Live-Befund 24.11.: Schlafzimmer Fenster Links/Rechts an einer Jalousie.)
+     */
+    public static function kontakteFuer(string $geraet, array $kontakte): array
     {
         $d = self::teile($geraet);
         if ($d['raum'] === []) {
-            return 0;
+            return [];
         }
         $treffer = [];
         foreach ($kontakte as $k) {
@@ -233,7 +248,7 @@ class VSCHErkennung
             }
             $treffer[] = $k[0];
         }
-        return count($treffer) === 1 ? $treffer[0] : 0;
+        return count($treffer) <= self::MAX_KONTAKTE ? $treffer : [];
     }
 
     private static function gleicherRaum(array $a, array $b): bool

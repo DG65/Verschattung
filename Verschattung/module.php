@@ -202,7 +202,7 @@ class Verschattung extends IPSModule
             $u = [
                 'hell' => $hell, 'warm' => $warm, 'wetter' => $wetter, 'wetterQuelle' => $wetterQuelle,
                 'ohneWetterBestaetigt' => $this->ReadPropertyBoolean('MarkiseOhneWetter'),
-                'fensterOffen' => $g['Kontakt'] > 0 && IPS_VariableExists($g['Kontakt']) && $this->kontaktOffen($g['Kontakt']),
+                'fensterOffen' => $this->fensterOffen($g),
                 'automatik' => (bool)$this->GetValue('Automatik'), 'tag' => $sonne['alt'] > 0,
                 'schutz' => $schutzAktionen === [] ? null : VSCHLogik::schutz($schutzAktionen, array_values(array_filter([$g['Position'], $g['Lamelle']])),
                     IPS_GetParent($g['Position']), $schutzMerk, $now, 60 * $this->ReadPropertyInteger('Haltezeit')),
@@ -471,6 +471,17 @@ class Verschattung extends IPSModule
         return $v;
     }
 
+    /** Ein Fenster gilt als offen, wenn einer seiner (bis zu vier) Kontakte offen meldet. */
+    private function fensterOffen(array $g): bool
+    {
+        foreach ([$g['Kontakt'], $g['Kontakt2'] ?? 0, $g['Kontakt3'] ?? 0, $g['Kontakt4'] ?? 0] as $k) {
+            if ($k > 0 && IPS_VariableExists($k) && $this->kontaktOffen($k)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function kontaktOffen(int $id): bool
     {
         $v = GetValue($id);
@@ -668,11 +679,15 @@ class Verschattung extends IPSModule
         $ergaenzt = 0;
         foreach ($geraete as &$g) {
             $p = (int)($g['Position'] ?? 0);
-            if ($p > 0 && IPS_VariableExists($p) && (int)($g['Kontakt'] ?? 0) === 0) {
+            if ($p > 0 && IPS_VariableExists($p) && (int)($g['Kontakt'] ?? 0) === 0 && (int)($g['Kontakt2'] ?? 0) === 0
+                && (int)($g['Kontakt3'] ?? 0) === 0 && (int)($g['Kontakt4'] ?? 0) === 0) {
                 $i = IPS_GetParent($p);
-                $k = VSCHErkennung::kontaktFuer(($inst[$i]['name'] ?? (string)($g['Name'] ?? '')) . ' ' . ($inst[$i]['ort'] ?? ''), $kontakte);
-                if ($k > 0) {
-                    $g['Kontakt'] = $k;
+                $k = VSCHErkennung::kontakteFuer(($inst[$i]['name'] ?? (string)($g['Name'] ?? '')) . ' ' . ($inst[$i]['ort'] ?? ''), $kontakte);
+                if ($k !== []) {
+                    $g['Kontakt'] = $k[0];
+                    $g['Kontakt2'] = $k[1] ?? 0;
+                    $g['Kontakt3'] = $k[2] ?? 0;
+                    $g['Kontakt4'] = $k[3] ?? 0;
                     $ergaenzt++;
                 }
             }
@@ -931,9 +946,13 @@ class Verschattung extends IPSModule
                     ['caption' => 'Slats (optional)', 'name' => 'Lamelle', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Slats 0 % = closed', 'name' => 'LamelleUmgekehrt', 'width' => '150px', 'add' => false, 'edit' => ['type' => 'CheckBox']],
                     ['caption' => 'Window/door contact', 'name' => 'Kontakt', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
+                    ['caption' => 'Contact 2', 'name' => 'Kontakt2', 'width' => '180px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
+                    ['caption' => 'Contact 3', 'name' => 'Kontakt3', 'width' => '180px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
+                    ['caption' => 'Contact 4', 'name' => 'Kontakt4', 'width' => '180px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Shading position (%)', 'name' => 'Beschattung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 100]],
                 ]],
             ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID);'],
+            ['type' => 'Label', 'name' => 'KontaktHint', 'caption' => 'Up to four window/door contacts per device (e.g. several sashes or a window front). If one of them is open, the device is not lowered.'],
             ['type' => 'Label', 'name' => 'GeraeteHint', 'caption' => 'Any device with a position variable works (e.g. Z-Wave, Shelly, KNX, Homematic, EnOcean, Zigbee). Shading position 0 = default of the type (roller shutter 75 %, venetian blind and awning 100 %). Use the test run to check the direction.'],
         ]];
 
@@ -1227,7 +1246,8 @@ class Verschattung extends IPSModule
                 'Name' => (string)($g['Name'] ?? '') !== '' ? (string)$g['Name'] : $this->name((int)($g['Position'] ?? 0)),
                 'Fassade' => (string)($g['Fassade'] ?? ''), 'Typ' => $typ, 'Position' => (int)($g['Position'] ?? 0),
                 'Richtung' => (int)($g['Richtung'] ?? 0), 'Lamelle' => (int)($g['Lamelle'] ?? 0),
-                'LamelleUmgekehrt' => (bool)($g['LamelleUmgekehrt'] ?? false), 'Kontakt' => (int)($g['Kontakt'] ?? 0),
+                'LamelleUmgekehrt' => (bool)($g['LamelleUmgekehrt'] ?? false), 'Kontakt' => (int)($g['Kontakt'] ?? 0), 'Kontakt2' => (int)($g['Kontakt2'] ?? 0),
+                'Kontakt3' => (int)($g['Kontakt3'] ?? 0), 'Kontakt4' => (int)($g['Kontakt4'] ?? 0),
                 'Beschattung' => $besch > 0 ? $besch : VSCHLogik::VORGABEN[$typ]['beschattung'],
                 'key' => 'g' . (int)($g['Position'] ?? 0),
             ];

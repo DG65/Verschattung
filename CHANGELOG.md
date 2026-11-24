@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 (in Entwicklung)
+
+- **Bis zu vier Fenster-/Türkontakte je Behang** (Spalten „Kontakt 2–4“). Ist einer davon offen, fährt der Behang nicht herunter. Hintergrund (Live-Befund 24.11.): Im Schlafzimmer hängen „Fenster Links“ und „Fenster Rechts“ an einem Fenster, und eine Fensterfront kann noch mehr Flügel haben.
+- Erkennung nimmt alle Kontakte im passenden Raum (Seitenangaben und Nummern trennen weiterhin), erst bei mehr als vier bleibt es leer. Bei dir: Schlafzimmer → Fenster Links + Rechts.
+
 ## 0.2.3 (in Entwicklung)
 
 - Statuszeile: bei mehr als vier Geräten steht „+2 weitere“ dahinter, statt die übrigen still wegzulassen.

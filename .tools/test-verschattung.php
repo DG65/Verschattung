@@ -403,6 +403,12 @@ check('G26 verbunden: Name, aktueller Wert und Alter sichtbar', strpos($vt->invo
 check('G27 leer, Kandidat gefunden: „🔍 Gefunden“ mit Wert', strpos($vt->invoke($m, 'TemperaturID', 0, ['TemperaturID' => 970, 'hinweise' => []]), '🔍 Gefunden: Außentemperatur (3,1') === 0);
 check('G28 gelöschte Variable wird gemeldet', strpos($vt->invoke($m, 'WindID', 999999, []), '⚠️') === 0);
 check('G29 WarnHub-Hinweis statt „nicht verbunden“', strpos($vt->invoke($m, 'WindID', 0, ['WindID' => 0, 'hinweise' => ['WindID' => 'warnhub']]), 'WarnHub') !== false);
+$fo = new ReflectionMethod($m, 'fensterOffen'); $fo->setAccessible(true);
+mkvar(980, 0, false, 'Fenster Links', 0, false, '~Window');
+mkvar(981, 0, true, 'Fenster Rechts', 0, false, '~Window');
+check('G30 zweiter Kontakt offen → Fenster gilt als offen', $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 981]) === true);
+check('G30b vierter Kontakt offen → Fenster gilt als offen', $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 0, 'Kontakt3' => 0, 'Kontakt4' => 981]) === true);
+check('G31 beide zu → nicht offen', (function () use ($fo, $m) { SetValue(981, false); return $fo->invoke($m, ['Kontakt' => 980, 'Kontakt2' => 981]) === false; })());
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
@@ -496,7 +502,10 @@ check('I6 Kontakt Wohnen Links → Terrassentür Links', ($G['Jalousie Wohnen Li
 check('I7 Kontakt Esszimmer → Essen Terrassentür', ($G['Jalousie Esszimmer']['Kontakt'] ?? 0) === 221);
 check('I8 Kontakt Kind I → Kind 1 (römisch = arabisch)', ($G['Jalousie Kind I']['Kontakt'] ?? 0) === 231);
 check('I9 Kontakt Kind II → Kind 2, nicht Kind 1', ($G['Jalousie Kind II']['Kontakt'] ?? 0) === 241);
-check('I10 Schlafzimmer mit zwei Fenstern: nicht raten', ($G['Jalousie Schlafzimmer']['Kontakt'] ?? -1) === 0);
+check('I10 Schlafzimmer: zwei Kontakte an einem Fenster → beide (Live-Befund 24.11.)', ($G['Jalousie Schlafzimmer']['Kontakt'] ?? -1) === 251 && ($G['Jalousie Schlafzimmer']['Kontakt2'] ?? -1) === 261, json_encode($G['Jalousie Schlafzimmer'] ?? null));
+check('I10b Seite trennt weiterhin: Wohnen Rechts nur Terrassentür Rechts', ($G['Jalousie Wohnen Rechts']['Kontakt2'] ?? -1) === 0);
+check('I10c Fensterfront mit vier Kontakten: alle vier', VSCHErkennung::kontakteFuer('Rollladen Wintergarten', [[1, 'Wintergarten Flügel 1'], [2, 'Wintergarten Flügel 2'], [3, 'Wintergarten Flügel 3'], [4, 'Wintergarten Tür']]) === [1, 2, 3, 4]);
+check('I10d mehr als vier passende Kontakte: nicht raten', VSCHErkennung::kontakteFuer('Rollladen Wintergarten', [[1, 'Wintergarten A'], [2, 'Wintergarten B'], [3, 'Wintergarten C'], [4, 'Wintergarten D'], [5, 'Wintergarten E']]) === []);
 check('I11 Markise: kein Kontakt', ($G['Markise']['Kontakt'] ?? -1) === 0);
 check('I12 Fassade bleibt leer (Angabe des Nutzers)', array_unique(array_column($G, 'Fassade')) === ['']);
 check('I13 schon zugeordnete Geräte nicht doppelt', count(VSCHErkennung::geraete($IN, [101, 161])) === 5);

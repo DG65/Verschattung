@@ -214,5 +214,9 @@
 "%d h ago": "vor %d h",
 "%d days ago": "vor %d Tagen",
 "Lock": "Sperre",
-"+%d more": "+%d weitere"
+"+%d more": "+%d weitere",
+"Contact 2": "Kontakt 2",
+"Contact 3": "Kontakt 3",
+"Contact 4": "Kontakt 4",
+"Up to four window/door contacts per device (e.g. several sashes or a window front). If one of them is open, the device is not lowered.": "Bis zu vier Fenster-/Türkontakte je Gerät (z. B. mehrere Flügel oder eine Fensterfront). Ist einer davon offen, fährt das Gerät nicht herunter."
 }

@@ -92,6 +92,9 @@ trait VSCHAssistent
                         ['caption' => $this->t('0 % means'), 'name' => 'Richtung', 'width' => '140px', 'edit' => ['type' => 'Select', 'options' => [
                             ['caption' => $this->t('automatic (profile)'), 'value' => 0], ['caption' => $this->t('open / retracted'), 'value' => 1], ['caption' => $this->t('closed / extended'), 'value' => 2]]]],
                         ['caption' => $this->t('Window/door contact'), 'name' => 'Kontakt', 'width' => '160px', 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Contact 2'), 'name' => 'Kontakt2', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Contact 3'), 'name' => 'Kontakt3', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
+                        ['caption' => $this->t('Contact 4'), 'name' => 'Kontakt4', 'visible' => false, 'edit' => ['type' => 'SelectVariable']],
                         ['caption' => 'Position', 'name' => 'Position', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats (optional)'), 'name' => 'Lamelle', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats 0 % = closed'), 'name' => 'LamelleUmgekehrt', 'visible' => false, 'save' => true],
