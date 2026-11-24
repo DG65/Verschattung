@@ -74,7 +74,9 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('SonneAus', 150);
         $this->RegisterPropertyFloat('AussenSommer', 18);
         $this->RegisterPropertyFloat('InnenGrenze', 24);
-        $this->RegisterPropertyFloat('RaumHellAn', 1.5);
+        $this->RegisterPropertyFloat('RaumHellAn', 1.5); // bis 0.6.0 in W/m², ungenutzt
+        // ab 0.6.1 in Lux (Dietmar 24.11.: „eher in Lux, damit kann man mehr anfangen“); Archiv: Sonne im Raum 200–2100 lx, Wolken 30–100 lx
+        $this->RegisterPropertyFloat('RaumHellLux', 150);
         // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
         $this->RegisterPropertyFloat('HeizGrenze', 21);
         $this->RegisterPropertyInteger('WPModusID', 0);
@@ -498,11 +500,25 @@ class Verschattung extends IPSModule
     /** Raumhelligkeit (nur zum Herunterfahren): erreicht die Sonne den Raum? [?bool, Begründung] */
     private function raumHell(array $g): array
     {
-        $w = $this->wm2((int)$g['RaumHell']);
-        if ($w === null) {
+        $lx = $this->lux((int)$g['RaumHell']);
+        if ($lx === null) {
             return [null, ''];
         }
-        return [$w >= $this->ReadPropertyFloat('RaumHellAn'), $this->t('Sun on the facade, but it does not reach the room (%d W/m²)', (int)round($w))];
+        return [$lx >= $this->ReadPropertyFloat('RaumHellLux'), $this->t('Sun on the facade, but it does not reach the room (%d lx)', (int)round($lx))];
+    }
+
+    /** Helligkeit in Lux. Die Einheit entscheidet: lx direkt, klx × 1000, W/m² × 120. */
+    private function lux(int $id): ?float
+    {
+        $v = $this->messwert($id);
+        if ($v === null) {
+            return null;
+        }
+        $e = mb_strtolower($this->einheit($id));
+        if (strpos($e, 'w/m') !== false) {
+            return $v * 120;
+        }
+        return strpos($e, 'klx') !== false ? $v * 1000 : $v;
     }
 
     /** Zahlenwert einer Variable, null wenn nicht gesetzt oder nicht vorhanden. */
@@ -1629,8 +1645,8 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'name' => $p . 'WPHint', 'caption' => $this->t('Found automatically from NRG-Stack heat pump modules. Heating → the sun may warm the house; cooling → shade.')],
             ['type' => 'Label', 'name' => $p . 'TempHint', 'caption' => $this->t('The device is the cheapest heating and cooling of the room: room too warm, heat pump cooling or summer outside → shade. Room below the heating limit, heat pump heating or cool outside → the sun warms the house. In between only glare protection (if set up). The room temperature comes from the device list (column "Room temperature"). Without temperatures the module shades whenever the sun shines.')],
             ['type' => 'Label', 'caption' => '💡 ' . $this->t('Room brightness: only for lowering')],
-            ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' W/m²', 'name' => $p . 'RaumHellAn', 'caption' => $this->t('Sun reaches the room from (W/m²)'), 'minimum' => 0, 'maximum' => 20, 'stepSize' => 0.5, 'width' => '600px'] + $wert('RaumHellAn'),
-            ['type' => 'Label', 'name' => $p . 'RaumHellHint', 'caption' => $this->t('If the brightness sensor of the room (column "Room brightness") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 2–20 W/m², clouds below 1 W/m².')],
+            ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' lx', 'name' => $p . 'RaumHellLux', 'caption' => $this->t('Sun reaches the room from (lx)'), 'minimum' => 0, 'maximum' => 2000, 'stepSize' => 10, 'width' => '600px'] + $wert('RaumHellLux'),
+            ['type' => 'Label', 'name' => $p . 'RaumHellHint', 'caption' => $this->t('If the brightness sensor of the room (column "Room brightness") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.')],
         ]);
     }
 

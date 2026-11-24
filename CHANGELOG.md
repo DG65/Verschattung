@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 (in Entwicklung)
+
+- **Raumhelligkeit in Lux** (Dietmar 24.11.: „eher in Lux, damit kann man mehr anfangen“): Schieberegler „Sonne erreicht den Raum ab“ 0–2000 lx, Vorgabe 150 lx (Archiv: Sonne im Raum 200–2100 lx, Wolken 30–100 lx). Neue Eigenschaft `RaumHellLux`; der alte W/m²-Wert wird nicht übernommen. Sensoren in W/m² werden umgerechnet (× 120).
+
+
 ## 0.6.0 (in Entwicklung)
 
 - **Nachbargebäude als Hindernis** (Dietmar 24.11.): Die Umrisse im Umkreis von 80 m werden zu einem Gebäudemodell: Traufe = Geschosse × 3 m (ohne Angabe 2 Geschosse), Satteldach 45°, First parallel zur längeren Seite. Wo OpenStreetMap Höhe, Geschosse, Dachform (`roof:shape`) oder Firstrichtung (`roof:orientation`) nennt, gilt das. Daraus der Höhenwinkel je Grad, gesehen von der Mitte der Fassade (Augenhöhe 2 m).

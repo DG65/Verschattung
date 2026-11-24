@@ -427,7 +427,7 @@ $walk = function ($x) use (&$walk, &$namen) {
 };
 $walk($form['elements']);
 $walk($form['actions']);
-foreach (['Standort', 'Fassaden', 'Geraete', 'WindID', 'RegenID', 'SperreID', 'WarnHubNutzen', 'NetzWetter', 'MarkiseOhneWetter', 'HelligkeitID', 'SonneAn', 'SonneAus', 'TemperaturID', 'AussenSommer', 'InnenGrenze', 'RaumHellAn', 'VerzoegerungAn', 'VerzoegerungAus', 'WindMarkise', 'WindRaffstore', 'Haltezeit'] as $p) {
+foreach (['Standort', 'Fassaden', 'Geraete', 'WindID', 'RegenID', 'SperreID', 'WarnHubNutzen', 'NetzWetter', 'MarkiseOhneWetter', 'HelligkeitID', 'SonneAn', 'SonneAus', 'TemperaturID', 'AussenSommer', 'InnenGrenze', 'RaumHellLux', 'VerzoegerungAn', 'VerzoegerungAus', 'WindMarkise', 'WindRaffstore', 'Haltezeit'] as $p) {
     check("G15 Eigenschaft $p im Formular", in_array($p, $namen, true));
 }
 check('G16 Grafiken im Formular', in_array('Grundriss', $namen, true) && in_array('Himmel', $namen, true));
@@ -486,6 +486,8 @@ mkvar(988, 2, 30.0, 'Helligkeit', 0, false, ''); $GLOBALS['OBJ'][988]['suffix'] 
 check('G32 W/m²: die Einheit entscheidet – Lux umgerechnet (auch Froggit „Solar Einstrahlung“ in lx, Live-Befund 24.11.), W/m² direkt, klx', $w2->invoke($m, 985) == 250.0 && abs($w2->invoke($m, 986) - 180.1) < 0.1 && $w2->invoke($m, 987) == 412.0
     && $w2->invoke($m, 988) == 250.0 && $w2->invoke($m, 0) === null);
 check('G33 Verbindung zeigt den umgerechneten Wert', strpos($vt->invoke($m, 'HelligkeitID', 985, []), '≈ 250 W/m²') !== false && strpos($vt->invoke($m, 'HelligkeitID', 987, []), '≈') === false);
+$lu = new ReflectionMethod($m, 'lux'); $lu->setAccessible(true);
+check('G34 Raumhelligkeit in Lux: lx direkt, klx × 1000, W/m² × 120', $lu->invoke($m, 985) == 30000.0 && $lu->invoke($m, 988) == 30000.0 && $lu->invoke($m, 987) == 412.0 * 120 && $lu->invoke($m, 0) === null);
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
 // 0.5.0: Warum-Probelauf, Tür/Fenster, Notfall, Wärmepumpe
 $fl = new ReflectionMethod($m, 'fensterLage'); $fl->setAccessible(true);
@@ -821,12 +823,12 @@ $f = array_column($m->fieldUpdates, 2, 0);
 check('J25 Zusammenfassung nennt die Geräte je Fassade (Live-Befund 23.11.)', strpos($f['WZusammenfassung'] ?? '', 'A Süd: X') !== false, $f['WZusammenfassung'] ?? '');
 $m->fieldUpdates = [];
 $msg = $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'standort' => '', 'fassaden' => $fx, 'geraete' => [['Name' => 'X', 'Fassade' => 'A', 'Typ' => 'raffstore', 'Position' => 601], ['Name' => 'Y', 'Fassade' => '-', 'Position' => 602]],
-    'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'hell' => 123, 'sonneAn' => 300, 'temp' => 0, 'aussenSommer' => 20, 'innenGrenze' => 25, 'raumHellAn' => 15]));
+    'warnhub' => true, 'wind' => 0, 'regen' => 0, 'netz' => false, 'ohne' => false, 'hell' => 123, 'sonneAn' => 300, 'temp' => 0, 'aussenSommer' => 20, 'innenGrenze' => 25, 'raumHellLux' => 300]));
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J19 Übernehmen füllt nur das Formular (keine Eigenschaft geändert)', isset($f['Fassaden'], $f['Geraete']) && count(json_decode($m->props['Geraete'], true)) === 2);
 check('J20 „nicht verschatten“ landet nicht in der Geräteliste', array_column(json_decode($f['Geraete'], true), 'Name') === ['X']);
 check('J21 Schritt 7: Sensor und Schieberegler landen im Formular, Ende bei 60 %', ($f['HelligkeitID'] ?? -1) === 123 && ($f['TemperaturID'] ?? -1) === 0
-    && ($f['SonneAn'] ?? 0) == 300 && ($f['SonneAus'] ?? 0) == 180 && ($f['AussenSommer'] ?? 0) == 20 && ($f['InnenGrenze'] ?? 0) == 25 && ($f['RaumHellAn'] ?? 0) == 15, json_encode($f));
+    && ($f['SonneAn'] ?? 0) == 300 && ($f['SonneAus'] ?? 0) == 180 && ($f['AussenSommer'] ?? 0) == 20 && ($f['InnenGrenze'] ?? 0) == 25 && ($f['RaumHellLux'] ?? 0) == 300, json_encode($f));
 check('J22 Standort-Instanz gewählt: eigener Standort wird geleert', json_decode($f['Standort'], true) === ['latitude' => 0, 'longitude' => 0]);
 check('J23 Meldung sagt „Änderungen übernehmen“', strpos($msg, 'Änderungen übernehmen') !== false, $msg);
 // Probefahrt mit Assistenten-Daten

@@ -222,7 +222,6 @@
             "%d rooms confirm the sun with their brightness sensor.": "%d Räume bestätigen die Sonne mit ihrem Helligkeitssensor.",
             "The sun does not reach the room": "Die Sonne erreicht den Raum nicht",
             "Sun on the facade, but only %d W/m² (shade from %d W/m²)": "Sonne auf der Fassade, aber nur %d W/m² (Beschattung ab %d W/m²)",
-            "Sun on the facade, but it does not reach the room (%d W/m²)": "Sonne auf der Fassade, erreicht den Raum aber nicht (%d W/m²)",
             "The module decides with measured values, not only with the position of the sun.": "Das Modul entscheidet mit Messwerten, nicht nur nach dem Sonnenstand.",
             "Sun: irradiance": "Sonne: Einstrahlung",
             "Irradiance or outdoor brightness": "Einstrahlung oder Helligkeit außen",
@@ -234,8 +233,6 @@
             "Summer from outdoor temperature (°C)": "Sommer ab Außentemperatur (°C)",
             "Room too warm from (°C)": "Raum zu warm ab (°C)",
             "Room brightness: only for lowering": "Raumhelligkeit: nur zum Herunterfahren",
-            "Sun reaches the room from (W/m²)": "Sonne erreicht den Raum ab (W/m²)",
-            "If the brightness sensor of the room (column \"Room brightness\") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 2–20 W/m², clouds below 1 W/m².": "Bleibt der Helligkeitssensor des Raums (Spalte „Raumhelligkeit“) darunter, erreicht die Sonne diesen Raum nicht und der Behang bleibt oben. Das Hochfahren hängt nie davon ab: Mit heruntergefahrenem Behang ist der Raum ohnehin dunkel. Raumsensoren messen deutlich weniger als draußen: Sonne im Raum etwa 2–20 W/m², Wolken unter 1 W/m².",
             "Emergency": "Notfall",
             "Smoke detector alarm: all devices up": "Rauchmelder-Alarm: alle Behänge hoch",
             "Keeps escape routes free – also at night and with the automatic switched off.": "Hält Fluchtwege frei – auch nachts und bei ausgeschalteter Automatik.",
@@ -307,7 +304,10 @@
             "Smoke detector alarm: all devices up.": "Rauchmelder-Alarm: alle Behänge hoch.",
             "neighbouring building": "Nachbargebäude",
             "Neighbouring buildings": "Nachbargebäude",
-            "Verschattung": "DG65-Toolkit Verschattung"
+            "Verschattung": "DG65-Toolkit Verschattung",
+            "Sun on the facade, but it does not reach the room (%d lx)": "Sonne auf der Fassade, erreicht den Raum aber nicht (%d lx)",
+            "Sun reaches the room from (lx)": "Sonne erreicht den Raum ab (lx)",
+            "If the brightness sensor of the room (column \"Room brightness\") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.": "Bleibt der Helligkeitssensor des Raums (Spalte „Raumhelligkeit“) darunter, erreicht die Sonne diesen Raum nicht und der Behang bleibt oben. Das Hochfahren hängt nie davon ab: Mit heruntergefahrenem Behang ist der Raum ohnehin dunkel. Raumsensoren messen deutlich weniger als draußen: Sonne im Raum etwa 200–2000 lx, Wolken unter 100 lx."
         }
     }
 }

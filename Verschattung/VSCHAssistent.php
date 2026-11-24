@@ -199,7 +199,7 @@ trait VSCHAssistent
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"hell" => (int)$WHell, "sonneAn" => (float)$WSonneAn, "temp" => (int)$WTemp, "aussenSommer" => (float)$WAussenSommer, '
-                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellAn" => (float)$WRaumHellAn, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
+                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellLux" => (float)$WRaumHellLux, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
             ],
         ];
         return [
@@ -589,7 +589,7 @@ trait VSCHAssistent
             $melder = $d['notfall'] ? VSCHErkennung::rauchmelder($this->momentaufnahme()) : [];
             $this->UpdateFormField('Notfall', 'values', json_encode(array_map(fn($m) => ['Melder' => $m], $melder)));
         }
-        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellAn' => 'RaumHellAn', 'heizGrenze' => 'HeizGrenze'] as $q => $feld) {
+        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellLux' => 'RaumHellLux', 'heizGrenze' => 'HeizGrenze'] as $q => $feld) {
             if (isset($d[$q])) {
                 $this->UpdateFormField($feld, 'value', (float)$d[$q]);
             }
