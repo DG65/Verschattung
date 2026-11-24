@@ -168,7 +168,8 @@ trait VSCHKachel
                 $lam = $lm > 0 ? round($g['LamelleUmgekehrt'] ? 90 * (1 - $lv / $lm) : 90 * $lv / $lm) : null;
             }
             $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'zu' => $zu === null ? null : round(max(0, min(1, $zu)), 2),
-                'lamelle' => $lam, 'grund' => (string)($z[$g['key']]['grund'] ?? ''), 'weg' => $wege[$g['Name']] ?? []];
+                'lamelle' => $lam, 'grund' => (string)($z[$g['key']]['grund'] ?? '') !== '' ? (string)$z[$g['key']]['grund']
+                    : ltrim((string)end($wege[$g['Name']] ?? ['']), '→ '), 'weg' => $wege[$g['Name']] ?? []];
         }
         if ($mitTexten) {
             $daten['texte'] = $this->kachelTexte();

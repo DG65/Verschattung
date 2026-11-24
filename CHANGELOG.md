@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.1 (in Entwicklung)
+
+- Live-Test 0.7.0 (24.11. abends, Test-Instanz angelegt und entfernt): IPSView-Seite läuft dunkel und hell (`?bg=ffffff`) – Nachthimmel mit Sternen, Gelände, Nachbarhäuser, Sonnenzeiten der Südfassade (09:00–09:40 + 14:00–15:50), Entscheidungsweg per Tipp. Verbessert:
+  - Grundriss näher heran (Nahbereich 22 m), das eigene Haus kräftiger mit Rand – es hob sich kaum von den Nachbarn ab.
+  - Geschlossene Lamellen als Fläche statt dünner senkrechter Striche.
+  - Grund je Behang auch vor dem ersten Regeltakt (aus dem Probelauf).
+  - „Wärmepumpe heizt“ ohne „(Raum –)“, wenn der Behang keinen Raumsensor hat (Markise).
+
+
 ## 0.7.0 (in Entwicklung)
 
 - **Kachel** (Dietmar 24.11.): Haus von oben mit Nachbargebäuden, beschienene Fassaden in Sonnenfarbe und die Sonne in ihrer Richtung; daneben der Himmel von heute mit Sonnenbahn, Sonnenzeit der Hauptfassade (kräftig), Gelände-Horizont, Nachbarhäusern und der Sonne jetzt. Der Himmel zeigt blau, heiter, wolkig, bedeckt, Regen, Dämmerung oder Nacht – aus der gemessenen Einstrahlung im Vergleich zum klaren Himmel und dem Regensensor. Kopfzeile: Einstrahlung, Außentemperatur, Lage (Kühlen/Heizen/Behaglich, Wärmepumpe), Automatik an/aus, Hinweis bei Notfall oder Wetterschutz. Je Behang ein Symbol der echten Stellung (Rollladen-Höhe, Lamellenwinkel, Markise), Prozent und Grund; ein Tipp zeigt den ganzen Entscheidungsweg.

@@ -409,7 +409,8 @@ class Verschattung extends IPSModule
             case 'wpkuehlt':
                 return [$wert, $this->t('heat pump is cooling: shade')];
             case 'wpheizt':
-                return [$wert, $this->t('heat pump is heating: the sun may warm the room (room %s)', $ft($innen, $iI))];
+                return [$wert, $innen === null ? $this->t('heat pump is heating: the sun may warm the house')
+                    : $this->t('heat pump is heating: the sun may warm the room (room %s)', $ft($innen, $iI))];
             case 'raumkalt':
                 return [$wert, $this->t('room %s below %s °C: the sun may warm it', $ft($innen, $iI), VSCHLogik::zahl($this->ReadPropertyFloat('HeizGrenze')))];
             case 'sommer':

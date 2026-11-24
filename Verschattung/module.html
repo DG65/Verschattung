@@ -8,11 +8,11 @@
      (UpdateVisualizationValue bzw. Abruf ?json=1 auf der IPSView-Seite). Bedienung nur: Automatik an/aus. -->
 <style>
 :root{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--sonne:#f5a623;--sonnebg:rgba(245,166,35,.16);
-  --behang:#8a6d4b;--kuehl:#2f80ed;--heiz:#e2574c;--neutral:#8e8e93;--haus:#c7c7cc;--nachbar:#d9d9de;--erde:#c9cfc4;--geb:#8e968a}
+  --behang:#8a6d4b;--kuehl:#2f80ed;--heiz:#e2574c;--neutral:#8e8e93;--haus:#8e8e93;--nachbar:#dcdce1;--erde:#c9cfc4;--geb:#8e968a}
 @media (prefers-color-scheme:dark){:root{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);
-  --haus:#636366;--nachbar:#48484a;--erde:#5b6157;--geb:#7d8579}}
-body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--haus:#c7c7cc;--nachbar:#d9d9de;--erde:#c9cfc4;--geb:#8e968a}
-body.dunkel{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);--haus:#636366;--nachbar:#48484a;--erde:#5b6157;--geb:#7d8579}
+  --haus:#aeaeb2;--nachbar:#3a3a3c;--erde:#5b6157;--geb:#7d8579}}
+body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--haus:#8e8e93;--nachbar:#dcdce1;--erde:#c9cfc4;--geb:#8e968a}
+body.dunkel{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);--haus:#aeaeb2;--nachbar:#3a3a3c;--erde:#5b6157;--geb:#7d8579}
 html,body{margin:0;height:100%;background:transparent;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 body{box-sizing:border-box;padding:var(--margin-top,14px) var(--margin-side,14px) var(--margin-bottom,14px)}
 .kachel{box-sizing:border-box;height:100%;display:flex;flex-direction:column;gap:10px;overflow:auto}
@@ -130,14 +130,14 @@ function grundriss() {
   (daten.nachbarn || []).forEach(function (n) { pts = pts.concat(n); });
   var r = 12;
   pts.forEach(function (p) { r = Math.max(r, Math.abs(p[0]), Math.abs(p[1])); });
-  r = Math.min(r, 40);
+  r = Math.min(r, 22); // Nahbereich: das eigene Haus soll groß genug sein
   var m = (Math.min(W, H) / 2 - 26) / r;
   function P(p) { return (cx + p[0] * m).toFixed(1) + ',' + (cy - p[1] * m).toFixed(1); }
   function poly(ps) { return ps.map(P).join(' '); }
   (daten.nachbarn || []).forEach(function (n) {
     if (n.some(function (p) { return Math.abs(p[0]) <= r && Math.abs(p[1]) <= r; })) { o += '<polygon points="' + poly(n) + '" fill="var(--nachbar)"/>'; }
   });
-  if ((daten.haus || []).length) { o += '<polygon points="' + poly(daten.haus) + '" fill="var(--haus)"/>'; }
+  if ((daten.haus || []).length) { o += '<polygon points="' + poly(daten.haus) + '" fill="var(--haus)" stroke="var(--fg)" stroke-width="1" stroke-opacity=".5"/>'; }
   else { o += '<rect x="' + (cx - 26) + '" y="' + (cy - 20) + '" width="52" height="40" rx="3" fill="var(--haus)"/>'; }
   (daten.fassaden || []).forEach(function (f) {
     if (!f.aktiv) { return; }
@@ -165,7 +165,9 @@ function symbol(g) {
   if (g.typ === 'markise') {
     o = '<line x1="3" y1="5" x2="23" y2="5" stroke="var(--fg2)" stroke-width="2"/><path d="M3,5 L' + (3 + z * 4) + ',' + (5 + z * 20) + ' L' + (23 + z * 0) + ',' + (5 + z * 20) + ' L23,5z" fill="var(--sonne)" opacity="' + (.25 + z * .55) + '"/>';
   } else if (g.typ === 'raffstore' && g.lamelle != null) {
-    var w = (g.lamelle || 0) * Math.PI / 180;
+    // geschlossene Lamellen als Fläche, dazu die Lamellen schräg (Neigung bis 60° angedeutet)
+    var zuL = Math.max(0, Math.min(1, (g.lamelle || 0) / 90)), w = Math.min(60, g.lamelle || 0) * Math.PI / 180;
+    o += '<rect x="3.5" y="4" width="19" height="' + (h - 1).toFixed(1) + '" fill="var(--behang)" opacity="' + (.15 + .6 * zuL).toFixed(2) + '"/>';
     for (var yy = 5.5; yy < 3 + h; yy += 3.4) { o += '<line x1="' + (13 - 9 * Math.cos(w)) + '" y1="' + (yy - 1.6 * Math.sin(w)) + '" x2="' + (13 + 9 * Math.cos(w)) + '" y2="' + (yy + 1.6 * Math.sin(w)) + '" stroke="var(--behang)" stroke-width="1.8" stroke-linecap="round"/>'; }
   } else {
     o += '<rect x="3.5" y="4" width="19" height="' + (h - 1).toFixed(1) + '" fill="var(--behang)"/>';
