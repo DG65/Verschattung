@@ -349,10 +349,23 @@ $gq = VSCHGebaeude::horizont([$hausS], [['first' => 'across']], [0, 0]);
 check('F24 First quer (OSM roof:orientation=across): First 11 m, atan(9/10) ≈ 42°', abs(($gq[180] ?? 0) - 42.0) < 0.3, json_encode($gq[180] ?? null));
 $g3 = VSCHGebaeude::horizont([$hausS], [['stockwerke' => 3]], [0, 0]);
 check('F25 OSM 3 Geschosse: höher als 2', ($g3[180] ?? 0) > ($gh[180] ?? 0) + 5);
+check('F25b Haus hinter der Fassade (Nordfassade sieht das Südhaus nicht)', VSCHGebaeude::horizont([$hausS], [], [0, 0], 0.0) === [] && isset(VSCHGebaeude::horizont([$hausS], [], [0, 0], 180.0)[180]));
 $zs = VSCHGebaeude::zusammen([[0, 3], [90, 3], [180, 3], [270, 3]], $gh);
 check('F26 Gelände und Gebäude: je Grad das Höhere', VSCHHorizont::hoehe($zs, 90) == 3.0 && abs(VSCHHorizont::hoehe($zs, 180) - 29.7) < 0.3 && count($zs) === 360);
 $au = VSCHGebaeude::auge(['fassaden' => [['az' => 180, 'seg' => [[[-4, -2], [4, -2]]]]]], 175);
 check('F27 Fenster-Standort: Mitte der Südfassade, 0,5 m davor', abs($au[0]) < 0.01 && abs($au[1] + 2.5) < 0.01, json_encode($au));
+$gar = VSCHGebaeude::modell([[0, 0], [6, 0], [6, 3], [0, 3]], ['art' => 'Garage']);
+check('F29 Garage (ALKIS-Funktion): eingeschossig, Flachdach, 3 m', $gar['traufe'] == 3.0 && $gar['first'] == 3.0 && $gar['neben'] === true, json_encode([$gar['traufe'], $gar['first']]));
+$kl = VSCHGebaeude::modell([[0, 0], [6, 0], [6, 5], [0, 5]]);
+check('F30 unter 40 m² ohne Angabe: Nebengebäude (3 m)', $kl['first'] == 3.0 && $kl['neben'] === true);
+$wh = VSCHGebaeude::modell([[0, 0], [12, 0], [12, 9], [0, 9]], ['art' => 'Wohnhaus']);
+check('F31 Wohnhaus bleibt 2 Geschosse + 45°-Dach', $wh['traufe'] == 6.0 && $wh['first'] == 10.5 && $wh['neben'] === false);
+check('F32 OSM building=garage zählt als Nebengebäude, Angabe Geschosse geht vor', VSCHGebaeude::modell([[0, 0], [12, 0], [12, 9], [0, 9]], ['art' => 'garages'])['neben'] === true
+    && VSCHGebaeude::modell([[0, 0], [6, 0], [6, 3], [0, 3]], ['art' => 'Garage', 'stockwerke' => 2])['traufe'] == 6.0);
+$gml = '<wfs:FeatureCollection><wfs:member><nora:v_al_gebaeude><nora:gebaeudefunktion_name>Garage</nora:gebaeudefunktion_name><nora:geom><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>420000 5355000 420006 5355000 420006 5355003 420000 5355003 420000 5355000</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></nora:geom></nora:v_al_gebaeude></wfs:member>'
+    . '<wfs:member><nora:v_al_gebaeude><nora:gebaeudefunktion_name>Wohnhaus</nora:gebaeudefunktion_name><nora:geom><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>420010 5355000 420022 5355000 420022 5355009 420010 5355009 420010 5355000</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></nora:geom></nora:v_al_gebaeude></wfs:member></wfs:FeatureCollection>';
+$gp = VSCHGeo::gmlPolygone($gml, 25832);
+check('F33 ALKIS-GML: Gebäudefunktion je Objekt gelesen', count($gp) === 2 && $gp[0]['art'] === 'Garage' && $gp[1]['art'] === 'Wohnhaus', json_encode(array_column($gp, 'art')));
 check('F28 Himmelsbild zeichnet Nachbargebäude', str_contains(base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 2], [180, 2]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont', $gh, 'Nachbarhaus'), 26)), 'Nachbarhaus'));
 
 // ---------------------------------------------------------------------------

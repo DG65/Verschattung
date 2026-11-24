@@ -21,6 +21,9 @@ final class VSCHGebaeude
     public const GESCHOSS_M = 3.0;
     public const GESCHOSSE_VORGABE = 2;
     public const AUGE_M = 2.0;      // Fenstermitte im Erdgeschoss über Gelände
+    /** Nebengebäude: eingeschossig mit Flachdach, 3 m (ALKIS-Funktion, OSM building=…, sonst unter 40 m² Grundfläche). */
+    public const NEBEN = '/garage|carport|schuppen|gartenhaus|geräte|geraete|nebengeb|überdach|ueberdach|gewächs|gewaechs|shed|hut|roof|greenhouse|kiosk|trafo|transformer|garages/i';
+    public const NEBEN_FLAECHE_M2 = 40.0;
     private const SCHRITT_M = 0.5;
 
     /**
@@ -54,6 +57,17 @@ final class VSCHGebaeude
         [$u0, $u1, $v0, $v1] = [min($su), max($su), min($sv), max($sv)];
         $halb = ($v1 - $v0) / 2;
         $vm = ($v0 + $v1) / 2;
+        $flaeche = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $flaeche += $p[$i][0] * $p[($i + 1) % $n][1] - $p[($i + 1) % $n][0] * $p[$i][1];
+        }
+        $flaeche = abs($flaeche) / 2;
+        $neben = (int)($info['stockwerke'] ?? 0) === 0 && (float)($info['hoehe'] ?? 0) <= 0
+            && (preg_match(self::NEBEN, (string)($info['art'] ?? '')) === 1 || $flaeche < self::NEBEN_FLAECHE_M2);
+        if ($neben) {
+            $info['stockwerke'] = 1;
+            $info['dach'] = 'flat';
+        }
         $flach = in_array((string)($info['dach'] ?? ''), ['flat', 'flach'], true);
         $dach = $flach ? 0.0 : $halb; // 45°: je Meter waagerecht ein Meter hoch
         $hoehe = (float)($info['hoehe'] ?? 0);
@@ -83,14 +97,15 @@ final class VSCHGebaeude
             $f1 = [$u[0] * $u1 + $v[0] * $vm, $u[1] * $u1 + $v[1] * $vm];
             $linien[] = [[$f0[0], $f0[1], $first], [$f1[0], $f1[1], $first]];
         }
-        return ['traufe' => round($traufe, 1), 'first' => round($first, 1), 'linien' => $linien];
+        return ['traufe' => round($traufe, 1), 'first' => round($first, 1), 'linien' => $linien, 'neben' => $neben];
     }
 
     /**
      * Höhenwinkel der Nachbargebäude je Grad (0–359), gesehen von $auge [x,y] in AUGE_M Höhe.
      * $nachbarn: Umrisse, $infos: gleich indizierte Höhenangaben. Rückgabe [az => Grad] (nur Richtungen mit Gebäude).
+     * $fassadeAz: Punkte hinter der Fassadenebene zählen nicht – Sonne von dort trifft die Fassade ohnehin nicht.
      */
-    public static function horizont(array $nachbarn, array $infos, array $auge): array
+    public static function horizont(array $nachbarn, array $infos, array $auge, ?float $fassadeAz = null): array
     {
         $out = [];
         foreach ($nachbarn as $i => $poly) {
@@ -108,6 +123,10 @@ final class VSCHGebaeude
                     $d = max(0.5, hypot($x, $y));
                     $az = fmod(rad2deg(atan2($x, $y)) + 360, 360);
                     $alt = rad2deg(atan(($h - self::AUGE_M) / $d));
+                    if ($fassadeAz !== null && VSCHSonne::winkelAbstand($az, $fassadeAz) >= 90) {
+                        $vorher = null; // hinter der Fassade
+                        continue;
+                    }
                     if ($vorher !== null) {
                         self::fuellen($out, $vorher[0], $vorher[1], $az, $alt);
                     }

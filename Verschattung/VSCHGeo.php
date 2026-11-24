@@ -177,7 +177,7 @@ final class VSCHGeo
             if (count($p) >= 4) {
                 $t = (array)($el['tags'] ?? []);
                 $out[] = ['p' => $p, 'stockwerke' => (int)($t['building:levels'] ?? 0), 'hoehe' => (float)($t['height'] ?? 0),
-                    'dach' => (string)($t['roof:shape'] ?? ''), 'first' => (string)($t['roof:orientation'] ?? '')];
+                    'dach' => (string)($t['roof:shape'] ?? ''), 'first' => (string)($t['roof:orientation'] ?? ''), 'art' => (string)($t['building'] ?? '')];
             }
         }
         return $out;
@@ -248,7 +248,7 @@ final class VSCHGeo
                 return self::lokal($lat, $lon, $p[0], $p[1]);
             }, $g['p'] ?? $g);
             $lokal[] = ['p' => self::schliessen($pts), 'hoehe' => (float)($g['hoehe'] ?? 0), 'stockwerke' => (int)($g['stockwerke'] ?? 0),
-                'dach' => (string)($g['dach'] ?? ''), 'first' => (string)($g['first'] ?? '')];
+                'dach' => (string)($g['dach'] ?? ''), 'first' => (string)($g['first'] ?? ''), 'art' => (string)($g['art'] ?? '')];
         }
         $eigen = null;
         foreach ($lokal as $i => $g) {
@@ -289,7 +289,7 @@ final class VSCHGeo
                     return [round($p[0], 1), round($p[1], 1)];
                 }, $g['p']);
                 // Höhenangaben für den Hindernis-Horizont (gleich indiziert wie 'nachbarn'; leer = 2 Geschosse + 45°-Dach)
-                $info[] = array_filter(['stockwerke' => $g['stockwerke'], 'hoehe' => $g['hoehe'], 'dach' => $g['dach'], 'first' => $g['first']]);
+                $info[] = array_filter(['stockwerke' => $g['stockwerke'], 'hoehe' => $g['hoehe'], 'dach' => $g['dach'], 'first' => $g['first'], 'art' => $g['art']]);
             }
         }
         $p = $lokal[$eigen]['p'];
@@ -371,6 +371,19 @@ final class VSCHGeo
     /** Polygone aus GML 3 (gml:posList bzw. gml:coordinates); Außenring je Feature. */
     public static function gmlPolygone(string $xml, int $epsg, bool $latLonReihenfolge = false): array
     {
+        // Je Objekt (wfs:member / gml:featureMember) auch Gebäudefunktion und Geschosse lesen (ALKIS BW: gebaeudefunktion_name,
+        // Live-Befund 24.11.: 8 Garagen und 4 Schuppen ums Haus galten sonst als zweigeschossige Häuser)
+        if (preg_match_all('#<(?:wfs:member|gml:featureMember)\b.*?</(?:wfs:member|gml:featureMember)>#s', $xml, $obj) && count($obj[0]) > 1) {
+            $out = [];
+            foreach ($obj[0] as $block) {
+                $art = preg_match('#<[\w:]*(?:gebaeudefunktion_name|gebaeudefunktion|funktion)\b[^>]*>([^<]+)<#i', $block, $fm) ? trim($fm[1]) : '';
+                $gs = preg_match('#<[\w:]*(?:anzahlderoberirdischengeschosse|anzahl_der_oberirdischen_geschosse|geschosse)\b[^>]*>(\d+)<#i', $block, $gm) ? (int)$gm[1] : 0;
+                foreach (self::gmlPolygone($block, $epsg, $latLonReihenfolge) as $p) {
+                    $out[] = $p + ['art' => $art, 'stockwerke' => $gs];
+                }
+            }
+            return $out;
+        }
         $out = [];
         // Je Polygon nur den äußeren Ring (exterior/outerBoundaryIs), Innenhöfe bleiben weg.
         if (!preg_match_all('#<(?:gml:)?(?:exterior|outerBoundaryIs)\b.*?<(?:gml:)?posList([^>]*)>(.*?)</(?:gml:)?posList>#s', $xml, $m, PREG_SET_ORDER)) {
@@ -415,7 +428,8 @@ final class VSCHGeo
                 if (count($p) >= 4) {
                     $pr = (array)($f['properties'] ?? []);
                     $out[] = ['p' => $p, 'hoehe' => (float)($pr['hoehe'] ?? 0),
-                        'stockwerke' => (int)($pr['anzahlDerOberirdischenGeschosse'] ?? ($pr['geschosse'] ?? 0))];
+                        'stockwerke' => (int)($pr['anzahlDerOberirdischenGeschosse'] ?? ($pr['geschosse'] ?? 0)),
+                        'art' => (string)($pr['gebaeudefunktion_name'] ?? ($pr['gebaeudefunktion'] ?? ($pr['funktion'] ?? '')))];
                 }
             }
         }

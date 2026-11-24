@@ -1689,7 +1689,7 @@ class Verschattung extends IPSModule
         if ($nachbarn === []) {
             return [];
         }
-        return VSCHGebaeude::horizont($nachbarn, (array)($haus['nachbarInfo'] ?? []), VSCHGebaeude::auge($haus, $fassadeAz));
+        return VSCHGebaeude::horizont($nachbarn, (array)($haus['nachbarInfo'] ?? []), VSCHGebaeude::auge($haus, $fassadeAz), $fassadeAz);
     }
 
     /** Hindernis-Horizont für eine Fassade: Gelände (PVGIS) und Nachbargebäude, je Grad das Höhere. */

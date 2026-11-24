@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.3 (in Entwicklung)
+
+- **Garagen, Schuppen und andere Nebengebäude** zählen als eingeschossig mit Flachdach (3 m). Erkannt an der ALKIS-Gebäudefunktion (BW liefert z. B. Wohnhaus, Garage, Schuppen, Scheune), am OSM-Gebäudetyp (`building=garage`, `shed` …) oder an einer Grundfläche unter 40 m². Live-Befund 24.11.: Ums Haus stehen 8 Garagen und 4 Schuppen, die vorher als zweigeschossige Häuser galten (eine Garage 6,9 m vor der Südfassade verdeckte so 35°).
+- **Gebäude hinter der Fassadenebene** zählen für diese Fassade nicht mehr (Sonne von dort trifft sie nie). Live: ein Haus 3,4 m westlich erschien im Südbild mit 50°.
+- Konsolentest 0.6.2 (24.11., Test-Instanz angelegt und entfernt): Typ-Spalte „DG65-Toolkit Verschattung“, Regler mit Wert („70 %“), Häkchen „Nachbargebäude anzeigen“, „Warum?“ mit „Horizont 14° (Nachbargebäude)“.
+
+
 ## 0.6.2 (in Entwicklung)
 
 - **Vorschau: Nachbargebäude ein- und ausblenden** (Dietmar 24.11.). Das Häkchen „Nachbargebäude anzeigen“ wirkt auf das Himmelsbild und auf die Sonnenzeiten darunter; die Steuerung rechnet immer mit den Gebäuden. Die Erklärzeile unter dem Bild nennt jetzt Hellgrau (Gelände) und Dunkelgrau (Nachbargebäude).
