@@ -49,6 +49,18 @@ trait VSCHKachel
             . '.then(function(r){return r.text();}).then(function(t){handleMessage(t);}).catch(function(){});},60000);</script>';
     }
 
+    /** Nachbargebäude als Höhenwinkel je 3° für das Sonnenstandsdiagramm (nur wo höher als 1°). */
+    private function gebaeudeStreifen(float $fassadeAz): array
+    {
+        $out = [];
+        foreach ($this->gebaeudeHorizont($fassadeAz) as $a => $h) {
+            if ($a % 3 === 0 && $h > 1) {
+                $out[] = [$a, round($h, 1)];
+            }
+        }
+        return $out;
+    }
+
     /** Grund aus dem Regeltakt, sonst die letzte Zeile des Probelaufs (ohne Pfeil). */
     private function kachelGrund(string $grund, array $weg): string
     {
@@ -74,13 +86,18 @@ trait VSCHKachel
     {
         $pos = $this->koordinaten();
         $now = $this->now();
-        $daten = ['automatik' => (bool)@$this->GetValue('Automatik'), 'bedienbar' => $bedienbar, 'geraete' => [], 'fassaden' => []];
+        $daten = ['automatik' => (bool)@$this->GetValue('Automatik'), 'bedienbar' => $bedienbar, 'geraete' => [], 'fassaden' => [], 'jetzt' => $now];
         if ($bg !== '') {
             $daten['bg'] = '#' . substr(preg_replace('/[^0-9a-fA-F]/', '', $bg), 0, 6);
         }
-        if ($pos === null) {
-            return $daten + ($mitTexten ? ['texte' => $this->kachelTexte()] : []);
+        if ($mitTexten) {
+            $daten['texte'] = $this->kachelTexte();
+            $daten['regeln'] = $this->regelnText();
         }
+        if ($pos === null) {
+            return $daten;
+        }
+        $tz = date_default_timezone_get();
         $sonne = VSCHSonne::stand($pos[0], $pos[1], $now);
         $daten['sonne'] = ['az' => round($sonne['az'], 1), 'alt' => round($sonne['alt'], 1)];
         $hid = $this->ReadPropertyInteger('HelligkeitID');
@@ -90,96 +107,84 @@ trait VSCHKachel
         $aussen = $this->messwert($this->ReadPropertyInteger('TemperaturID'));
         $daten['aussen'] = $aussen === null ? null : round($aussen, 1);
 
-        // Fassaden: beschienen jetzt? Hauptfassade = die mit den meisten Geräten
+        // Tag: Bahn, Sonnenauf-/untergang, klarer Himmel, gemessener Verlauf
+        $bahn = VSCHSonne::bahn($pos[0], $pos[1], date('Y-m-d', $now), $tz, 10);
+        $hell = array_values(array_filter($bahn, fn($p) => $p[2] > 0));
+        $auf = $hell === [] ? strtotime('today 08:00', $now) : (int)$hell[0][0];
+        $unter = $hell === [] ? strtotime('today 17:00', $now) : (int)end($hell)[0];
+        $daten['bahn'] = array_values(array_map(fn($p) => [round($p[1], 1), round($p[2], 1), (int)$p[0]], array_filter($bahn, fn($p) => $p[2] > -1)));
+        $gel = $this->horizontPunkte();
+        $daten['horizont'] = [];
+        for ($a = 0; $a < 360; $a += 5) {
+            $daten['horizont'][] = [$a, round(VSCHHorizont::hoehe($gel, $a), 1)];
+        }
+        $daten['tag'] = [
+            'auf' => $auf, 'unter' => $unter,
+            'klar' => array_map(fn($p) => [(int)$p[0], (int)round(VSCHLogik::klarHimmel($p[2]))], $hell),
+            'verlauf' => json_decode($this->ReadAttributeString('Verlauf'), true) ?: [],
+        ];
+
+        // Fassaden mit ihren Fenstern, Sonnenzeiten heute und „Sonne jetzt / verdeckt“
         $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
         $fassaden = $this->listeWerte($this->ReadPropertyString('Fassaden'));
-        $zahl = array_count_values(array_map(fn($g) => (string)$g['Fassade'], $this->geraete()));
-        $haupt = null;
+        $geraete = $this->geraete();
+        $z = $this->zustand();
+        if ($wege === []) {
+            $wege = $this->regeln(true);
+        }
         foreach ($this->fassadenMitKanten($fassaden, $haus) as $i => $f) {
             $k = (string)($fassaden[$i]['Kennung'] ?? '');
-            $an = $f['aktiv'] && VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $f['az'],
-                VSCHHorizont::hoehe($this->hindernisPunkte($f['az']), $sonne['az']), false);
-            $daten['fassaden'][] = ['kennung' => $k, 'az' => $f['az'], 'aktiv' => $f['aktiv'], 'sonne' => $an,
-                'seg' => array_map(fn($s) => [[round($s[0][0], 1), round($s[0][1], 1)], [round($s[1][0], 1), round($s[1][1], 1)]], (array)$f['seg'])];
-            if ($f['aktiv'] && ($haupt === null || ($zahl[$k] ?? 0) > ($zahl[$haupt['k']] ?? 0))) {
-                $haupt = ['k' => $k, 'az' => $f['az']];
+            $meine = array_values(array_filter($geraete, fn($g) => $g['Fassade'] === $k && $g['Position'] > 0));
+            if (!$f['aktiv'] && $meine === []) {
+                continue;
             }
+            $hind = $this->hindernisPunkte($f['az']);
+            $geo = VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $f['az'], 0.0, false);
+            $an = $f['aktiv'] && VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $f['az'], VSCHHorizont::hoehe($hind, $sonne['az']), false);
+            $fenster = VSCHGrafik::sonnenfenster($bahn, $hind, $f['az']);
+            $daten['fassaden'][] = [
+                'kennung' => $k, 'name' => (string)($fassaden[$i]['Name'] ?? ''), 'az' => $f['az'], 'aktiv' => $f['aktiv'],
+                'sonne' => $an, 'verdeckt' => $geo && !$an, 'profil' => round(VSCHSonne::profilwinkel($sonne['alt'], $sonne['az'], $f['az']), 1),
+                'zeiten' => array_map(fn($w) => [(int)$w[0], (int)$w[1]], $fenster),
+                'gebaeude' => $this->gebaeudeStreifen($f['az']),
+                'seg' => array_map(fn($s) => [[round($s[0][0], 1), round($s[0][1], 1)], [round($s[1][0], 1), round($s[1][1], 1)]], (array)$f['seg']),
+            ];
         }
+        // Lageplan (klein): Haus, Nachbarn, Straßen im Nahbereich
+        $nah = fn($pts) => count(array_filter($pts, fn($p) => abs($p[0]) < 30 && abs($p[1]) < 30)) > 0;
         $daten['haus'] = array_map(fn($p) => [round($p[0], 1), round($p[1], 1)], (array)($haus['eigen'] ?? []));
-        $daten['nachbarn'] = array_map(fn($n) => array_map(fn($p) => [round($p[0], 1), round($p[1], 1)], $n), (array)($haus['nachbarn'] ?? []));
-        // Straßen im Nahbereich der Kachel (±30 m)
+        $daten['nachbarn'] = array_values(array_filter(array_map(fn($n) => array_map(fn($p) => [round($p[0], 1), round($p[1], 1)], $n), (array)($haus['nachbarn'] ?? [])), $nah));
         $daten['strassen'] = array_values(array_filter(array_map(fn($st) => ['b' => (float)$st['b'], 'p' => (array)$st['p']], (array)($haus['strassen'] ?? [])),
-            fn($st) => count(array_filter($st['p'], fn($p) => abs($p[0]) < 30 && abs($p[1]) < 30)) > 0));
+            fn($st) => $nah($st['p'])));
 
-        // Himmelsbogen: Bahn heute, Gelände, Gebäude, Sonnenzeit der Hauptfassade
-        $bahn = VSCHSonne::bahn($pos[0], $pos[1], date('Y-m-d', $now), date_default_timezone_get(), 10);
-        $daten['bahn'] = array_values(array_map(fn($p) => [round($p[1], 1), round($p[2], 1)], array_filter($bahn, fn($p) => $p[2] > -2)));
-        $gelaende = $this->horizontPunkte();
-        $daten['horizont'] = [];
-        for ($a = 30; $a <= 330; $a += 5) {
-            $daten['horizont'][] = [$a, round(VSCHHorizont::hoehe($gelaende, $a), 1)];
-        }
-        $daten['gebaeude'] = [];
-        $daten['bahnAn'] = [];
-        if ($haupt !== null) {
-            $daten['fassadeAz'] = $haupt['az'];
-            foreach ($this->gebaeudeHorizont($haupt['az']) as $a => $h) {
-                if ($a % 2 === 0 && $h > VSCHHorizont::hoehe($gelaende, $a) + 0.2) {
-                    $daten['gebaeude'][] = [$a, round($h, 1)];
-                }
-            }
-            $hind = $this->hindernisPunkte($haupt['az']);
-            $seg = [];
-            foreach ($bahn as $p) {
-                if (VSCHLogik::sonneAufFassade($p[1], $p[2], $haupt['az'], VSCHHorizont::hoehe($hind, $p[1]), false)) {
-                    $seg[] = [round($p[1], 1), round($p[2], 1)];
-                } elseif ($seg !== []) {
-                    $daten['bahnAn'][] = $seg;
-                    $seg = [];
-                }
-            }
-            if ($seg !== []) {
-                $daten['bahnAn'][] = $seg;
-            }
-            $fenster = VSCHGrafik::sonnenfenster($bahn, $hind, $haupt['az']);
-            $daten['sonnenzeit'] = $fenster === [] ? $this->t('Facade %s: no direct sun today', $haupt['k'])
-                : $this->t('Facade %s: sun today %s', $haupt['k'], implode(' + ', array_map(fn($w) => date('H:i', $w[0]) . '–' . date('H:i', $w[1]), $fenster)));
-        }
-
-        // Lage (Heizen/Kühlen/neutral) wie der Regeltakt sie zuletzt bestimmt hat, häufigste über die Geräte
-        $z = $this->zustand();
+        // Lage (Heizen/Kühlen/behaglich) wie der Regeltakt sie zuletzt bestimmt hat, häufigste über die Geräte
         $lagen = array_count_values(array_filter(array_map('strval', (array)($z['_klima'] ?? []))));
         arsort($lagen);
         $lage = (string)(array_key_first($lagen) ?? '');
         $daten['lage'] = $lage;
-        $daten['lageText'] = ['kuehlen' => $this->t('Cooling: shade'), 'heizen' => $this->t('Heating: let the sun in'),
+        $daten['lageText'] = ['kuehlen' => $this->t('Summer: keeping the heat out'), 'heizen' => $this->t('Winter: the sun heats with us'),
             'neutral' => $this->t('Comfortable: glare protection only')][$lage] ?? '';
         $wp = $this->wpModus();
-        if ($wp !== null) {
-            $daten['lageText'] .= ($daten['lageText'] !== '' ? ' · ' : '') . $this->t('Heat pump: %s', $this->wpText($wp));
-        }
+        $daten['wp'] = $wp === null ? '' : $this->wpText($wp);
         $notfall = $this->notfall();
         $wetter = (array)($z['_w'] ?? []);
         $daten['sperre'] = $notfall !== '' ? $this->t('Emergency: %s – all devices up', $notfall)
             : (in_array('einfahren', $wetter, true) ? $this->t('Weather protection active') : '');
 
-        if ($wege === []) {
-            $wege = $this->regeln(true);
-        }
-        foreach ($this->geraete() as $g) {
+        foreach ($geraete as $g) {
             if ($g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
             }
             [$zu, $lam] = $this->istStellung($g);
-            $lam = $lam === null ? null : round($lam);
-            $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'zu' => $zu === null ? null : round($zu, 2),
+            $rt = $this->messwert((int)$g['RaumTemp']);
+            $rl = $this->lux((int)$g['RaumHell']);
+            $ziel = (int)$g['ZielLux'] > 0 ? (float)$g['ZielLux'] : $this->ReadPropertyFloat('ZielLux');
+            $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'fassade' => $g['Fassade'],
+                'zu' => $zu === null ? null : round($zu, 2), 'lamelle' => $lam === null ? null : round($lam),
                 'schalter' => 'Aktiv' . $g['Position'], 'aktiv' => $this->geraetAktiv($g),
-                'lamelle' => $lam, 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
+                'raumTemp' => $rt === null ? null : round($rt, 1), 'raumLux' => $rl === null ? null : (int)round($rl), 'zielLux' => $ziel > 0 ? (int)$ziel : null,
+                'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
                 'weg' => $wege[$g['Name']] ?? []];
-        }
-        if ($mitTexten) {
-            $daten['texte'] = $this->kachelTexte();
-            $daten['regeln'] = $this->regelnText();
         }
         return $daten;
     }
@@ -189,16 +194,31 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
-            'on' => $this->t('on'),
-            'off' => $this->t('off'),
-            'outside' => $this->t('outside'),
-            'Irradiance' => $this->t('Irradiance'),
-            'No device assigned' => $this->t('No device assigned'),
             'E' => $this->t('E'),
-            'SE' => $this->t('SE'),
-            'S' => $this->t('S'),
-            'SW' => $this->t('SW'),
-            'W' => $this->t('W'),
+            'Heat pump' => $this->t('Heat pump'),
+            'How the automatic works' => $this->t('How the automatic works'),
+            'Neighbours off' => $this->t('Neighbours off'),
+            'Neighbours on' => $this->t('Neighbours on'),
+            'No device assigned' => $this->t('No device assigned'),
+            'No sun on the facades' => $this->t('No sun on the facades'),
+            'Shading' => $this->t('Shading'),
+            'Sun on' => $this->t('Sun on'),
+            'Sun path today' => $this->t('Sun path today'),
+            'Today' => $this->t('Today'),
+            'closed' => $this->t('closed'),
+            'extended' => $this->t('extended'),
+            'hidden by the surroundings' => $this->t('hidden by the surroundings'),
+            'neighbouring buildings' => $this->t('neighbouring buildings'),
+            'none' => $this->t('none'),
+            'open' => $this->t('open'),
+            'outside' => $this->t('outside'),
+            'retracted' => $this->t('retracted'),
+            'shaded' => $this->t('shaded'),
+            'sun height' => $this->t('sun height'),
+            'sun now' => $this->t('sun now'),
+            'sun on the facade' => $this->t('sun on the facade'),
+            'terrain' => $this->t('terrain'),
+            'Irradiance' => $this->t('Irradiance'),
             'clear sky' => $this->t('clear sky'),
             'mostly sunny' => $this->t('mostly sunny'),
             'partly cloudy' => $this->t('partly cloudy'),
@@ -207,10 +227,6 @@ trait VSCHKachel
             'twilight' => $this->t('twilight'),
             'night' => $this->t('night'),
             'no sensor' => $this->t('no sensor'),
-            'auto' => $this->t('auto'),
-            'Neighbours on' => $this->t('Neighbours on'),
-            'Neighbours off' => $this->t('Neighbours off'),
-            'How the automatic works' => $this->t('How the automatic works'),
         ];
     }
 

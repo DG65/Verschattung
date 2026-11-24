@@ -3,277 +3,257 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- Kachel der Verschattung (HTML-SDK) und zugleich die eigenständige Seite für IPSView (WebHook).
-     Daten kommen über handleMessage: beim Aufbau mit Texten (GetVisualizationTile), danach nur noch Werte
-     (UpdateVisualizationValue bzw. Abruf ?json=1 auf der IPSView-Seite). Bedienung nur: Automatik an/aus. -->
+<!-- Kachel der Verschattung (HTML-SDK) und eigenständige Seite für IPSView (WebHook).
+     Stil wie die übrigen NRG-Stack-Kacheln: Karten, ruhige Typografie, klare Zahlen, keine Illustration.
+     Aufbau: Lage-Karte mit Kennzahlen · Sonnenstandsdiagramm (polar, Norden oben: Horizont und Nachbarn als Silhouette,
+     Sichtbereich der Fassade, Sonnenbahn heute, Sonne jetzt, Hausumriss) · Tagesverlauf · Behänge je Fassade als Karten. -->
 <style>
-:root{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--sonne:#f5a623;--sonnebg:rgba(245,166,35,.16);
-  --behang:#8a6d4b;--kuehl:#2f80ed;--heiz:#e2574c;--neutral:#8e8e93;--haus:#8e8e93;--nachbar:#dcdce1;--strasse:#f7f6f1;--strasserand:#d9d5ca;--erde:#c9cfc4;--geb:#8e968a}
-@media (prefers-color-scheme:dark){:root{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);
-  --haus:#aeaeb2;--nachbar:#3a3a3c;--strasse:#4a4a4d;--strasserand:#5c5c60;--erde:#5b6157;--geb:#7d8579}}
-body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--rand:rgba(0,0,0,.12);--fl:rgba(0,0,0,.05);--haus:#8e8e93;--nachbar:#dcdce1;--strasse:#f7f6f1;--strasserand:#d9d5ca;--erde:#c9cfc4;--geb:#8e968a}
-body.dunkel{--fg:#f2f2f7;--fg2:#a1a1a6;--rand:rgba(255,255,255,.16);--fl:rgba(255,255,255,.07);--haus:#aeaeb2;--nachbar:#3a3a3c;--strasse:#4a4a4d;--strasserand:#5c5c60;--erde:#5b6157;--geb:#7d8579}
-html,body{margin:0;height:100%;background:transparent;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+:root{--fg:#1d1d1f;--fg2:#6e6e73;--fg3:#aeaeb2;--linie:rgba(0,0,0,.08);--karte:rgba(255,255,255,.72);--karte2:rgba(0,0,0,.035);
+  --schatten:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);--sonne:#f5a623;--sonneT:rgba(245,166,35,.14);
+  --kuehl:#0a84ff;--heiz:#ff7a1a;--warn:#ff3b30;--gruen:#34c759;--sil:#c7c7cc;--sil2:#a1a1a6;--haus:#3a3a3c}
+@media (prefers-color-scheme:dark){:root{--fg:#f5f5f7;--fg2:#98989d;--fg3:#5a5a5e;--linie:rgba(255,255,255,.09);--karte:rgba(44,44,46,.72);--karte2:rgba(255,255,255,.05);
+  --schatten:0 1px 2px rgba(0,0,0,.3);--sil:#48484a;--sil2:#636366;--haus:#e5e5ea}}
+body.hell{--fg:#1d1d1f;--fg2:#6e6e73;--fg3:#aeaeb2;--linie:rgba(0,0,0,.08);--karte:rgba(255,255,255,.72);--karte2:rgba(0,0,0,.035);--schatten:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);--sil:#c7c7cc;--sil2:#a1a1a6;--haus:#3a3a3c}
+body.dunkel{--fg:#f5f5f7;--fg2:#98989d;--fg3:#5a5a5e;--linie:rgba(255,255,255,.09);--karte:rgba(44,44,46,.72);--karte2:rgba(255,255,255,.05);--schatten:0 1px 2px rgba(0,0,0,.3);--sil:#48484a;--sil2:#636366;--haus:#e5e5ea}
+html,body{margin:0;height:100%;background:transparent;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 body{box-sizing:border-box;padding:var(--margin-top,14px) var(--margin-side,14px) var(--margin-bottom,14px)}
-.kachel{box-sizing:border-box;height:100%;display:flex;flex-direction:column;gap:10px;overflow:auto}
-.kopf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.wert{display:flex;flex-direction:column;min-width:64px}
-.wert b{font-size:17px;font-weight:600}
-.wert span{font-size:11px;color:var(--fg2)}
-.lage{font-size:12px;padding:3px 9px;border-radius:10px;background:var(--fl)}
-.lage.kuehlen{color:var(--kuehl);background:rgba(47,128,237,.14)}
-.lage.heizen{color:var(--heiz);background:rgba(226,87,76,.14)}
+.kachel{box-sizing:border-box;height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.kachel>*{flex-shrink:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.karte{background:var(--karte);border-radius:16px;box-shadow:var(--schatten);padding:14px 16px}
+.titel{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.titel .rechts{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.zahl{font-variant-numeric:tabular-nums}
+/* Oben: Lage + Diagramm */
+.oben{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1.1fr);gap:12px;align-items:start}
+@media (max-width:620px){.oben{grid-template-columns:1fr}}
+.lage{display:flex;flex-direction:column;gap:14px}
+.lage .haupt{font-size:24px;font-weight:600;line-height:1.15}
+.lage .haupt.kuehlen{color:var(--kuehl)} .lage .haupt.heizen{color:var(--heiz)}
+.lage .unter{font-size:13px;color:var(--fg2);margin-top:3px}
+.kz{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kz div{background:var(--karte2);border-radius:12px;padding:9px 11px}
+.kz b{display:block;font-size:20px;font-weight:600;line-height:1.1}
+.kz span{font-size:11px;color:var(--fg2)}
+.zeile{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--fg2)}
+.zeile .wert{color:var(--fg);font-weight:500}
 .schalter{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg2)}
-.schalter button{font:inherit;font-size:13px;color:var(--fg);background:var(--fl);border:1px solid var(--rand);border-radius:14px;padding:4px 12px;cursor:pointer}
-.schalter button.an{background:var(--sonnebg);border-color:transparent;color:#b26a00}
-.schalter button:disabled{opacity:.5;cursor:default}
-.hinweis{font-size:12px;padding:6px 10px;border-radius:10px;background:rgba(226,87,76,.14);color:var(--heiz)}
-.bilder{display:flex;gap:10px;flex-wrap:wrap}
-.bild{flex:1 1 240px;min-width:200px;max-width:420px;border-radius:12px;overflow:hidden;background:var(--fl)}
-.bild svg{display:block;width:100%;height:auto;max-height:210px}
-.bild.plan svg{margin:0 auto;max-width:280px}
-.bild{position:relative}
-.chip{position:absolute;left:8px;top:8px;font:inherit;font-size:11px;color:var(--fg2);background:var(--fl);border:1px solid var(--rand);border-radius:10px;padding:2px 8px;cursor:pointer}
-.chip.an{color:var(--fg)}
-.liste{display:flex;flex-direction:column;gap:4px}
-.zeile{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;background:var(--fl);cursor:pointer}
-.zeile .sym{flex:none;width:26px;height:30px}
-.zeile .name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zeile .grund{font-size:12px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zeile .txt{min-width:0;flex:1}
-.zeile .prozent{flex:none;font-size:13px;color:var(--fg2)}
-.weg{display:none;font-size:12px;color:var(--fg2);padding:2px 10px 8px 44px;white-space:pre-line}
-.zeile.offen + .weg{display:block}
-.leer{font-size:13px;color:var(--fg2)}
-.mini{flex:none;font:inherit;font-size:11px;color:var(--fg2);background:transparent;border:1px solid var(--rand);border-radius:10px;padding:2px 8px;cursor:pointer}
-.mini.an{color:#b26a00;background:var(--sonnebg);border-color:transparent}
-.mini:disabled{opacity:.5;cursor:default}
-.zeile.aus .name,.zeile.aus .sym{opacity:.5}
-.info{font-size:12px;color:var(--fg2);background:var(--fl);border-radius:10px;padding:8px 12px;white-space:pre-line;line-height:1.5}
-.infoknopf{font:inherit;font-size:12px;color:var(--fg2);background:transparent;border:0;padding:0;cursor:pointer;text-align:left}
+.toggle{width:44px;height:26px;border-radius:13px;border:0;background:var(--fg3);position:relative;padding:0;transition:background .2s}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+.toggle.an{background:var(--gruen)} .toggle.an::after{left:20px}
+.toggle:disabled{opacity:.5;cursor:default}
+.toggle.klein{width:34px;height:20px;border-radius:10px} .toggle.klein::after{width:16px;height:16px} .toggle.klein.an::after{left:16px}
+.hinweis{background:rgba(255,59,48,.12);color:var(--warn);border-radius:12px;padding:9px 12px;font-size:13px;font-weight:600}
+.diagramm{display:flex;flex-direction:column;align-items:center}
+.diagramm svg{display:block;width:100%;max-width:340px;height:auto}
+.chip{font-size:11px;color:var(--fg2);background:var(--karte2);border:0;border-radius:10px;padding:3px 9px}
+.legende{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--fg2);margin-top:4px}
+.legende i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* Tagesverlauf */
+.verlauf svg{display:block}
+/* Behänge */
+.gruppe{display:flex;flex-direction:column;gap:8px}
+.raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+.geraet{background:var(--karte);box-shadow:var(--schatten);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;border:1.5px solid transparent;min-height:112px}
+.geraet.gewaehlt{border-color:var(--sonne)}
+.geraet.aus{opacity:.5}
+.geraet .k{display:flex;align-items:flex-start;gap:8px}
+.geraet .sym{flex:none;width:34px;height:34px}
+.geraet .n{font-size:14px;font-weight:600;line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.geraet .s{font-size:13px;font-weight:500}
+.geraet .g{font-size:12px;color:var(--fg2);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.geraet .m{display:flex;gap:10px;font-size:11px;color:var(--fg2);margin-top:auto}
+.weg{grid-column:1/-1;background:var(--karte2);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--fg2);white-space:pre-line;line-height:1.55}
+.info{background:var(--karte2);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--fg2);white-space:pre-line;line-height:1.55}
+.infoknopf{background:none;border:0;padding:0;font-size:12px;color:var(--fg2);text-align:left}
 </style>
 </head>
 <body>
 <div class="kachel" id="kachel"></div>
 <script>
-var daten = null;
-var offen = {};
-var infoOffen = false;
-// Nachbargebäude ein/aus – je Betrachter gemerkt (Browser-Speicher, darf fehlen)
-var nachbarnAn = true;
+var daten = null, gewaehlt = null, fassadeWahl = null, infoOffen = false, nachbarnAn = true;
 try { nachbarnAn = localStorage.getItem('vsch-nachbarn') !== '0'; } catch (e) { }
-function nachbarnUmschalten() {
-  nachbarnAn = !nachbarnAn;
-  try { localStorage.setItem('vsch-nachbarn', nachbarnAn ? '1' : '0'); } catch (e) { }
-  zeichnen();
-}
 
 function T(k) { return (daten && daten.texte && daten.texte[k]) || k; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
-function zahl(v, n) { return v == null ? '–' : Number(v).toLocaleString(undefined, {maximumFractionDigits: n || 0}); }
+function zahl(v, n) { return v == null ? '–' : Number(v).toLocaleString(undefined, {minimumFractionDigits: n || 0, maximumFractionDigits: n || 0}); }
+function uhr(ts) { var d = new Date(ts * 1000); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function aktion(ident, wert) { if (typeof requestAction === 'function') { requestAction(ident, wert); } }
+function f1(v) { return v.toFixed(1); }
 
-// Kachel: requestAction an die Instanz. IPSView-Seite: keine Bedienung.
-function automatik() {
-  if (typeof requestAction === 'function' && daten) { requestAction('Automatik', !daten.automatik); }
-}
-function geraetSchalten(i) {
-  var g = daten && daten.geraete[i];
-  if (g && typeof requestAction === 'function') { requestAction(g.schalter, !g.aktiv); }
-}
-
-// Himmel je Zustand: Farbverlauf, Wolken, Regen, Sterne
-var HIMMEL = {
-  sonnig: ['#4a90e2', '#bfe1ff'], heiter: ['#5b9bd5', '#d6e9f8'], wolkig: ['#8aa4bd', '#dfe7ee'],
-  bedeckt: ['#8c949c', '#c9ced3'], regen: ['#6b7580', '#a9b1b9'], daemmerung: ['#3b4a6b', '#f2b880'],
-  nacht: ['#0f1a33', '#2a3b5f'], unbekannt: ['#9fb6cc', '#e4edf5']
-};
-
-function wolke(x, y, s, o) {
-  return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')" opacity="' + o + '">'
-    + '<ellipse cx="0" cy="0" rx="22" ry="11" fill="#fff"/><ellipse cx="-12" cy="-6" rx="12" ry="10" fill="#fff"/>'
-    + '<ellipse cx="9" cy="-9" rx="14" ry="12" fill="#fff"/></g>';
-}
-
-// Himmelsbogen: Azimut 60–300° waagerecht, Höhe 0–70° senkrecht
-function himmelsbogen() {
-  var W = 320, H = 170, ml = 6, mr = 6, mt = 8, mb = 18, a0 = 50, a1 = 310, h1 = 70;
-  function x(a) { return ml + (a - a0) / (a1 - a0) * (W - ml - mr); }
-  function y(h) { return H - mb - Math.max(0, h) / h1 * (H - mt - mb); }
-  var k = daten.himmel || {art: 'unbekannt'}, f = HIMMEL[k.art] || HIMMEL.unbekannt, o = '';
-  o += '<defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + f[0] + '"/><stop offset="1" stop-color="' + f[1] + '"/></linearGradient></defs>';
-  o += '<rect width="' + W + '" height="' + H + '" fill="url(#hg)"/>';
-  if (k.art === 'nacht') {
-    for (var i = 0; i < 18; i++) { o += '<circle cx="' + ((i * 53) % W) + '" cy="' + (8 + (i * 37) % 90) + '" r="' + (i % 3 ? .8 : 1.3) + '" fill="#fff" opacity=".8"/>'; }
+// ------------------------------------------------ Sonnenstandsdiagramm (polar, Norden oben)
+function sonnenDiagramm(fa) {
+  var S = 300, c = S / 2, R = 128, o = '';
+  function rad(alt) { return R * (90 - Math.max(0, Math.min(90, alt))) / 90; }
+  function P(az, alt) { var a = az * Math.PI / 180, r = rad(alt); return [c + Math.sin(a) * r, c - Math.cos(a) * r]; }
+  // Sichtbereich der Fassade (±80°): weicher Sektor
+  if (fa) {
+    var a0 = (fa.az - 80) * Math.PI / 180, a1 = (fa.az + 80) * Math.PI / 180;
+    o += '<path d="M' + c + ',' + c + ' L' + f1(c + Math.sin(a0) * R) + ',' + f1(c - Math.cos(a0) * R) + ' A' + R + ',' + R + ' 0 0,1 ' + f1(c + Math.sin(a1) * R) + ',' + f1(c - Math.cos(a1) * R) + 'z" fill="var(--sonneT)"/>';
   }
-  if (k.art === 'heiter') { o += wolke(70, 40, .8, .85) + wolke(250, 28, .6, .8); }
-  if (k.art === 'wolkig') { o += wolke(60, 36, 1, .9) + wolke(160, 26, 1.2, .9) + wolke(262, 44, .9, .9); }
-  if (k.art === 'bedeckt' || k.art === 'regen') { o += wolke(50, 30, 1.4, .85) + wolke(150, 22, 1.6, .9) + wolke(255, 30, 1.4, .85); }
-  if (k.art === 'regen') {
-    for (var r = 0; r < 26; r++) { var rx = 10 + r * 12; o += '<line x1="' + rx + '" y1="' + (52 + (r % 4) * 9) + '" x2="' + (rx - 4) + '" y2="' + (62 + (r % 4) * 9) + '" stroke="#e8eef4" stroke-width="1.3" opacity=".8"/>'; }
-  }
-  // Band der Hauptfassade (±80°)
-  if (daten.fassadeAz != null) {
-    var b0 = Math.max(a0, daten.fassadeAz - 80), b1 = Math.min(a1, daten.fassadeAz + 80);
-    o += '<rect x="' + x(b0) + '" y="' + mt + '" width="' + (x(b1) - x(b0)) + '" height="' + (H - mt - mb) + '" fill="#fff" opacity=".13"/>';
-  }
-  // Gelände-Horizont und Nachbargebäude
-  var d = 'M' + x(a0) + ',' + y(0);
-  (daten.horizont || []).forEach(function (p) { if (p[0] >= a0 && p[0] <= a1) { d += ' L' + x(p[0]).toFixed(1) + ',' + y(p[1]).toFixed(1); } });
-  o += '<path d="' + d + ' L' + x(a1) + ',' + y(0) + 'Z" fill="var(--erde)" opacity=".95"/>';
-  (nachbarnAn ? (daten.gebaeude || []) : []).forEach(function (p) {
-    if (p[0] >= a0 && p[0] <= a1) { o += '<rect x="' + (x(p[0] - 1)).toFixed(1) + '" y="' + y(p[1]).toFixed(1) + '" width="' + (x(p[0] + 1) - x(p[0] - 1) + .4).toFixed(1) + '" height="' + (y(0) - y(p[1])).toFixed(1) + '" fill="var(--geb)"/>'; }
-  });
-  // Sonnenbahn heute, Sonnenzeit auf der Fassade kräftig
-  var pfad = '', pfadAn = '';
-  (daten.bahn || []).forEach(function (p, i) {
-    var s = (i ? ' L' : 'M') + x(p[0]).toFixed(1) + ',' + y(p[1]).toFixed(1);
-    pfad += s;
-  });
-  if (pfad) { o += '<path d="' + pfad + '" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3" opacity=".9"/>'; }
-  (daten.bahnAn || []).forEach(function (seg) {
-    var s = ''; seg.forEach(function (p, i) { s += (i ? ' L' : 'M') + x(p[0]).toFixed(1) + ',' + y(p[1]).toFixed(1); });
-    o += '<path d="' + s + '" fill="none" stroke="var(--sonne)" stroke-width="3" stroke-linecap="round"/>';
-  });
-  // Sonne jetzt
-  if (daten.sonne && daten.sonne.alt > -1 && daten.sonne.az >= a0 && daten.sonne.az <= a1) {
-    var sx = x(daten.sonne.az), sy = y(daten.sonne.alt), tr = (k.art === 'bedeckt' || k.art === 'regen') ? .55 : 1;
-    o += '<circle cx="' + sx + '" cy="' + sy + '" r="13" fill="#ffd25a" opacity="' + (.35 * tr) + '"/><circle cx="' + sx + '" cy="' + sy + '" r="7.5" fill="#ffcc33" opacity="' + tr + '"/>';
-  }
-  [[90, 'E'], [135, 'SE'], [180, 'S'], [225, 'SW'], [270, 'W']].forEach(function (t) {
-    o += '<text x="' + x(t[0]) + '" y="' + (H - 5) + '" font-size="10" text-anchor="middle" fill="var(--fg2)">' + T(t[1]) + '</text>';
-  });
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + o + '</svg>';
-}
-
-// Haus von oben: Norden oben, beschienene Fassaden in Sonnenfarbe, Sonne am Rand in ihrer Richtung
-function grundriss() {
-  var W = 220, H = 170, cx = W / 2, cy = H / 2, o = '';
-  var pts = [].concat(daten.haus || []);
-  (daten.nachbarn || []).forEach(function (n) { pts = pts.concat(n); });
-  var r = 12;
-  pts.forEach(function (p) { r = Math.max(r, Math.abs(p[0]), Math.abs(p[1])); });
-  r = Math.min(r, 22); // Nahbereich: das eigene Haus soll groß genug sein
-  var m = (Math.min(W, H) / 2 - 26) / r;
-  function P(p) { return (cx + p[0] * m).toFixed(1) + ',' + (cy - p[1] * m).toFixed(1); }
-  function poly(ps) { return ps.map(P).join(' '); }
-  [['var(--strasserand)', 1.4], ['var(--strasse)', 0]].forEach(function (lage) {
-    (daten.strassen || []).forEach(function (st) {
-      o += '<polyline points="' + poly(st.p) + '" fill="none" stroke="' + lage[0] + '" stroke-width="' + (Math.max(1.5, st.b * m) + lage[1]).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round"/>';
-    });
-  });
-  (nachbarnAn ? (daten.nachbarn || []) : []).forEach(function (n) {
-    if (n.some(function (p) { return Math.abs(p[0]) <= r && Math.abs(p[1]) <= r; })) { o += '<polygon points="' + poly(n) + '" fill="var(--nachbar)"/>'; }
-  });
-  if ((daten.haus || []).length) { o += '<polygon points="' + poly(daten.haus) + '" fill="var(--haus)" stroke="var(--fg)" stroke-width="1" stroke-opacity=".5"/>'; }
-  else { o += '<rect x="' + (cx - 26) + '" y="' + (cy - 20) + '" width="52" height="40" rx="3" fill="var(--haus)"/>'; }
-  (daten.fassaden || []).forEach(function (f) {
-    if (!f.aktiv) { return; }
-    var farbe = f.sonne ? 'var(--sonne)' : 'var(--fg2)', breite = f.sonne ? 5 : 2.5;
-    if (f.seg && f.seg.length) {
-      f.seg.forEach(function (s) { o += '<line x1="' + (cx + s[0][0] * m) + '" y1="' + (cy - s[0][1] * m) + '" x2="' + (cx + s[1][0] * m) + '" y2="' + (cy - s[1][1] * m) + '" stroke="' + farbe + '" stroke-width="' + breite + '" stroke-linecap="round"/>'; });
-    } else {
-      var a = f.az * Math.PI / 180, fx = cx + Math.sin(a) * 30, fy = cy - Math.cos(a) * 24;
-      o += '<line x1="' + (fx - Math.cos(a) * 18) + '" y1="' + (fy - Math.sin(a) * 18) + '" x2="' + (fx + Math.cos(a) * 18) + '" y2="' + (fy + Math.sin(a) * 18) + '" stroke="' + farbe + '" stroke-width="' + breite + '" stroke-linecap="round"/>';
+  // Ringe 0/30/60° und Himmelsrichtungen
+  [0, 30, 60].forEach(function (h) { o += '<circle cx="' + c + '" cy="' + c + '" r="' + f1(rad(h)) + '" fill="none" stroke="var(--linie)"/>'; });
+  [0, 45, 90, 135, 180, 225, 270, 315].forEach(function (az) { var p = P(az, 0); o += '<line x1="' + c + '" y1="' + c + '" x2="' + f1(p[0]) + '" y2="' + f1(p[1]) + '" stroke="var(--linie)"/>'; });
+  [[0, 'N'], [90, T('E')], [180, 'S'], [270, 'W']].forEach(function (t) { var a = t[0] * Math.PI / 180; o += '<text x="' + f1(c + Math.sin(a) * (R + 12)) + '" y="' + f1(c - Math.cos(a) * (R + 12) + 4) + '" font-size="11" font-weight="600" text-anchor="middle" fill="var(--fg2)">' + t[1] + '</text>'; });
+  [30, 60].forEach(function (h) { o += '<text x="' + (c + 3) + '" y="' + f1(c - rad(h) - 3) + '" font-size="9" fill="var(--fg3)">' + h + '°</text>'; });
+  // Horizont (Gelände) und Nachbargebäude als Silhouette vom Rand nach innen
+  var hz = {}; (daten.horizont || []).forEach(function (p) { hz[p[0]] = p[1]; });
+  var geb = {}; if (fa && nachbarnAn) { (fa.gebaeude || []).forEach(function (p) { geb[p[0]] = p[1]; }); }
+  function silhouette(mitGeb) {
+    var d = '';
+    for (var az = 0; az <= 360; az += 3) {
+      var g = hz[az - az % 5] || 0; if (mitGeb) { g = Math.max(g, geb[az % 360] || 0); }
+      var p = P(az % 360, g); d += (az ? ' L' : 'M') + f1(p[0]) + ',' + f1(p[1]);
     }
-  });
-  o += '<text x="' + (W - 12) + '" y="16" font-size="11" text-anchor="middle" fill="var(--fg2)">N</text><path d="M' + (W - 12) + ',20 l-4,9 l4,-3 l4,3z" fill="var(--fg2)"/>';
-  if (daten.sonne && daten.sonne.alt > -1) {
-    var sa = daten.sonne.az * Math.PI / 180, rr = Math.min(W, H) / 2 - 14, sx = cx + Math.sin(sa) * rr, sy = cy - Math.cos(sa) * rr;
-    o += '<line x1="' + sx + '" y1="' + sy + '" x2="' + (cx + Math.sin(sa) * 30) + '" y2="' + (cy - Math.cos(sa) * 30) + '" stroke="var(--sonne)" stroke-width="1.2" stroke-dasharray="2 3" opacity=".8"/>';
-    o += '<circle cx="' + sx + '" cy="' + sy + '" r="8" fill="#ffcc33"/>';
-    for (var i = 0; i < 8; i++) { var w = i * Math.PI / 4; o += '<line x1="' + (sx + Math.cos(w) * 10) + '" y1="' + (sy + Math.sin(w) * 10) + '" x2="' + (sx + Math.cos(w) * 13) + '" y2="' + (sy + Math.sin(w) * 13) + '" stroke="#ffcc33" stroke-width="1.6" stroke-linecap="round"/>'; }
+    return 'M' + (c - R) + ',' + c + ' A' + R + ',' + R + ' 0 1,1 ' + (c + R) + ',' + c + ' A' + R + ',' + R + ' 0 1,1 ' + (c - R) + ',' + c + 'z ' + d + 'z';
   }
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + o + '</svg>';
+  if (nachbarnAn && fa && (fa.gebaeude || []).length) { o += '<path d="' + silhouette(true) + '" fill="var(--sil2)" fill-rule="evenodd" opacity=".55"/>'; }
+  o += '<path d="' + silhouette(false) + '" fill="var(--sil)" fill-rule="evenodd"/>';
+  // Hausumriss in der Mitte (maßstäblich verkleinert)
+  if ((daten.haus || []).length) {
+    var ext = 6; daten.haus.forEach(function (p) { ext = Math.max(ext, Math.abs(p[0]), Math.abs(p[1])); });
+    var m = 26 / ext, pts = daten.haus.map(function (p) { return f1(c + p[0] * m) + ',' + f1(c - p[1] * m); }).join(' ');
+    o += '<polygon points="' + pts + '" fill="var(--karte)" stroke="var(--haus)" stroke-width="1.4"/>';
+    if (fa && fa.seg) { fa.seg.forEach(function (s) { o += '<line x1="' + f1(c + s[0][0] * m) + '" y1="' + f1(c - s[0][1] * m) + '" x2="' + f1(c + s[1][0] * m) + '" y2="' + f1(c - s[1][1] * m) + '" stroke="var(--sonne)" stroke-width="3" stroke-linecap="round"/>'; }); }
+  }
+  // Sonnenbahn heute: auf der Fassade kräftig, sonst gestrichelt
+  var bahn = (daten.bahn || []).filter(function (p) { return p[1] > 0; }), zeiten = (fa && fa.zeiten) || [];
+  function an(ts) { return zeiten.some(function (z) { return ts >= z[0] && ts <= z[1]; }); }
+  var d0 = '', seg = [], segs = [];
+  bahn.forEach(function (p, i) { var q = P(p[0], p[1]); d0 += (i ? ' L' : 'M') + f1(q[0]) + ',' + f1(q[1]); if (an(p[2])) { seg.push(q); } else if (seg.length) { segs.push(seg); seg = []; } });
+  if (seg.length) { segs.push(seg); }
+  if (d0) { o += '<path d="' + d0 + '" fill="none" stroke="var(--fg3)" stroke-width="1.5" stroke-dasharray="2 4" stroke-linecap="round"/>'; }
+  segs.forEach(function (sg) { o += '<polyline points="' + sg.map(function (q) { return f1(q[0]) + ',' + f1(q[1]); }).join(' ') + '" fill="none" stroke="var(--sonne)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'; });
+  // volle Stunden als kleine Punkte mit Zahl
+  bahn.forEach(function (p) { var d = new Date(p[2] * 1000); if (d.getMinutes() === 0 && d.getHours() % 3 === 0) { var q = P(p[0], p[1]); o += '<circle cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2" fill="var(--fg2)"/><text x="' + f1(q[0]) + '" y="' + f1(q[1] - 6) + '" font-size="9" text-anchor="middle" fill="var(--fg2)">' + d.getHours() + '</text>'; } });
+  // Sonne jetzt
+  if (daten.sonne && daten.sonne.alt > 0) { var q = P(daten.sonne.az, daten.sonne.alt); o += '<circle cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="11" fill="#ffcc00" opacity=".25"/><circle cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="6.5" fill="#ffcc00" stroke="#fff" stroke-width="1.5"/>'; }
+  return '<svg viewBox="0 0 ' + S + ' ' + S + '">' + o + '</svg>';
 }
 
-// Symbol eines Behangs: Fensterrahmen, Behang so weit unten wie seine Stellung, Lamellen schräg
+// ------------------------------------------------ Tagesverlauf
+function tagesverlauf(fa, B) {
+  var t = daten.tag; if (!t) { return ''; }
+  var t0 = t.auf - 1800, t1 = t.unter + 1800, W = Math.max(280, B - 34), H = 104, mt = 16, mb = 20, maxW = 100;
+  (t.klar || []).forEach(function (p) { maxW = Math.max(maxW, p[1]); });
+  (t.verlauf || []).forEach(function (p) { if (p[1] != null) { maxW = Math.max(maxW, p[1]); } });
+  maxW = Math.ceil(maxW / 200) * 200;
+  function x(ts) { return (ts - t0) / (t1 - t0) * W; }
+  function y(v) { return H - mb - v / maxW * (H - mt - mb); }
+  var o = '<defs><linearGradient id="ev" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5a623" stop-opacity=".45"/><stop offset="1" stop-color="#f5a623" stop-opacity=".03"/></linearGradient></defs>';
+  [0, .5, 1].forEach(function (f) { o += '<line x1="0" y1="' + f1(y(maxW * f)) + '" x2="' + W + '" y2="' + f1(y(maxW * f)) + '" stroke="var(--linie)"/>'; });
+  o += '<text x="' + W + '" y="' + f1(y(maxW) - 4) + '" font-size="9" text-anchor="end" fill="var(--fg3)">' + maxW + ' W/m²</text>';
+  ((fa && fa.zeiten) || []).forEach(function (z) {
+    o += '<rect x="' + f1(x(z[0])) + '" y="2" width="' + f1(x(z[1]) - x(z[0])) + '" height="6" rx="3" fill="var(--sonne)"/>';
+  });
+  var d = ''; (t.klar || []).forEach(function (p, i) { d += (i ? ' L' : 'M') + f1(x(p[0])) + ',' + f1(y(p[1])); });
+  if (d) { o += '<path d="' + d + '" fill="none" stroke="var(--fg3)" stroke-width="1.2" stroke-dasharray="3 3"/>'; }
+  var m = '', erst = null, letzt = null;
+  (t.verlauf || []).forEach(function (p) { if (p[1] == null || p[0] < t0) { return; } m += (erst == null ? 'M' : ' L') + f1(x(p[0])) + ',' + f1(y(p[1])); if (erst == null) { erst = p[0]; } letzt = p[0]; });
+  if (m) { o += '<path d="' + m + ' L' + f1(x(letzt)) + ',' + f1(y(0)) + ' L' + f1(x(erst)) + ',' + f1(y(0)) + 'z" fill="url(#ev)"/><path d="' + m + '" fill="none" stroke="#f5a623" stroke-width="2" stroke-linejoin="round"/>'; }
+  (t.verlauf || []).forEach(function (p) { if (p[2] > 0 && p[0] >= t0) { o += '<rect x="' + f1(x(p[0])) + '" y="' + f1(H - mb + 3) + '" width="' + f1(Math.max(1, x(p[0] + 600) - x(p[0]))) + '" height="4" fill="var(--kuehl)"/>'; } });
+  for (var h = Math.ceil(t0 / 3600) * 3600; h <= t1; h += 3600) { var hh = new Date(h * 1000).getHours(); if (hh % 3 === 0) { o += '<text x="' + f1(x(h)) + '" y="' + (H - 3) + '" font-size="10" text-anchor="middle" fill="var(--fg2)">' + hh + ':00</text>'; } }
+  if (daten.jetzt >= t0 && daten.jetzt <= t1) { o += '<line x1="' + f1(x(daten.jetzt)) + '" y1="' + mt + '" x2="' + f1(x(daten.jetzt)) + '" y2="' + (H - mb + 7) + '" stroke="var(--fg)" stroke-width="1.2"/>'; }
+  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + o + '</svg>';
+}
+
+// ------------------------------------------------ Behang-Symbol (Füllstand wie Apple Home)
 function symbol(g) {
-  var z = Math.max(0, Math.min(1, g.zu == null ? 0 : g.zu)), h = 4 + z * 22, o = '<rect x="2" y="3" width="22" height="26" rx="2" fill="none" stroke="var(--fg2)" stroke-width="1.3"/>';
+  var z = Math.max(0, Math.min(1, g.zu == null ? 0 : g.zu)), o = '<rect x="1" y="1" width="32" height="32" rx="9" fill="var(--karte2)"/>';
+  var farbe = g.aktiv === false ? 'var(--fg3)' : (z > .02 ? 'var(--fg)' : 'var(--fg3)');
   if (g.typ === 'markise') {
-    o = '<line x1="3" y1="5" x2="23" y2="5" stroke="var(--fg2)" stroke-width="2"/><path d="M3,5 L' + (3 + z * 4) + ',' + (5 + z * 20) + ' L' + (23 + z * 0) + ',' + (5 + z * 20) + ' L23,5z" fill="var(--sonne)" opacity="' + (.25 + z * .55) + '"/>';
-  } else if (g.typ === 'raffstore' && g.lamelle != null) {
-    // geschlossene Lamellen als Fläche, dazu die Lamellen schräg (Neigung bis 60° angedeutet)
-    var zuL = Math.max(0, Math.min(1, (g.lamelle || 0) / 90)), w = Math.min(60, g.lamelle || 0) * Math.PI / 180;
-    o += '<rect x="3.5" y="4" width="19" height="' + (h - 1).toFixed(1) + '" fill="var(--behang)" opacity="' + (.15 + .6 * zuL).toFixed(2) + '"/>';
-    for (var yy = 5.5; yy < 3 + h; yy += 3.4) { o += '<line x1="' + (13 - 9 * Math.cos(w)) + '" y1="' + (yy - 1.6 * Math.sin(w)) + '" x2="' + (13 + 9 * Math.cos(w)) + '" y2="' + (yy + 1.6 * Math.sin(w)) + '" stroke="var(--behang)" stroke-width="1.8" stroke-linecap="round"/>'; }
-  } else {
-    o += '<rect x="3.5" y="4" width="19" height="' + (h - 1).toFixed(1) + '" fill="var(--behang)"/>';
-    for (var ry = 7; ry < 3 + h - 1; ry += 3.5) { o += '<line x1="4" y1="' + ry + '" x2="22" y2="' + ry + '" stroke="var(--rand)" stroke-width=".8"/>'; }
+    o += '<line x1="7" y1="10" x2="27" y2="10" stroke="' + farbe + '" stroke-width="2" stroke-linecap="round"/>';
+    o += '<path d="M7,10 L' + f1(7 - z * 3) + ',' + f1(10 + 4 + z * 12) + ' L' + f1(27 + z * 3) + ',' + f1(10 + 4 + z * 12) + ' L27,10z" fill="' + farbe + '" opacity="' + (.25 + z * .55) + '"/>';
+    return '<svg class="sym" viewBox="0 0 34 34">' + o + '</svg>';
   }
-  return '<svg class="sym" viewBox="0 0 26 32">' + o + '</svg>';
+  o += '<line x1="7" y1="8" x2="27" y2="8" stroke="' + farbe + '" stroke-width="2" stroke-linecap="round"/>';
+  var unten = 8 + z * 19;
+  if (g.typ === 'raffstore' && g.lamelle != null) {
+    var w = Math.min(75, g.lamelle) * Math.PI / 180;
+    for (var yy = 11; yy <= unten; yy += 3.2) { o += '<line x1="' + f1(17 - 9 * Math.cos(w * .3)) + '" y1="' + f1(yy - 1.4 * Math.sin(w)) + '" x2="' + f1(17 + 9 * Math.cos(w * .3)) + '" y2="' + f1(yy + 1.4 * Math.sin(w)) + '" stroke="' + farbe + '" stroke-width="1.6" stroke-linecap="round"/>'; }
+  } else if (z > .02) {
+    o += '<rect x="8" y="9" width="18" height="' + f1(unten - 9) + '" rx="1.5" fill="' + farbe + '" opacity=".85"/>';
+  }
+  return '<svg class="sym" viewBox="0 0 34 34">' + o + '</svg>';
 }
 
+// ------------------------------------------------ Aufbau
 function zeichnen() {
-  var k = document.getElementById('kachel');
-  if (!daten) { return; }
-  var lage = daten.lage || '', o = '';
-  o += '<div class="kopf">';
-  o += '<div class="wert"><b>' + zahl(daten.einstrahlung) + ' W/m²</b><span>' + esc(T(daten.himmel ? daten.himmel.text : 'Irradiance')) + '</span></div>';
-  if (daten.aussen != null) { o += '<div class="wert"><b>' + zahl(daten.aussen, 1) + ' °C</b><span>' + esc(T('outside')) + '</span></div>'; }
-  if (lage) { o += '<span class="lage ' + esc(lage) + '">' + esc(daten.lageText || '') + '</span>'; }
-  o += '<div class="schalter">' + esc(T('Automatic')) + '<button id="auto" class="' + (daten.automatik ? 'an' : '') + '"' + (daten.bedienbar ? '' : ' disabled') + '>' + esc(daten.automatik ? T('on') : T('off')) + '</button></div>';
-  o += '</div>';
-  if (daten.sperre) { o += '<div class="hinweis">' + esc(daten.sperre) + '</div>'; }
-  var chip = (daten.nachbarn || []).length ? '<button class="chip' + (nachbarnAn ? ' an' : '') + '" id="nachbarn">🏘 ' + esc(nachbarnAn ? T('Neighbours on') : T('Neighbours off')) + '</button>' : '';
-  o += '<div class="bilder"><div class="bild plan">' + chip + grundriss() + '</div><div class="bild">' + himmelsbogen() + '</div></div>';
-  if (daten.sonnenzeit) { o += '<div class="leer">☀️ ' + esc(daten.sonnenzeit) + '</div>'; }
-  o += '<div class="liste">';
-  if (!(daten.geraete || []).length) { o += '<div class="leer">' + esc(T('No device assigned')) + '</div>'; }
-  (daten.geraete || []).forEach(function (g, i) {
-    o += '<div class="zeile' + (offen[i] ? ' offen' : '') + (g.aktiv === false ? ' aus' : '') + '" data-i="' + i + '">' + symbol(g)
-      + '<div class="txt"><div class="name">' + esc(g.name) + '</div><div class="grund">' + esc(g.grund) + '</div></div>'
-      + '<div class="prozent">' + (g.zu == null ? '' : Math.round(g.zu * 100) + ' %') + '</div>'
-      + '<button class="mini' + (g.aktiv === false ? '' : ' an') + '" data-s="' + i + '"' + (daten.bedienbar ? '' : ' disabled') + ' title="' + esc(T('Automatic')) + '">'
-      + esc(g.aktiv === false ? T('off') : T('auto')) + '</button></div>'
-      + '<div class="weg">' + esc((g.weg || []).join('\n')) + '</div>';
-  });
-  o += '</div>';
-  if (daten.regeln) {
-    o += '<button class="infoknopf" id="info">ℹ️ ' + esc(T('How the automatic works')) + (infoOffen ? ' ▴' : ' ▾') + '</button>';
-    if (infoOffen) { o += '<div class="info">' + esc(daten.regeln) + '</div>'; }
+  var k = document.getElementById('kachel'); if (!daten) { return; }
+  var B = Math.max(300, (k.clientWidth || 600) - 2);
+  var geraete = (daten.geraete || []).map(function (g, i) { g._i = i; return g; });
+  var fassaden = (daten.fassaden || []).filter(function (f) { return geraete.some(function (g) { return g.fassade === f.kennung; }); });
+  if (fassadeWahl == null || !fassaden.some(function (f) { return f.kennung === fassadeWahl; })) {
+    var best = null; fassaden.forEach(function (f) { var n = geraete.filter(function (g) { return g.fassade === f.kennung; }).length; if (!best || n > best.n) { best = {k: f.kennung, n: n}; } });
+    fassadeWahl = best ? best.k : null;
   }
+  var fa = fassaden.filter(function (f) { return f.kennung === fassadeWahl; })[0] || null;
+  var o = '';
+  if (daten.sperre) { o += '<div class="hinweis">' + esc(daten.sperre) + '</div>'; }
+  // Lage + Diagramm
+  var anJetzt = fassaden.filter(function (f) { return f.sonne; }).map(function (f) { return f.name; });
+  o += '<div class="oben"><div class="karte lage"><div><div class="titel">' + esc(T('Shading')) + '<span class="rechts schalter">' + esc(T('Automatic'))
+    + ' <button class="toggle' + (daten.automatik ? ' an' : '') + '" id="auto"' + (daten.bedienbar ? '' : ' disabled') + '></button></span></div>'
+    + '<div class="haupt ' + esc(daten.lage || '') + '">' + esc(daten.lageText || T('Shading')) + '</div>'
+    + '<div class="unter">' + esc(anJetzt.length ? T('Sun on') + ' ' + anJetzt.join(', ') : T('No sun on the facades')) + (daten.wp ? ' · ' + esc(T('Heat pump') + ': ' + daten.wp) : '') + '</div></div>';
+  o += '<div class="kz"><div><b class="zahl">' + zahl(daten.einstrahlung) + '</b><span>W/m² · ' + esc(T((daten.himmel || {}).text || 'Irradiance')) + '</span></div>'
+    + '<div><b class="zahl">' + zahl(daten.aussen, 1) + '°</b><span>' + esc(T('outside')) + '</span></div>'
+    + '<div><b class="zahl">' + (daten.sonne && daten.sonne.alt > 0 ? zahl(daten.sonne.alt) + '°' : '–') + '</b><span>' + esc(T('sun height')) + '</span></div></div>';
+  var t = daten.tag || {};
+  o += '<div class="zeile">☀︎ <span class="wert">' + (t.auf ? uhr(t.auf) : '–') + '</span> – <span class="wert">' + (t.unter ? uhr(t.unter) : '–') + '</span>'
+    + (fa ? '<span style="margin-left:auto">' + esc(fa.name) + ': <span class="wert">' + esc((fa.zeiten || []).map(function (z) { return uhr(z[0]) + '–' + uhr(z[1]); }).join(', ') || T('none')) + '</span></span>' : '') + '</div></div>';
+  o += '<div class="karte diagramm"><div class="titel" style="align-self:stretch">' + esc(T('Sun path today')) + '<span class="rechts">'
+    + ((fa && (fa.gebaeude || []).length) ? '<button class="chip" id="nachbarn">' + esc(nachbarnAn ? T('Neighbours on') : T('Neighbours off')) + '</button>' : '') + '</span></div>'
+    + sonnenDiagramm(fa)
+    + '<div class="legende"><span><i style="background:var(--sonne)"></i>' + esc(T('sun on the facade')) + '</span><span><i style="background:var(--sil)"></i>' + esc(T('terrain')) + '</span>'
+    + (fa && (fa.gebaeude || []).length && nachbarnAn ? '<span><i style="background:var(--sil2);opacity:.55"></i>' + esc(T('neighbouring buildings')) + '</span>' : '') + '</div></div></div>';
+  // Tagesverlauf
+  o += '<div class="karte verlauf"><div class="titel">' + esc(T('Today')) + '<span class="rechts"><span style="color:var(--sonne)">▬</span> ' + esc(T('sun on the facade')) + ' &nbsp; <span style="color:var(--kuehl)">▬</span> ' + esc(T('shaded')) + '</span></div>' + tagesverlauf(fa, B) + '</div>';
+  // Behänge je Fassade
+  fassaden.forEach(function (f) {
+    var liste = geraete.filter(function (g) { return g.fassade === f.kennung; });
+    o += '<div class="gruppe"><div class="titel">' + esc(f.name || f.kennung) + ' · ' + Math.round(f.az) + '°<span class="rechts">' + esc(f.sonne ? T('sun now') : (f.verdeckt ? T('hidden by the surroundings') : '')) + '</span></div><div class="raster">';
+    liste.forEach(function (g) {
+      var st = g.zu == null ? '' : (g.typ === 'markise' ? (g.zu > .05 ? T('extended') + ' ' + Math.round(g.zu * 100) + ' %' : T('retracted')) : (g.zu < .03 ? T('open') : Math.round(g.zu * 100) + ' % ' + T('closed'))) + (g.lamelle != null && g.typ === 'raffstore' && g.zu > .03 ? ' · ' + g.lamelle + '°' : '');
+      o += '<div class="geraet' + (gewaehlt === g._i ? ' gewaehlt' : '') + (g.aktiv === false ? ' aus' : '') + '" data-i="' + g._i + '"><div class="k">' + symbol(g)
+        + '<span class="n">' + esc(g.name) + '</span><button class="toggle klein' + (g.aktiv === false ? '' : ' an') + '" data-s="' + g._i + '"' + (daten.bedienbar ? '' : ' disabled') + ' title="' + esc(T('Automatic')) + '"></button></div>'
+        + '<div class="s">' + esc(st) + '</div><div class="g">' + esc(g.grund) + '</div><div class="m">'
+        + (g.raumTemp != null ? '<span class="zahl">' + zahl(g.raumTemp, 1) + ' °C</span>' : '') + (g.raumLux != null ? '<span class="zahl">' + zahl(g.raumLux) + ' lx' + (g.zielLux ? ' → ' + g.zielLux : '') + '</span>' : '') + '</div></div>';
+      if (gewaehlt === g._i && (g.weg || []).length) { o += '<div class="weg">' + esc(g.weg.join('\n')) + '</div>'; }
+    });
+    o += '</div></div>';
+  });
+  if (!fassaden.length) { o += '<div class="karte">' + esc(T('No device assigned')) + '</div>'; }
+  if (daten.regeln) { o += '<button class="infoknopf" id="info">ⓘ ' + esc(T('How the automatic works')) + (infoOffen ? ' ▴' : ' ▾') + '</button>' + (infoOffen ? '<div class="info">' + esc(daten.regeln) + '</div>' : ''); }
   k.innerHTML = o;
-  var nb = document.getElementById('nachbarn');
-  if (nb) { nb.onclick = nachbarnUmschalten; }
-  var ib = document.getElementById('info');
-  if (ib) { ib.onclick = function () { infoOffen = !infoOffen; zeichnen(); }; }
-  Array.prototype.forEach.call(k.querySelectorAll('.mini'), function (b) {
-    b.onclick = function (e) { e.stopPropagation(); geraetSchalten(b.getAttribute('data-s')); };
-  });
-  var b = document.getElementById('auto');
-  if (b) { b.onclick = automatik; }
-  Array.prototype.forEach.call(k.querySelectorAll('.zeile'), function (z) {
-    z.onclick = function () { var i = z.getAttribute('data-i'); offen[i] = !offen[i]; zeichnen(); };
-  });
+  var b = document.getElementById('auto'); if (b) { b.onclick = function () { aktion('Automatik', !daten.automatik); }; }
+  var nb = document.getElementById('nachbarn'); if (nb) { nb.onclick = function () { nachbarnAn = !nachbarnAn; try { localStorage.setItem('vsch-nachbarn', nachbarnAn ? '1' : '0'); } catch (e) { } zeichnen(); }; }
+  var ib = document.getElementById('info'); if (ib) { ib.onclick = function () { infoOffen = !infoOffen; zeichnen(); }; }
+  Array.prototype.forEach.call(k.querySelectorAll('.geraet'), function (e) { e.onclick = function () { var i = +e.getAttribute('data-i'); gewaehlt = gewaehlt === i ? null : i; var g = daten.geraete[i]; if (g) { fassadeWahl = g.fassade; } zeichnen(); }; });
+  Array.prototype.forEach.call(k.querySelectorAll('[data-s]'), function (e) { e.onclick = function (ev) { ev.stopPropagation(); var g = daten.geraete[+e.getAttribute('data-s')]; if (g) { aktion(g.schalter, !g.aktiv); } }; });
 }
 
-// Hintergrund für IPSView: auf die ganze Seite, Schriftfarbe nach Helligkeit (Verbund-Merkregel)
+// Hintergrund für IPSView: auf die ganze Seite, Schriftfarbe nach Helligkeit; ohne Angabe nach Gerätemodus
 function hintergrund(bg) {
-  if (!bg && typeof requestAction !== 'function') {
-    // eigenständige Seite ohne ?bg: lesbarer Grund nach Gerätemodus (in der Kachel liefert Symcon den Hintergrund)
-    bg = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#1c1c1e' : '#ffffff';
-  }
+  if (!bg && typeof requestAction !== 'function') { bg = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#1c1c1e' : '#f2f2f7'; }
   if (!bg) { return; }
-  document.documentElement.style.background = bg;
-  document.body.style.background = bg;
+  document.documentElement.style.background = bg; document.body.style.background = bg;
   var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(bg);
-  if (m) {
-    var l = .299 * parseInt(m[1], 16) + .587 * parseInt(m[2], 16) + .114 * parseInt(m[3], 16);
-    document.body.className = l < 140 ? 'dunkel' : 'hell';
-  }
+  if (m) { document.body.className = (.299 * parseInt(m[1], 16) + .587 * parseInt(m[2], 16) + .114 * parseInt(m[3], 16)) < 140 ? 'dunkel' : 'hell'; }
 }
 
 function handleMessage(nachricht) {
   var neu = typeof nachricht === 'string' ? JSON.parse(nachricht) : nachricht;
   if (!neu) { return; }
-  var texte = daten && daten.texte;
-  var regeln = daten && daten.regeln;
+  var texte = daten && daten.texte, regeln = daten && daten.regeln;
   daten = neu;
   if (!daten.texte && texte) { daten.texte = texte; }
   if (!daten.regeln && regeln) { daten.regeln = regeln; }
   hintergrund(daten.bg);
   zeichnen();
 }
+var groesse = 0;
+window.addEventListener('resize', function () { clearTimeout(groesse); groesse = setTimeout(zeichnen, 150); });
 </script>
 </body>
 </html>

@@ -111,6 +111,7 @@ class Verschattung extends IPSModule
         $this->RegisterAttributeString('NetzBoe', '{}');
         $this->RegisterAttributeBoolean('PurposeIntroGone', false);
         $this->RegisterAttributeString('AssistentEntwurf', '{}');
+        $this->RegisterAttributeString('Verlauf', '[]'); // heute je 10 min: [Zeit, W/m², beschattete Behänge] für das Tagesband der Kachel
 
         $this->RegisterTimer('Tick', 0, 'VSCH_Tick($_IPS[\'TARGET\']);');
     }
@@ -344,6 +345,7 @@ class Verschattung extends IPSModule
             return $wege;
         }
         $z['_w'] = $this->wetterLage();
+        $this->verlaufMerken($now, $hid > 0 && IPS_VariableExists($hid) ? $this->wm2($hid) : null, $z);
         $z['_schutz'] = $schutzMerk;
         $this->WriteAttributeString('Zustand', json_encode($z));
         $status = $statusZeilen === [] ? $this->t('No device assigned') : implode(' · ', array_slice($statusZeilen, 0, 4))
@@ -396,6 +398,24 @@ class Verschattung extends IPSModule
         if (@$this->GetIDForIdent('Aktiv' . $position) !== false) {
             $this->RequestAction('Aktiv' . $position, $aktiv);
         }
+    }
+
+    /** Tagesverlauf für die Kachel: alle 10 Minuten Einstrahlung und Zahl der beschatteten Behänge; nur heute. */
+    private function verlaufMerken(int $now, ?float $wm2, array $z): void
+    {
+        $v = json_decode($this->ReadAttributeString('Verlauf'), true) ?: [];
+        $slot = intdiv($now, 600) * 600;
+        if ($v !== [] && (int)end($v)[0] === $slot) {
+            return;
+        }
+        $heute = strtotime('today', $now);
+        $v = array_values(array_filter($v, fn($e) => (int)$e[0] >= $heute));
+        $besch = 0;
+        foreach ($this->geraete() as $g) {
+            $besch += (bool)($z[$g['key']]['soll'] ?? false) && (bool)($z[$g['key']]['wir'] ?? false) ? 1 : 0;
+        }
+        $v[] = [$slot, $wm2 === null ? null : (int)round($wm2), $besch];
+        $this->WriteAttributeString('Verlauf', json_encode($v));
     }
 
     /** „So arbeitet die Automatik“ – dieselben Regeln in Kachel und Formular, damit niemand etwas sucht, was es nicht gibt. */

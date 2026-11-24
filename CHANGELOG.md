@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 (in Entwicklung)
+
+- **Kachel neu** im Stil der übrigen NRG-Stack-Kacheln (Karten, ruhige Typografie, klare Zahlen, keine Illustration; Dietmar 24.11.: die erste Fassung mit gemalter Fassade war „naive Kunst“):
+  - **Lage-Karte:** Lage in einem Satz („Winter: Die Sonne heizt mit“ / „Sommer: Die Hitze bleibt draußen“), welche Fassade gerade Sonne hat, Wärmepumpe; Kennzahlen Einstrahlung (mit Himmelszustand), außen, Sonnenhöhe; Sonnenauf- und -untergang, Sonnenzeit der Fassade; Automatik als Schalter. Rot nur für Notfall und Wetterschutz.
+  - **Sonnenstandsdiagramm** (polar, Norden oben, wie in der Architektur): Höhenringe 0/30/60°, Gelände-Horizont und Nachbarhäuser als Silhouette am Rand, Sichtbereich der Fassade als Sektor, Sonnenbahn heute (auf der Fassade kräftig), Uhrzeiten, Sonne jetzt, Hausumriss mit der Fassade in der Mitte; „Nachbarn an/aus“.
+  - **Heute:** Einstrahlung gemessen gegen klaren Himmel, Sonnenzeit der Fassade, Beschattungszeiten, „jetzt“. Der Verlauf wird alle 10 Minuten mitgeschrieben (Attribut, nur heute).
+  - **Behänge als Karten je Fassade** (wie Apple Home): Symbol mit Füllstand bzw. Lamellen, Stellung in Klartext, Grund, Raumtemperatur und -helligkeit (mit Ziel), Schalter Automatik; ein Tipp zeigt den Entscheidungsweg.
+  - Zeichnet passend zur Kachelgröße, hell und dunkel.
+
+
 ## 0.8.3 (in Entwicklung)
 
 - **„⏯️ Automatik je Behang“ im Formular** (Dietmar 24.11.: „Wo kann ich einen Behang herausnehmen?“): Liste aller Behänge mit Häkchen; Abhaken nimmt einen Behang sofort aus der automatischen Verschattung (ohne „Übernehmen“) – derselbe Schalter wie auf der Kachel und die Variable „Automatik <Name>“. Hinweis darauf bei der Geräteliste.

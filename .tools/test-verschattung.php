@@ -598,7 +598,7 @@ check('G49 Himmel aus Einstrahlung: klar, heiter, wolkig, bedeckt, Regen, Nacht'
 $html = $m->GetVisualizationTile();
 preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $html, $km);
 $kd = json_decode($km[1] ?? 'null', true);
-check('G50 Kachel: Seite mit Daten (Sonne, Bahn, Geräte mit Stellung und Weg, Texte)', is_array($kd) && isset($kd['sonne'], $kd['bahn'], $kd['texte']['Automatic']) && count($kd['geraete']) >= 1
+check('G50 Kachel: Seite mit Daten (Sonne, Bahn, Geräte mit Stellung und Weg, Texte)', is_array($kd) && isset($kd['sonne'], $kd['tag']['klar'], $kd['texte']['Automatic']) && count($kd['geraete']) >= 1
     && array_key_exists('zu', $kd['geraete'][0]) && $kd['geraete'][0]['weg'] !== [] && $kd['bedienbar'] === true, json_encode(array_keys((array)$kd)));
 $z0 = $m->attrs['Zustand'];
 $m->attrs['Zustand'] = '{}'; // frisch angelegt: noch kein Grund im Zustand (Live-Befund 0.7.1: end() auf Ausdruck → Abbruch)
