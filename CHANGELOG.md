@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0 (in Entwicklung)
+
+- **Nachbargebäude als Hindernis** (Dietmar 24.11.): Die Umrisse im Umkreis von 80 m werden zu einem Gebäudemodell: Traufe = Geschosse × 3 m (ohne Angabe 2 Geschosse), Satteldach 45°, First parallel zur längeren Seite. Wo OpenStreetMap Höhe, Geschosse, Dachform (`roof:shape`) oder Firstrichtung (`roof:orientation`) nennt, gilt das. Daraus der Höhenwinkel je Grad, gesehen von der Mitte der Fassade (Augenhöhe 2 m).
+  - Das **Himmelsbild** zeigt die Nachbargebäude dunkler über dem Gelände-Horizont.
+  - **Entscheidung, Vorschau und „Warum?“** rechnen mit dem Höheren von Gelände und Gebäude; „Warum?“ nennt „(Nachbargebäude)“, wenn ein Haus die Sonne verdeckt.
+  - Höhenangaben kommen erst mit einem erneuten „Haus erkennen“; bis dahin gilt für alle Nachbarn 2 Geschosse + 45°-Dach.
+- Konsolentest 0.5.0 (24.11., Test-Instanz angelegt und entfernt): „Warum?“, Notfall-Panel (2 Rauchmelder), Wärmepumpe, Assistent Schritt 7/8 und „Neu zeichnen“ laufen. Behoben:
+  - **Schieberegler zeigen ihren Wert** samt Einheit (`displayValue`, vorher nur der Punkt).
+  - **Gespeicherte Geräte im Assistenten** werden vervollständigt (fehlende Felder, Kontakte, Raumsensoren) – vorher „Objekt # existiert nicht“ und leere Spalte „0 % bedeutet“; die neuen Spalten gehen im Assistenten nicht mehr verloren.
+  - „Warum?“: keine doppelte Zeile; bei ausgeschalteter Automatik steht dabei, was sonst passieren würde.
+  - Spalte „Typ“ der Konsole zeigt „DG65-Toolkit Verschattung“ (Übersetzung des Modulnamens, Verbund-Regel 24.11.).
+  - Zusammenfassung im Assistenten: „Heizen oder Kühlen aus: Außentemperatur, Wärmepumpe, N Raumtemperaturen“ und Notfall.
+
+
 ## 0.5.0 (in Entwicklung)
 
 - **Der Behang als günstigste Heizung und Kühlung des Raums** (Dietmar 24.11.): drei Lagen statt nur Sommer/Winter.

@@ -175,7 +175,9 @@ final class VSCHGeo
                 $p[] = [(float)$g['lat'], (float)$g['lon']];
             }
             if (count($p) >= 4) {
-                $out[] = ['p' => $p, 'stockwerke' => (int)($el['tags']['building:levels'] ?? 0), 'hoehe' => (float)($el['tags']['height'] ?? 0)];
+                $t = (array)($el['tags'] ?? []);
+                $out[] = ['p' => $p, 'stockwerke' => (int)($t['building:levels'] ?? 0), 'hoehe' => (float)($t['height'] ?? 0),
+                    'dach' => (string)($t['roof:shape'] ?? ''), 'first' => (string)($t['roof:orientation'] ?? '')];
             }
         }
         return $out;
@@ -245,7 +247,8 @@ final class VSCHGeo
             $pts = array_map(function ($p) use ($lat, $lon) {
                 return self::lokal($lat, $lon, $p[0], $p[1]);
             }, $g['p'] ?? $g);
-            $lokal[] = ['p' => self::schliessen($pts), 'hoehe' => (float)($g['hoehe'] ?? 0), 'stockwerke' => (int)($g['stockwerke'] ?? 0)];
+            $lokal[] = ['p' => self::schliessen($pts), 'hoehe' => (float)($g['hoehe'] ?? 0), 'stockwerke' => (int)($g['stockwerke'] ?? 0),
+                'dach' => (string)($g['dach'] ?? ''), 'first' => (string)($g['first'] ?? '')];
         }
         $eigen = null;
         foreach ($lokal as $i => $g) {
@@ -269,6 +272,7 @@ final class VSCHGeo
             return $leer + ['meldung' => 'Am Standort steht kein Gebäude (Standort genau auf das Haus setzen)'];
         }
         $nachbarn = [];
+        $info = [];
         foreach ($lokal as $i => $g) {
             if ($i === $eigen) {
                 continue;
@@ -284,6 +288,8 @@ final class VSCHGeo
                 $nachbarn[] = array_map(function ($p) {
                     return [round($p[0], 1), round($p[1], 1)];
                 }, $g['p']);
+                // Höhenangaben für den Hindernis-Horizont (gleich indiziert wie 'nachbarn'; leer = 2 Geschosse + 45°-Dach)
+                $info[] = array_filter(['stockwerke' => $g['stockwerke'], 'hoehe' => $g['hoehe'], 'dach' => $g['dach'], 'first' => $g['first']]);
             }
         }
         $p = $lokal[$eigen]['p'];
@@ -291,7 +297,7 @@ final class VSCHGeo
             'eigen' => array_map(function ($q) {
                 return [round($q[0], 2), round($q[1], 2)];
             }, $p),
-            'nachbarn' => $nachbarn, 'fassaden' => self::fassaden($p), 'gebaeude' => count($polygone)];
+            'nachbarn' => $nachbarn, 'nachbarInfo' => $info, 'fassaden' => self::fassaden($p), 'gebaeude' => count($polygone)];
     }
 
     // ---------------------------------------------------------------------
@@ -407,7 +413,9 @@ final class VSCHGeo
                     $p[] = self::nachWgs((float)$c[0], (float)$c[1], $epsg, false);
                 }
                 if (count($p) >= 4) {
-                    $out[] = ['p' => $p, 'hoehe' => (float)($f['properties']['hoehe'] ?? 0)];
+                    $pr = (array)($f['properties'] ?? []);
+                    $out[] = ['p' => $p, 'hoehe' => (float)($pr['hoehe'] ?? 0),
+                        'stockwerke' => (int)($pr['anzahlDerOberirdischenGeschosse'] ?? ($pr['geschosse'] ?? 0))];
                 }
             }
         }

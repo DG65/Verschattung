@@ -64,7 +64,8 @@ trait VSCHAssistent
                         ], array_map(fn($r) => ['caption' => $this->t(['N' => 'North', 'O' => 'East', 'S' => 'South', 'W' => 'West'][$r]), 'name' => 'R' . $r,
                             'width' => '70px', 'edit' => ['type' => 'CheckBox']], ['N', 'O', 'S', 'W']),
                         array_map(fn($k) => ['caption' => $k, 'name' => $k, 'visible' => false, 'save' => true],
-                            ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung', 'RaumTemp', 'RaumHell']))],
+                            ['Typ', 'Position', 'Richtung', 'Lamelle', 'LamelleUmgekehrt', 'Kontakt', 'Kontakt2', 'Kontakt3', 'Kontakt4', 'Beschattung', 'RaumTemp', 'RaumHell',
+                                'BeiOffen', 'Tiefe', 'FensterHoehe', 'Bruestung']))],
                     ['type' => 'CheckBox', 'name' => 'WInfoSchreiben', 'caption' => $this->t('Also write to device info field'), 'value' => false],
                     ['type' => 'Label', 'caption' => $this->t('Optional: writes the line "Orientation: South" into the info field of each device, so other modules can read it. Other text there stays.')],
                 ],
@@ -133,6 +134,10 @@ trait VSCHAssistent
                         ['caption' => $this->t('Slats (optional)'), 'name' => 'Lamelle', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Slats 0 % = closed'), 'name' => 'LamelleUmgekehrt', 'visible' => false, 'save' => true],
                         ['caption' => $this->t('Shading position (%)'), 'name' => 'Beschattung', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Contact open'), 'name' => 'BeiOffen', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Sun max. into room (cm)'), 'name' => 'Tiefe', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Window height (cm)'), 'name' => 'FensterHoehe', 'visible' => false, 'save' => true],
+                        ['caption' => $this->t('Sill height (cm)'), 'name' => 'Bruestung', 'visible' => false, 'save' => true],
                     ]],
                     ['type' => 'Label', 'name' => 'WGeraeteHinweis', 'caption' => $this->t('Missing a device? Add it later in the device list of the form with "+".')],
                 ],
@@ -181,7 +186,7 @@ trait VSCHAssistent
                     ['type' => 'CheckBox', 'name' => 'WNotfall', 'caption' => $this->t('Smoke detector alarm: all devices up'), 'value' => $this->notfallMelder() !== []],
                     ['type' => 'Label', 'name' => 'WNotfallInfo', 'caption' => $this->t('Keeps escape routes free – also at night and with the automatic switched off.')],
                 ]),
-                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp]));',
+                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
             [
@@ -373,7 +378,10 @@ trait VSCHAssistent
         $typText = ['rollladen' => $this->t('Roller shutter'), 'raffstore' => $this->t('Venetian blind'), 'markise' => $this->t('Awning')];
         $az = array_column($fassaden, 'Azimut', 'Kennung');
         $zeilen = [];
+        $inst = null;
         foreach ($this->listeWerte($this->ReadPropertyString('Geraete')) as $g) {
+            $inst ??= $this->momentaufnahme();
+            $g = $this->gespeichertErgaenzen($g, $inst);
             $zeilen[] = self::mitKreuzen($g, isset($az[$g['Fassade'] ?? '']) ? (float)$az[$g['Fassade']] : null, $typText);
         }
         if ($erkennen) {
@@ -382,6 +390,35 @@ trait VSCHAssistent
             }
         }
         return $zeilen;
+    }
+
+    /**
+     * Gespeicherte Gerätezeile für den Assistenten: fehlende Felder (aus älteren Versionen) mit 0 auffüllen und – wo leer –
+     * Kontakte und Raumsensoren wie bei neu erkannten Geräten ergänzen. Live-Befund 24.11.: ohne das zeigte die Liste
+     * „Objekt # existiert nicht“ und eine leere Spalte „0 % bedeutet“.
+     */
+    private function gespeichertErgaenzen(array $g, array $inst): array
+    {
+        $g += ['Richtung' => 0, 'Lamelle' => 0, 'LamelleUmgekehrt' => false, 'Kontakt' => 0, 'Kontakt2' => 0, 'Kontakt3' => 0, 'Kontakt4' => 0,
+            'Beschattung' => 0, 'RaumTemp' => 0, 'RaumHell' => 0, 'BeiOffen' => 0, 'Tiefe' => 0, 'FensterHoehe' => 0, 'Bruestung' => 0];
+        $p = (int)($g['Position'] ?? 0);
+        if ($p <= 0 || !IPS_VariableExists($p)) {
+            return $g;
+        }
+        $i = IPS_GetParent($p);
+        $text = ($inst[$i]['name'] ?? (string)($g['Name'] ?? '')) . ' ' . ($inst[$i]['ort'] ?? '');
+        if ((int)$g['Kontakt'] + (int)$g['Kontakt2'] + (int)$g['Kontakt3'] + (int)$g['Kontakt4'] === 0) {
+            $k = VSCHErkennung::kontakteFuer($text, VSCHErkennung::kontakte($inst));
+            [$g['Kontakt'], $g['Kontakt2'], $g['Kontakt3'], $g['Kontakt4']] = [$k[0] ?? 0, $k[1] ?? 0, $k[2] ?? 0, $k[3] ?? 0];
+        }
+        $raum = null;
+        foreach (['RaumTemp' => 'temp', 'RaumHell' => 'hell'] as $sp => $art) {
+            if ((int)$g[$sp] === 0) {
+                $raum ??= VSCHErkennung::raumSensoren($inst);
+                $g[$sp] = VSCHErkennung::raumSensorFuer($text, $raum, $art);
+            }
+        }
+        return $g;
     }
 
     /** Gerätezeile um Kreuze N/O/S/W ergänzen (Ecken: zwei Kreuze). */
@@ -504,12 +541,23 @@ trait VSCHAssistent
         $raumH = count(array_filter($geraete, fn($g) => ($g['Fassade'] ?? '') !== '-' && (int)($g['RaumHell'] ?? 0) > 0));
         $zeilen[] = (int)($s['hell'] ?? 0) > 0 ? $this->t('Shades when the sun is on the facade and the irradiance is high enough.')
             : $this->t('Shades whenever the sun is on the facade (no irradiance sensor).');
-        $zeilen[] = (int)($s['temp'] ?? 0) > 0 || $raumT > 0
-            ? ((int)($s['temp'] ?? 0) > 0 ? $this->t('Summer/winter from the outdoor temperature and %d room temperatures.', $raumT)
-                : $this->t('Summer/winter from %d room temperatures (no outdoor temperature).', $raumT))
-            : $this->t('No temperatures: also shades in winter.');
+        $quellen = [];
+        if ((int)($s['temp'] ?? 0) > 0) {
+            $quellen[] = $this->t('outdoor temperature');
+        }
+        if ((int)($s['wp'] ?? 0) > 0) {
+            $quellen[] = $this->t('heat pump');
+        }
+        if ($raumT > 0) {
+            $quellen[] = $this->t('%d room temperatures', $raumT);
+        }
+        $zeilen[] = $quellen === [] ? $this->t('No temperatures: also shades in winter.')
+            : $this->t('Heating or cooling from: %s.', implode(', ', $quellen));
         if ($raumH > 0) {
             $zeilen[] = $this->t('%d rooms confirm the sun with their brightness sensor.', $raumH);
+        }
+        if (!empty($s['notfall'])) {
+            $zeilen[] = $this->t('Smoke detector alarm: all devices up.');
         }
         $zeilen[] = $this->vorschauText(self::nurGenutzteAktiv($fassaden, $geraete), -1, 'heute');
         $this->UpdateFormField('WZusammenfassung', 'caption', implode("\n", $zeilen));

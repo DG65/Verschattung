@@ -53,7 +53,7 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 
 ## Wie entschieden wird
 
-- **Sonne auf der Fassade:** Die Sonne steht höchstens 80° seitlich der Fassadenrichtung und mindestens 1° über dem Gelände-Horizont. Der Sonnenstand wird im Modul selbst berechnet (NOAA).
+- **Sonne auf der Fassade:** Die Sonne steht höchstens 80° seitlich der Fassadenrichtung und mindestens 1° über dem Horizont – dem höheren von Gelände (PVGIS) und Nachbargebäuden (Modell: Geschosse × 3 m, ohne Angabe 2 Geschosse, Satteldach 45°, First längs). Der Sonnenstand wird im Modul selbst berechnet (NOAA).
 - **Scheint die Sonne wirklich?** Einstrahlung in W/m² (Wetterstation bevorzugt; Lux-Sensoren werden umgerechnet, 1 W/m² ≈ 120 lx – die Einheit der Variable entscheidet). Beschatten ab / Beenden unter mit Hysterese, Vorgabe 250 / 150 W/m². Klarer Himmel mittags auf 48° N: etwa 930 W/m² im Juni, 280 W/m² im Dezember.
 - **Der Behang als günstigste Heizung und Kühlung:** *Kühlbedarf* – Raum zu warm (Vorgabe 24 °C), Wärmepumpe kühlt oder draußen Sommer (Vorgabe 18 °C) – heißt voll beschatten. *Heizbedarf* – Wärmepumpe heizt, Raum unter 21 °C oder außen kühl – heißt: Behang oben, die Sonne wärmt das Haus. Dazwischen (Raum behaglich) nur Blendschutz. Die Wärmepumpe findet das Modul über den Verbundvertrag `heatpump`. Ohne Temperaturen beschattet es immer bei Sonne.
 - **Blendschutz je Fenster (optional):** Mit „Sonne max. in Raum“, Fensterhöhe und Brüstung fährt der Behang nur so weit herunter, dass die Sonne höchstens so tief hereinfällt.

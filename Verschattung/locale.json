@@ -218,8 +218,6 @@
             "Room brightness": "Raumhelligkeit",
             "Shades when the sun is on the facade and the irradiance is high enough.": "Beschattet, wenn die Sonne auf der Fassade steht und die Einstrahlung hoch genug ist.",
             "Shades whenever the sun is on the facade (no irradiance sensor).": "Beschattet immer, wenn die Sonne auf der Fassade steht (kein Einstrahlungssensor).",
-            "Summer/winter from the outdoor temperature and %d room temperatures.": "Sommer/Winter aus der Außentemperatur und %d Raumtemperaturen.",
-            "Summer/winter from %d room temperatures (no outdoor temperature).": "Sommer/Winter aus %d Raumtemperaturen (keine Außentemperatur).",
             "No temperatures: also shades in winter.": "Keine Temperaturen: beschattet auch im Winter.",
             "%d rooms confirm the sun with their brightness sensor.": "%d Räume bestätigen die Sonne mit ihrem Helligkeitssensor.",
             "The sun does not reach the room": "Die Sonne erreicht den Raum nicht",
@@ -299,7 +297,17 @@
             "❓ Why? (test run, nothing moves)": "❓ Warum? (Probelauf, es fährt nichts)",
             "do not lower (door)": "nicht herunterfahren (Tür)",
             "ventilation position (window)": "Lüftungsposition (Fenster)",
-            "Up to four window/door contacts per device. Open: the device is not lowered (lockout protection) – every open contact counts as a door, because the name does not tell whether one can walk through. Handles that report \"tilted\" lower at most to the ventilation position. For real windows set the column \"Contact open\" to \"ventilation position (window)\".": "Bis zu vier Fenster-/Türkontakte je Behang. Offen: Der Behang fährt nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür, weil der Name nicht verrät, ob man hinausgehen kann. Griffe, die „gekippt“ melden, lassen den Behang höchstens bis zur Lüftungsposition herunter. Für echte Fenster die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ stellen."
+            "Up to four window/door contacts per device. Open: the device is not lowered (lockout protection) – every open contact counts as a door, because the name does not tell whether one can walk through. Handles that report \"tilted\" lower at most to the ventilation position. For real windows set the column \"Contact open\" to \"ventilation position (window)\".": "Bis zu vier Fenster-/Türkontakte je Behang. Offen: Der Behang fährt nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür, weil der Name nicht verrät, ob man hinausgehen kann. Griffe, die „gekippt“ melden, lassen den Behang höchstens bis zur Lüftungsposition herunter. Für echte Fenster die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ stellen.",
+            "With the automatic switched on: %s": "Mit eingeschalteter Automatik: %s",
+            "shade": "beschatten",
+            "outdoor temperature": "Außentemperatur",
+            "heat pump": "Wärmepumpe",
+            "%d room temperatures": "%d Raumtemperaturen",
+            "Heating or cooling from: %s.": "Heizen oder Kühlen aus: %s.",
+            "Smoke detector alarm: all devices up.": "Rauchmelder-Alarm: alle Behänge hoch.",
+            "neighbouring building": "Nachbargebäude",
+            "Neighbouring buildings": "Nachbargebäude",
+            "Verschattung": "DG65-Toolkit Verschattung"
         }
     }
 }

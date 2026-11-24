@@ -46,6 +46,7 @@ require $root . '/Verschattung/VSCHText.php';
 require $root . '/Verschattung/VSCHSonne.php';
 require $root . '/Verschattung/VSCHGeo.php';
 require $root . '/Verschattung/VSCHHorizont.php';
+require $root . '/Verschattung/VSCHGebaeude.php';
 require $root . '/Verschattung/VSCHLogik.php';
 require $root . '/Verschattung/VSCHGrafik.php';
 require $root . '/Verschattung/VSCHErkennung.php';
@@ -334,6 +335,25 @@ $svg = base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 10], [90
 preg_match('/<path d="M[^"]*"/', $svg, $pf);
 $ys = array_map(fn($p) => (float)explode(',', $p)[1], array_slice(explode(' L', $pf[0] ?? ''), 1, 10));
 check('F7 Horizont maßstabsgetreu (10° ≈ y 199)', $ys !== [] && abs(max($ys) - min($ys)) < 0.2 && abs($ys[0] - 199.2) < 1.5, json_encode(array_slice($ys, 0, 3)));
+
+// Nachbargebäude (0.6.0): 2 Geschosse + 45°-Dach, First parallel zur längeren Seite
+$hausS = [[-5, -10], [5, -10], [5, -18], [-5, -18]];
+$md = VSCHGebaeude::modell($hausS);
+check('F20 Gebäude ohne Angaben: Traufe 6 m (2 Geschosse), First 10 m (halbe Breite 4 m bei 45°)', $md['traufe'] == 6.0 && $md['first'] == 10.0, json_encode([$md['traufe'], $md['first']]));
+$gh = VSCHGebaeude::horizont([$hausS], [], [0, 0]);
+check('F21 Haus 10 m südlich: Höhenwinkel nach Süden vom First (atan(8/14) ≈ 29,7°)', abs(($gh[180] ?? 0) - 29.7) < 0.3, json_encode($gh[180] ?? null));
+check('F22 kein Gebäude im Norden', !isset($gh[0]) && !isset($gh[90]));
+$gf = VSCHGebaeude::horizont([$hausS], [['dach' => 'flat']], [0, 0]);
+check('F23 Flachdach: Traufkante vorn (atan(4/10) ≈ 21,8°)', abs(($gf[180] ?? 0) - 21.8) < 0.3, json_encode($gf[180] ?? null));
+$gq = VSCHGebaeude::horizont([$hausS], [['first' => 'across']], [0, 0]);
+check('F24 First quer (OSM roof:orientation=across): First 11 m, atan(9/10) ≈ 42°', abs(($gq[180] ?? 0) - 42.0) < 0.3, json_encode($gq[180] ?? null));
+$g3 = VSCHGebaeude::horizont([$hausS], [['stockwerke' => 3]], [0, 0]);
+check('F25 OSM 3 Geschosse: höher als 2', ($g3[180] ?? 0) > ($gh[180] ?? 0) + 5);
+$zs = VSCHGebaeude::zusammen([[0, 3], [90, 3], [180, 3], [270, 3]], $gh);
+check('F26 Gelände und Gebäude: je Grad das Höhere', VSCHHorizont::hoehe($zs, 90) == 3.0 && abs(VSCHHorizont::hoehe($zs, 180) - 29.7) < 0.3 && count($zs) === 360);
+$au = VSCHGebaeude::auge(['fassaden' => [['az' => 180, 'seg' => [[[-4, -2], [4, -2]]]]]], 175);
+check('F27 Fenster-Standort: Mitte der Südfassade, 0,5 m davor', abs($au[0]) < 0.01 && abs($au[1] + 2.5) < 0.01, json_encode($au));
+check('F28 Himmelsbild zeichnet Nachbargebäude', str_contains(base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 2], [180, 2]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont', $gh, 'Nachbarhaus'), 26)), 'Nachbarhaus'));
 
 // ---------------------------------------------------------------------------
 heading('G Modul');
@@ -910,6 +930,9 @@ foreach (glob($root . '/Verschattung/*.php') as $datei) {
 }
 $fehlt = array_values(array_filter(array_keys($texte), fn($t) => !isset($GLOBALS['DE'][$t])));
 check('H4 jeder Text hat eine deutsche Übersetzung', $fehlt === [], count($fehlt) . ': ' . implode(' | ', array_slice($fehlt, 0, 60)));
+// Modulname aus module.json: Übersetzung für die Spalte „Typ“ der Konsole (SUITE.md, Verbund-Regel 24.11.)
+$texte[json_decode(file_get_contents($root . '/Verschattung/module.json'), true)['name']] = true;
+check('H6 Typ-Spalte: Modulname lesbar übersetzt', ($GLOBALS['DE']['Verschattung'] ?? '') === 'DG65-Toolkit Verschattung');
 $unbenutzt = array_values(array_filter(array_keys($GLOBALS['DE']), fn($t) => !isset($texte[$t])));
 check('H5 keine unbenutzten Übersetzungen', $unbenutzt === [], implode(' | ', array_slice($unbenutzt, 0, 8)));
 foreach ($GLOBALS['DE'] as $en => $de) {

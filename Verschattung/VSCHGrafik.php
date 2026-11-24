@@ -126,7 +126,8 @@ final class VSCHGrafik
     /**
      * $bahnen: ['Beschriftung' => [[ts,az,alt]…], …] (erste = hervorgehoben), $horizont: [[az,h]…], $fassadeAz: ?float.
      */
-    public static function himmel(array $bahnen, array $horizont, ?float $fassadeAz, string $farbe, string $tz, string $hinweisHorizont): string
+    public static function himmel(array $bahnen, array $horizont, ?float $fassadeAz, string $farbe, string $tz, string $hinweisHorizont,
+        array $gebaeude = [], string $hinweisGebaeude = ''): string
     {
         [$w, $h, $ml, $mr, $mt, $mb] = [560, 260, 36, 12, 14, 30];
         [$az0, $az1, $alt1] = [30, 330, 70];
@@ -161,6 +162,22 @@ final class VSCHGrafik
             $d .= ' L' . self::n($x($a)) . ',' . self::n($y(min($alt1, VSCHHorizont::hoehe($horizont, $a))));
         }
         $o .= '<path d="' . $d . ' L' . self::n($x($az1)) . ',' . self::n($y(0)) . 'Z" fill="#c9cfc4"/>';
+        // Nachbargebäude (Modell: Geschosse + 45°-Dach) dunkler über dem Gelände, je Grad als Säule
+        $hoechste = null;
+        for ($a = (int)$az0; $a <= (int)$az1; $a++) {
+            $g = $gebaeude[$a % 360] ?? null;
+            if ($g === null || $g <= VSCHHorizont::hoehe($horizont, $a) + 0.2) {
+                continue;
+            }
+            $top = self::n($y(min($alt1, $g)));
+            $o .= '<rect x="' . self::n($x($a - 0.5)) . '" y="' . $top . '" width="' . self::n($x($a + 0.5) - $x($a - 0.5) + 0.3) . '" height="' . self::n($y(0) - (float)$top) . '" fill="#8e968a"/>';
+            if ($hoechste === null || $g > $hoechste[1]) {
+                $hoechste = [$a, $g];
+            }
+        }
+        if ($hoechste !== null && $hinweisGebaeude !== '') {
+            $o .= '<text x="' . self::n($x($hoechste[0])) . '" y="' . self::n($y(min($alt1, $hoechste[1])) - 4) . '" font-size="9.5" text-anchor="middle" fill="#3d443a">' . htmlspecialchars($hinweisGebaeude) . '</text>';
+        }
         $o .= '<text x="' . ($ml + 6) . '" y="' . self::n($y(0) - 4) . '" font-size="9.5" fill="#3d443a">' . htmlspecialchars($hinweisHorizont) . '</text>';
         $zone = new DateTimeZone($tz);
         $erste = true;

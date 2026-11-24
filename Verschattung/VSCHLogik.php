@@ -108,7 +108,6 @@ final class VSCHLogik
         $wunsch = (bool)$g['sonneAn'];
         $anteil = null; // null = volle Beschattungsposition des Geräts
         $warum = $wunsch ? VSCHText::t('Sun on the facade') : (($u['tag'] ?? true) ? VSCHText::t('No direct sun on the facade') : VSCHText::t('Night'));
-        $weg[] = $warum;
         if ($wunsch && ($u['hell'] ?? null) === false) {
             $wunsch = false;
             $warum = (string)($u['hellGrund'] ?? VSCHText::t('Sun on the facade, but not bright enough'));
@@ -171,6 +170,7 @@ final class VSCHLogik
             $z['hand'] = null;
         }
         if (!($u['automatik'] ?? true)) {
+            $weg[] = VSCHText::t('With the automatic switched on: %s', $z['soll'] ? VSCHText::t('shade') . ' – ' . $warum : $warum);
             return $fertig(null, null, VSCHText::t('Automatic switched off'), $z);
         }
 
