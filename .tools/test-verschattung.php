@@ -624,6 +624,13 @@ $m->RequestAction('Aktiv601', false);
 $kd2 = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $mm) ? $mm[1] : 'null', true);
 $g601 = array_values(array_filter($kd2['geraete'], fn($g) => $g['schalter'] === 'Aktiv601'))[0] ?? null;
 check('G56 Schalter per RequestAction; Kachel zeigt ihn mit Regeln', GetValue($sid) === false && ($g601['aktiv'] ?? null) === false && str_contains($kd2['regeln'] ?? '', 'Was') === false && ($kd2['regeln'] ?? '') !== '');
+$m->UISchalter(601, true);
+check('G58 Formular-Liste „Automatik je Behang“ schaltet die Variable sofort', GetValue($sid) === true);
+$fm = json_decode($m->GetConfigurationForm(), true);
+$liste = null;
+array_walk_recursive($fm, function () {});
+foreach ($fm['actions'] as $act) { foreach ((array)($act['items'] ?? []) as $it) { if (($it['name'] ?? '') === 'Schalter') { $liste = $it; } } }
+check('G59 Liste „Automatik je Behang“ im Aktionsbereich mit Häkchen je Behang', $liste !== null && in_array(601, array_column($liste['values'], 'Position'), true) && str_contains($liste['onEdit'], 'VSCH_UISchalter'));
 $m->RequestAction('Aktiv601', true);
 $alt = $m->props['Geraete'];
 $m->props['Geraete'] = json_encode(array_values(array_filter(json_decode($alt, true), fn($g) => $g['Position'] !== 601)));

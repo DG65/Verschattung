@@ -208,6 +208,8 @@ trait VSCHKachel
             'night' => $this->t('night'),
             'no sensor' => $this->t('no sensor'),
             'auto' => $this->t('auto'),
+            'Neighbours on' => $this->t('Neighbours on'),
+            'Neighbours off' => $this->t('Neighbours off'),
             'How the automatic works' => $this->t('How the automatic works'),
         ];
     }

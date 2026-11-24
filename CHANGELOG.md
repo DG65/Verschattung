@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3 (in Entwicklung)
+
+- **„⏯️ Automatik je Behang“ im Formular** (Dietmar 24.11.: „Wo kann ich einen Behang herausnehmen?“): Liste aller Behänge mit Häkchen; Abhaken nimmt einen Behang sofort aus der automatischen Verschattung (ohne „Übernehmen“) – derselbe Schalter wie auf der Kachel und die Variable „Automatik <Name>“. Hinweis darauf bei der Geräteliste.
+- **Kachel: Nachbarn per Klick aus- und einblenden** („🏘 Nachbarn an/aus“ im Grundriss) – wirkt auf Grundriss und Himmelsbild, je Betrachter gemerkt. Die Steuerung rechnet immer mit den Gebäuden.
+
+
 ## 0.8.2 (in Entwicklung)
 
 - **Straßen im Lageplan** (Dietmar 24.11.): Straßen und Wege aus OpenStreetMap im Umkreis von 120 m, in echter Breite je Straßenart (z. B. Wohnstraße 5,5 m, Zufahrt 3,5 m, Fußweg 1,8 m), unter den Gebäuden, mit Straßennamen entlang der Achse. Auch auf der Kachel (Nahbereich). Geholt werden sie mit „Haus erkennen“; einmal neu erkennen, damit sie erscheinen. Quellenvermerk „Straßen: © OpenStreetMap-Mitwirkende (ODbL)“.

@@ -359,5 +359,10 @@
     "6. Door open → not lowered. Window tilted → at most to the ventilation position.": "6. Tür offen → nicht herunter. Fenster gekippt → höchstens bis zur Lüftungsposition.",
     "7. Switch \"Automatic\" per device: off → the device is left alone. Only emergency and weather protection still move it.": "7. Schalter „Automatik“ je Behang: aus → der Behang hat Ruhe. Nur Notfall und Wetterschutz fahren ihn dann noch.",
     "8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.": "8. Notfall (Rauchmelder) → alle Behänge hoch. Wind, Regen, Sturm → Markisen und Raffstores fahren ein. Beides immer, auch bei ausgeschalteter Automatik.",
-    "Streets: © OpenStreetMap contributors (ODbL)": "Straßen: © OpenStreetMap-Mitwirkende (ODbL)"
+    "Streets: © OpenStreetMap contributors (ODbL)": "Straßen: © OpenStreetMap-Mitwirkende (ODbL)",
+    "⏯️  Automatic per device": "⏯️  Automatik je Behang",
+    "Untick a device to take it out of the automatic shading. It is then left alone; only emergency and weather protection still move it. Takes effect immediately – the same switch as on the tile and the variable \"Automatic <name>\".": "Häkchen entfernen nimmt einen Behang aus der automatischen Verschattung. Er hat dann Ruhe; nur Notfall und Wetterschutz fahren ihn noch. Wirkt sofort – derselbe Schalter wie auf der Kachel und die Variable „Automatik <Name>“.",
+    "Take a single device out of the automatic: below in \"Automatic per device\", on the tile or with the variable \"Automatic <name>\".": "Einzelnen Behang aus der Automatik nehmen: unten unter „Automatik je Behang“, auf der Kachel oder mit der Variable „Automatik <Name>“.",
+    "Neighbours on": "Nachbarn an",
+    "Neighbours off": "Nachbarn aus"
 }

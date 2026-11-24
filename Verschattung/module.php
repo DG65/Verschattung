@@ -390,6 +390,14 @@ class Verschattung extends IPSModule
      * Scheint die Sonne? Einstrahlung (W/m², Lux umgerechnet) gegen SonneAn/SonneAus mit Hysterese.
      * Rückgabe [?bool, Begründung wenn zu wenig]; ohne Sensor [null, ''] (dann zählt nur die Geometrie).
      */
+    /** Automatik eines Behangs aus dem Formular schalten (Liste „Automatik je Behang“). */
+    public function UISchalter(int $position, bool $aktiv): void
+    {
+        if (@$this->GetIDForIdent('Aktiv' . $position) !== false) {
+            $this->RequestAction('Aktiv' . $position, $aktiv);
+        }
+    }
+
     /** „So arbeitet die Automatik“ – dieselben Regeln in Kachel und Formular, damit niemand etwas sucht, was es nicht gibt. */
     private function regelnText(): string
     {
@@ -1418,6 +1426,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Sill height (cm)', 'name' => 'Bruestung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 300]],
                 ]],
             ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } $n = []; foreach (($Notfall ?? []) as $x) { $n[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID, (int)($WPModusID ?? 0), json_encode($n));'],
+            ['type' => 'Label', 'name' => 'AutomatikJeBehangHint', 'caption' => 'Take a single device out of the automatic: below in "Automatic per device", on the tile or with the variable "Automatic <name>".'],
             ['type' => 'Label', 'name' => 'KontaktHint', 'caption' => 'Up to four window/door contacts per device. Open: the device is not lowered (lockout protection) – every open contact counts as a door, because the name does not tell whether one can walk through. Handles that report "tilted" lower at most to the ventilation position. For real windows set the column "Contact open" to "ventilation position (window)".'],
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' %', 'name' => 'Lueftung', 'caption' => 'Ventilation position: lower at most to (%)', 'minimum' => 0, 'maximum' => 100, 'stepSize' => 5, 'width' => '600px'],
             ['type' => 'Label', 'name' => 'TiefeHint', 'caption' => 'Optional glare protection: with "Sun max. into room", window height and sill height the device goes down only as far as needed, so that the sun reaches at most that far into the room. Used when neither heating nor cooling is needed; when cooling, the device shades fully.'],
@@ -1488,6 +1497,24 @@ class Verschattung extends IPSModule
 
         $actions = [];
         $actions[] = $this->assistentFormular($fassaden, $optTyp);
+        // Automatik je Behang: schaltet sofort die Variable „Automatik <Name>“ (dieselbe wie auf der Kachel), ohne „Übernehmen“
+        $schalter = [];
+        foreach ($this->geraete() as $g) {
+            if ($g['Position'] > 0) {
+                $schalter[] = ['Name' => $g['Name'], 'Fassade' => $g['Fassade'], 'Aktiv' => $this->geraetAktiv($g), 'Position' => $g['Position']];
+            }
+        }
+        $actions[] = ['type' => 'ExpansionPanel', 'caption' => '⏯️  Automatic per device', 'items' => [
+            ['type' => 'Label', 'caption' => 'Untick a device to take it out of the automatic shading. It is then left alone; only emergency and weather protection still move it. Takes effect immediately – the same switch as on the tile and the variable "Automatic <name>".'],
+            ['type' => 'List', 'name' => 'Schalter', 'rowCount' => max(3, count($schalter)), 'add' => false, 'delete' => false, 'values' => $schalter,
+                'onEdit' => 'VSCH_UISchalter($id, (int)$Schalter[\'Position\'], (bool)$Schalter[\'Aktiv\']);',
+                'columns' => [
+                    ['caption' => 'Device', 'name' => 'Name', 'width' => 'auto'],
+                    ['caption' => 'Facade', 'name' => 'Fassade', 'width' => '100px'],
+                    ['caption' => 'Automatic', 'name' => 'Aktiv', 'width' => '110px', 'edit' => ['type' => 'CheckBox']],
+                    ['caption' => 'Position', 'name' => 'Position', 'visible' => false],
+                ]],
+        ]];
         $actions[] = ['type' => 'ExpansionPanel', 'caption' => '🔧  Assign devices & test run', 'expanded' => $fassaden !== [] && $this->geraete() === [], 'items' => [
             ['type' => 'Label', 'caption' => 'Choose a facade and check the direction with the test run (only saved devices move).'],
             ['type' => 'RowLayout', 'items' => [
