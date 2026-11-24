@@ -350,6 +350,9 @@ trait VSCHAssistent
         $zahl = array_count_values(array_filter(array_map(fn($g) => (string)($g['Fassade'] ?? ''), $alle), fn($f) => $f !== '' && $f !== '-'));
         if ($zahl !== []) {
             arsort($zahl);
+            // nur Fassaden mit Geräten anbieten, mit Namen („B · Süd“)
+            $namen = array_column($fassaden, 'Name', 'Kennung');
+            $this->UpdateFormField('WProbeFassade', 'options', json_encode(array_map(fn($k) => ['caption' => $k . (isset($namen[$k]) ? ' · ' . $namen[$k] : ''), 'value' => $k], array_keys($zahl))));
             $this->UpdateFormField('WProbeFassade', 'value', (string)array_key_first($zahl));
         }
         $this->UIAssistentMerken('fassaden', json_encode($fassaden));
@@ -514,7 +517,7 @@ trait VSCHAssistent
         }
         $zeilen[] = $wann === 1 ? $this->t('Shades when the sun is on the facade and it is bright.')
             : ($wann === 2 ? $this->t('Shades when the sun is on the facade on warm days.') : $this->t('Shades whenever the sun is on the facade.'));
-        $zeilen[] = $this->vorschauText($fassaden, -1, 'heute');
+        $zeilen[] = $this->vorschauText(self::nurGenutzteAktiv($fassaden, $geraete), -1, 'heute');
         $this->UpdateFormField('WZusammenfassung', 'caption', implode("\n", $zeilen));
     }
 
@@ -526,6 +529,7 @@ trait VSCHAssistent
         $this->UpdateFormField('Standort', 'value', json_encode(['latitude' => $pos[0] ?? 0, 'longitude' => $pos[1] ?? 0]));
         $fassaden = $this->entwurf('fassaden', json_encode($d['fassaden'] ?? []));
         $geraete = array_values(array_filter($this->entwurf('geraete', json_encode($d['geraete'] ?? [])), fn($g) => ($g['Fassade'] ?? '') !== '-'));
+        $fassaden = self::nurGenutzteAktiv($fassaden, $geraete);
         $this->UpdateFormField('Fassaden', 'values', json_encode($fassaden));
         $this->UpdateFormField('Geraete', 'values', json_encode($geraete));
         $this->UpdateFormField('WarnHubNutzen', 'value', (bool)($d['warnhub'] ?? false));
@@ -582,6 +586,23 @@ trait VSCHAssistent
     }
 
     // ------------------------------------------------------------------ Hilfen
+
+    /**
+     * Fassaden ohne Gerät auf „nicht aktiv“ (bleiben in der Liste – später reicht ein Häkchen, kein neues „Haus erkennen“).
+     * Hängt gar kein Gerät an einer Fassade, bleibt alles wie es ist.
+     */
+    public static function nurGenutzteAktiv(array $fassaden, array $geraete): array
+    {
+        $genutzt = array_unique(array_map(fn($g) => (string)($g['Fassade'] ?? ''), $geraete));
+        if (array_intersect($genutzt, array_column($fassaden, 'Kennung')) === []) {
+            return $fassaden;
+        }
+        foreach ($fassaden as &$f) {
+            $f['Aktiv'] = in_array((string)$f['Kennung'], $genutzt, true);
+        }
+        unset($f);
+        return $fassaden;
+    }
 
     /** Standort des Assistenten: 0 = Standort-Instanz, 1 = auf der Karte gewählt. */
     private function assistentKoordinaten(int $art, string $standort): ?array

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 (in Entwicklung)
+
+- Fassaden ohne Gerät werden beim „OK“ des Assistenten auf „nicht aktiv“ gesetzt. Sie bleiben in der Liste – kommt später ein Behang dazu, reicht ein Häkchen. Vorschau und Zusammenfassung nennen nur noch aktive Fassaden, der Grundriss zeigt die ungenutzten blass, die Probefahrt bietet nur Fassaden mit Geräten an (mit Namen, z. B. „B · Süd“).
+
 ## 0.3.1 (in Entwicklung)
 
 - Probefahrt im Assistenten wählt die Fassade mit den meisten Geräten vor (vorher immer A).

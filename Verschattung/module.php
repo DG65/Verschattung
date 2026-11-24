@@ -1118,6 +1118,9 @@ class Verschattung extends IPSModule
         $bahn = VSCHSonne::bahn($pos[0], $pos[1], $this->tagDatum($tag), date_default_timezone_get(), 5);
         $teile = [];
         foreach ($fassaden as $i => $f) {
+            if (!(bool)($f['Aktiv'] ?? true)) {
+                continue; // Fassade ohne Gerät: keine Sonnenzeiten
+            }
             $fenster = VSCHGrafik::sonnenfenster($bahn, $this->horizontPunkte(), (float)$f['Azimut']);
             $zeit = $fenster === [] ? $this->t('no direct sun') : implode(' + ', array_map(function ($w) {
                 return date('H:i', $w[0]) . '–' . date('H:i', $w[1]);
@@ -1142,7 +1145,7 @@ class Verschattung extends IPSModule
                     $seg = (array)$e['seg'];
                 }
             }
-            $out[] = ['az' => (float)$f['Azimut'], 'seg' => $seg];
+            $out[] = ['az' => (float)$f['Azimut'], 'seg' => $seg, 'aktiv' => (bool)($f['Aktiv'] ?? true)];
         }
         return $out;
     }

@@ -88,6 +88,8 @@ final class VSCHGrafik
         foreach ($fassaden as $i => $f) {
             $farbe = self::FARBEN[$i % count(self::FARBEN)];
             $breit = $i === $auswahl ? 5 : 3.2;
+            // Fassaden ohne Gerät (nicht aktiv) blass – das Haus bleibt erkennbar, der Blick geht auf die genutzten
+            $o .= ($f['aktiv'] ?? true) ? '<g>' : '<g opacity="0.3">';
             $segs = (array)($f['seg'] ?? []);
             $az = deg2rad((float)$f['az']);
             if ($segs !== []) {
@@ -112,7 +114,7 @@ final class VSCHGrafik
                 $o .= '<line x1="' . self::n($c) . '" y1="' . self::n($c) . '" x2="' . self::n($bx) . '" y2="' . self::n($by) . '" stroke="' . $farbe . '" stroke-width="' . $breit . '"/>';
             }
             $o .= '<circle cx="' . self::n($bx) . '" cy="' . self::n($by) . '" r="' . ($i === $auswahl ? 13 : 11) . '" fill="' . $farbe . '" stroke="#ffffff" stroke-width="2"/>'
-                . '<text x="' . self::n($bx) . '" y="' . self::n($by + 4.5) . '" font-size="13" font-weight="600" text-anchor="middle" fill="#ffffff">' . self::kennung($i) . '</text>';
+                . '<text x="' . self::n($bx) . '" y="' . self::n($by + 4.5) . '" font-size="13" font-weight="600" text-anchor="middle" fill="#ffffff">' . self::kennung($i) . '</text></g>';
         }
         // Nordpfeil und Maßstab (10 m)
         $o .= '<path d="M' . ($w - 24) . ',14 l7,18 l-7,-5 l-7,5z" fill="#1d211c"/><text x="' . ($w - 24) . '" y="46" font-size="11" font-weight="600" text-anchor="middle" fill="#1d211c">N</text>';

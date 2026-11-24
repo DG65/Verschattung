@@ -277,6 +277,7 @@ $uri = VSCHGrafik::himmel(['heute' => $bahn, 'Dez' => VSCHSonne::bahn($LAT, $LON
 $svg = base64_decode(substr($uri, 26));
 check('F3 Himmel ist gültiges SVG (auch mit < > im Text)', @simplexml_load_string($svg) !== false);
 check('F4 Grafik ohne Haus (manuelle Fassaden) geht', @simplexml_load_string(base64_decode(substr(VSCHGrafik::grundriss([], [['az' => 135.0]], [], 0, 'Europe/Berlin'), 26))) !== false);
+check('F8 Grundriss: Fassade ohne Gerät blass (opacity 0.3)', strpos(base64_decode(substr(VSCHGrafik::grundriss([], [['az' => 166.0, 'aktiv' => true], ['az' => 76.0, 'aktiv' => false]], [], 0, 'Europe/Berlin'), 26)), '<g opacity="0.3">') !== false);
 $fenster = VSCHGrafik::sonnenfenster(VSCHSonne::bahn($LAT, $LON, '2026-06-21', 'Europe/Berlin', 5), $H, 2.0);
 check('F5 Nordfassade 21.06.: Sonne morgens und abends', count($fenster) === 2, json_encode(array_map(fn($w) => [date('H:i', $w[0]), date('H:i', $w[1])], $fenster)));
 check('F6 Nordfassade 21.12.: keine Sonne', VSCHGrafik::sonnenfenster(VSCHSonne::bahn($LAT, $LON, '2026-12-21', 'Europe/Berlin', 5), $H, 2.0) === []);
@@ -730,6 +731,22 @@ $m->UIAssistentGeraete(json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut'
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J36 Süd angekreuzt → Fassade B (166°), ohne Kreuz → nicht verschatten', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade', 'Name') === ['Süd1' => 'B', 'Ohne' => '-'], $f['WGeraete'] ?? '');
 check('J40 Probefahrt wählt die Fassade mit den meisten Geräten vor', ($f['WProbeFassade'] ?? '') === 'B');
+check('J41 Probefahrt bietet nur Fassaden mit Geräten an, mit Namen', json_decode($f['WProbeFassade'] ?? 'null', true) !== null || (function () use ($m) {
+    foreach ($m->fieldUpdates as $u) { if ($u[0] === 'WProbeFassade' && $u[1] === 'options') { return json_decode($u[2], true) === [['caption' => 'B · Süd', 'value' => 'B']]; } } return false; })());
+// Fassaden ohne Gerät werden beim Übernehmen inaktiv (bleiben in der Liste)
+$vier = [['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 76, 'Aktiv' => true], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 166, 'Aktiv' => true], ['Kennung' => 'C', 'Name' => 'West', 'Azimut' => 256, 'Aktiv' => true]];
+check('J42 nur genutzte Fassaden aktiv', array_column(Verschattung::nurGenutzteAktiv($vier, [['Fassade' => 'B']]), 'Aktiv', 'Kennung') === ['A' => false, 'B' => true, 'C' => false]);
+check('J43 ohne jede Zuordnung bleibt alles aktiv', array_column(Verschattung::nurGenutzteAktiv($vier, [['Fassade' => '']]), 'Aktiv') === [true, true, true]);
+$m->UIAssistentMerken('fassaden', json_encode($vier));
+$m->UIAssistentMerken('geraete', json_encode([['Name' => 'J1', 'Fassade' => 'B', 'Position' => 951]]));
+$m->fieldUpdates = [];
+$m->UIAssistentUebernehmen(json_encode(['art' => 0]));
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J44 Übernehmen: Fassadenliste mit A/C inaktiv, B aktiv', array_column(json_decode($f['Fassaden'] ?? '[]', true), 'Aktiv', 'Kennung') === ['A' => false, 'B' => true, 'C' => false]);
+$m->fieldUpdates = [];
+$m->UIAssistentZusammenfassung('', '', 0);
+$f = array_column($m->fieldUpdates, 2, 0);
+check('J45 Zusammenfassung nennt nur Sonnenzeiten genutzter Fassaden', strpos($f['WZusammenfassung'] ?? '', 'B Süd:') !== false && strpos($f['WZusammenfassung'] ?? '', 'A Ost:') === false, $f['WZusammenfassung'] ?? '');
 // Info-Feld nur mit Häkchen
 $GLOBALS['OBJ'][950]['info'] = 'Bitte nicht anfassen';
 $m->UIAssistentUebernehmen(json_encode(['art' => 0, 'info' => false]));
