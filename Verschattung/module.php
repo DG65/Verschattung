@@ -71,7 +71,12 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('SonneAus', 150);
         $this->RegisterPropertyFloat('AussenSommer', 18);
         $this->RegisterPropertyFloat('InnenGrenze', 24);
-        $this->RegisterPropertyFloat('RaumHellAn', 1.5); // Raumsensoren messen hinter Glas wenig: Sonne im Raum ≈ 2–18 W/m², Wolken < 1 (Archiv 24.11.)
+        $this->RegisterPropertyFloat('RaumHellAn', 1.5);
+        // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
+        $this->RegisterPropertyFloat('HeizGrenze', 21);
+        $this->RegisterPropertyInteger('WPModusID', 0);
+        $this->RegisterPropertyFloat('Lueftung', 70);
+        $this->RegisterPropertyString('Notfall', '[]'); // Raumsensoren messen hinter Glas wenig: Sonne im Raum ≈ 2–18 W/m², Wolken < 1 (Archiv 24.11.)
         $this->RegisterPropertyInteger('VerzoegerungAn', 3);
         $this->RegisterPropertyInteger('VerzoegerungAus', 15);
         $this->RegisterPropertyInteger('WindID', 0);
@@ -124,6 +129,11 @@ class Verschattung extends IPSModule
                 $this->RegisterMessage($id, VM_UPDATE);
             }
         }
+        foreach ($this->notfallMelder() as $id) {
+            if (IPS_VariableExists($id)) {
+                $this->RegisterMessage($id, VM_UPDATE); // Rauchmelder: sofort, nicht erst im Minutentakt
+            }
+        }
         $ok = $this->koordinaten() !== null && $this->geraete() !== [];
         $this->SetTimerInterval('Tick', $ok ? 60 * 1000 : 0);
         $this->SetStatus($this->koordinaten() === null ? 201 : 102);
@@ -142,6 +152,12 @@ class Verschattung extends IPSModule
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
     {
         if ($Message !== VM_UPDATE) {
+            return;
+        }
+        if (in_array($SenderID, $this->notfallMelder(), true)) {
+            if ($Data[0] ?? false) {
+                $this->Tick(); // Notfall: alle Behänge sofort hoch
+            }
             return;
         }
         if (in_array($SenderID, [$this->ReadPropertyInteger('WindID'), $this->ReadPropertyInteger('RegenID'), $this->ReadPropertyInteger('SperreID')], true)) {
@@ -173,9 +189,33 @@ class Verschattung extends IPSModule
 
     public function Tick(): void
     {
+        $this->regeln(false);
+    }
+
+    /**
+     * „❓ Warum?“: Probelauf ohne Fahrt und ohne Zustandsänderung – der ganze Entscheidungsweg je Behang mit den Messwerten.
+     */
+    public function UIWarum(): string
+    {
+        if ($this->koordinaten() === null) {
+            return $this->t('No location yet.');
+        }
+        $bloecke = [];
+        foreach ($this->regeln(true) as $name => $weg) {
+            $bloecke[] = '▶ ' . $name . "\n   " . implode("\n   ", $weg);
+        }
+        return $bloecke === [] ? $this->t('No device assigned') : $this->t('Test run – nothing moves:') . "\n\n" . implode("\n\n", $bloecke);
+    }
+
+    /**
+     * Ein Regeldurchlauf. $probe = true: nichts fahren, nichts speichern (für „Warum?“).
+     * Rückgabe: [Gerätename => Entscheidungsweg (Zeilen)].
+     */
+    private function regeln(bool $probe): array
+    {
         $pos = $this->koordinaten();
         if ($pos === null) {
-            return;
+            return [];
         }
         $now = $this->now();
         $sonne = VSCHSonne::stand($pos[0], $pos[1], $now);
@@ -183,52 +223,97 @@ class Verschattung extends IPSModule
         $fassaden = $this->fassadenMap();
         $z = $this->zustand();
         $z['_f'] = (array)($z['_f'] ?? []);
-        $this->wetterMerken();
+        if (!$probe) {
+            $this->wetterMerken();
+        }
         $hell = $this->hell($z);
         $aussen = $this->messwert($this->ReadPropertyInteger('TemperaturID'));
-        $z['_warm'] = (array)($z['_warm'] ?? []);
+        $wp = $this->wpModus();
+        $notfall = $this->notfall();
+        $z['_klima'] = (array)($z['_klima'] ?? []);
         $warnungen = $this->warnungen();
         $schutzAktionen = $this->schutzAktionen();
         $schutzMerk = (array)($z['_schutz'] ?? []);
         $wetterQuelle = $this->ReadPropertyInteger('WindID') > 0 || $warnungen !== null || $this->ReadPropertyBoolean('NetzWetter') || $this->ReadPropertyInteger('SperreID') > 0;
         $zeiten = ['an' => 60 * $this->ReadPropertyInteger('VerzoegerungAn'), 'aus' => 60 * $this->ReadPropertyInteger('VerzoegerungAus')];
+        $kopf = [$this->t('Sun: azimuth %d°, elevation %d°', (int)round($sonne['az']), (int)round($sonne['alt']))];
+        $hid = $this->ReadPropertyInteger('HelligkeitID');
+        $kopf[] = $hid > 0 && IPS_VariableExists($hid)
+            ? $this->t('Irradiance: %d W/m² (shade from %d, end below %d)', (int)round((float)$this->wm2($hid)), (int)$this->ReadPropertyFloat('SonneAn'), (int)$this->ReadPropertyFloat('SonneAus'))
+            : $this->t('Irradiance: no sensor – the position of the sun decides');
+        if ($wp !== null) {
+            $kopf[] = $this->t('Heat pump: %s', $this->wpText($wp));
+        }
         $statusZeilen = [];
+        $wege = [];
         foreach ($this->geraete() as $g) {
-            $f = $fassaden[$g['Fassade']] ?? null;
-            if ($f === null && $g['Position'] > 0) {
-                $statusZeilen[] = $g['Name'] . ': ' . $this->t('choose a facade');
-            }
-            if ($f === null || !$f['Aktiv'] || $g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
+            $k = $g['key'];
+            if ($g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
             }
+            $f = $fassaden[$g['Fassade']] ?? null;
+            if ($notfall === '' && $f === null) {
+                $statusZeilen[] = $g['Name'] . ': ' . $this->t('choose a facade');
+                $wege[$g['Name']] = [$this->t('choose a facade')];
+                continue;
+            }
+            if ($notfall === '' && !$f['Aktiv']) {
+                $wege[$g['Name']] = [$this->t('Facade %s is not active', (string)$g['Fassade'])];
+                continue;
+            }
+            $faz = (float)($f['Azimut'] ?? 180);
             $hz = VSCHHorizont::hoehe($horizont, $sonne['az']);
             $fk = $g['Fassade'];
-            $an = VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], (float)$f['Azimut'], $hz, (bool)($z['_f'][$fk] ?? false));
+            $an = $f !== null && VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $faz, $hz, (bool)($z['_f'][$fk] ?? false));
             $z['_f'][$fk] = $an;
+            $profil = VSCHSonne::profilwinkel($sonne['alt'], $sonne['az'], $faz);
             $wetter = VSCHLogik::wetter($g['Typ'], $this->wetterQuellen($g['Typ'], $warnungen), $now);
-            $k = $g['key'];
-            $warm = $this->warm($g, $aussen, $z['_warm'][$k] ?? null);
-            $z['_warm'][$k] = $warm[0];
+            $klima = $this->klima($g, $aussen, $wp, $z['_klima'][$k] ?? null);
+            $z['_klima'][$k] = $klima[0];
             $raumHell = $this->raumHell($g);
+            $fenster = $this->fensterLage($g);
+            $weg = array_merge($kopf, [
+                $this->t('Facade %s (%d°): %s · horizon %d°', (string)$g['Fassade'], (int)round($faz), $an ? $this->t('sun on the facade') : $this->t('no sun'), (int)round($hz)),
+                $this->t('Room and climate: %s', $klima[1] !== '' ? $klima[1] : $this->t('no temperatures – shading whenever the sun shines')),
+                $this->t('Window/door: %s', $fenster[1]),
+            ]);
+            if ($wetter['art'] !== '') {
+                $weg[] = $this->t('Weather: %s', $wetter['grund']);
+            }
+            $tiefe = null;
+            if ((int)$g['Tiefe'] > 0 && (int)$g['FensterHoehe'] > 0 && $g['Typ'] !== 'markise') {
+                $t = VSCHLogik::tiefeAnteil($profil, (float)$g['Tiefe'], (float)$g['FensterHoehe'], (float)$g['Bruestung']);
+                if ($t !== null) {
+                    $tiefe = [$t[0], $t[0] <= 0.02
+                        ? $this->t('glare protection: the sun reaches only %d cm into the room', (int)round(min(9999, $t[1])))
+                        : $this->t('glare protection: sun at most %d cm into the room (%d %% down)', (int)$g['Tiefe'], (int)round($t[0] * 100))];
+                }
+            }
             $u = [
-                'hell' => $hell[0], 'hellGrund' => $hell[1], 'warm' => $warm[0], 'warmGrund' => $warm[1],
+                'notfall' => $notfall, 'weg' => $weg, 'hell' => $hell[0], 'hellGrund' => $hell[1], 'klima' => $klima[0], 'klimaGrund' => $klima[1],
                 'raumHell' => $raumHell[0], 'raumHellGrund' => $raumHell[1], 'wetter' => $wetter, 'wetterQuelle' => $wetterQuelle,
                 'ohneWetterBestaetigt' => $this->ReadPropertyBoolean('MarkiseOhneWetter'),
-                'fensterOffen' => $this->fensterOffen($g),
+                'fenster' => $fenster[0], 'lueftung' => $this->ReadPropertyFloat('Lueftung') / 100,
                 'automatik' => (bool)$this->GetValue('Automatik'), 'tag' => $sonne['alt'] > 0,
                 'schutz' => $schutzAktionen === [] ? null : VSCHLogik::schutz($schutzAktionen, array_values(array_filter([$g['Position'], $g['Lamelle']])),
                     IPS_GetParent($g['Position']), $schutzMerk, $now, 60 * $this->ReadPropertyInteger('Haltezeit')),
             ];
-            $ger = ['typ' => $g['Typ'], 'az' => (float)$f['Azimut'], 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0,
-                'profil' => VSCHSonne::profilwinkel($sonne['alt'], $sonne['az'], (float)$f['Azimut'])];
+            $ger = ['typ' => $g['Typ'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe];
             $r = VSCHLogik::entscheide($ger, $u, (array)($z[$k] ?? []), $zeiten, $now);
+            $wege[$g['Name']] = $r['weg'];
+            if ($probe) {
+                continue;
+            }
             $neu = $r['z'];
             $neu['grund'] = $r['grund'];
             if ($r['ziel'] !== null) {
-                $this->ausfuehren($g, $r['ziel'], $r['lamelle'], $neu, $now);
+                $this->ausfuehren($g, $r['ziel'], $r['lamelle'], $neu, $now, $r['anteil'] ?? null);
             }
             $z[$k] = $neu;
             $statusZeilen[] = $g['Name'] . ': ' . $r['grund'];
+        }
+        if ($probe) {
+            return $wege;
         }
         $z['_w'] = $this->wetterLage();
         $z['_schutz'] = $schutzMerk;
@@ -238,20 +323,23 @@ class Verschattung extends IPSModule
         if ($this->GetValue('Status') !== $status) {
             $this->SetValue('Status', $status);
         }
+        return $wege;
     }
 
     /** Befehl an ein Gerät: Behang auf Ziel, Lamellen nachführen. Wiederholt einmal, wenn ein Befehl verloren ging. */
-    private function ausfuehren(array $g, string $ziel, ?float $lamelle, array &$z, int $now): void
+    private function ausfuehren(array $g, string $ziel, ?float $lamelle, array &$z, int $now, ?float $teil = null): void
     {
-        $anteil = $ziel === 'beschatten' ? $g['Beschattung'] / 100 : 0.0;
+        // $teil: Blendschutz-Tiefe oder Lüftungsposition begrenzen die Beschattungsposition des Geräts
+        $anteil = $ziel === 'beschatten' ? ($teil === null ? $g['Beschattung'] / 100 : min($g['Beschattung'] / 100, $teil)) : 0.0;
         $wert = $this->positionWert($g, $anteil);
         $letzt = (array)($z['befehl'] ?? []);
-        $gleich = ($letzt['ziel'] ?? '') === $ziel;
+        // gleiches Ziel, aber Position um mehr als 5 % gewandert (Sonne steigt, Fenster geöffnet) → neu fahren
+        $gleich = ($letzt['ziel'] ?? '') === $ziel && abs((float)($letzt['anteil'] ?? $anteil) - $anteil) < 0.05;
         $ist = GetValue($g['Position']);
         $weit = abs((float)$ist - $wert) > max(2.0, 0.03 * $this->maxWert($g['Position']));
         if (!$gleich || ($weit && $now - (int)($letzt['ts'] ?? 0) > self::NACHKONTROLLE_S && (int)($letzt['wdh'] ?? 0) < 1)) {
             if ($this->schalten($g['Position'], $wert)) {
-                $z['befehl'] = ['ziel' => $ziel, 'ts' => $now, 'wdh' => $gleich ? (int)($letzt['wdh'] ?? 0) + 1 : 0];
+                $z['befehl'] = ['ziel' => $ziel, 'ts' => $now, 'wdh' => $gleich ? (int)($letzt['wdh'] ?? 0) + 1 : 0, 'anteil' => round($anteil, 3)];
             }
         }
         if ($lamelle !== null && $g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
@@ -287,30 +375,119 @@ class Verschattung extends IPSModule
     }
 
     /**
-     * Sommer oder Winter für diesen Behang: Raum zu warm ODER außen über der Sommergrenze → beschatten;
-     * sonst darf die Sonne den Raum wärmen. Rückgabe [?bool, Begründung]; ohne beide Temperaturen [null, ''].
+     * Heizen, Kühlen oder neutral für diesen Behang (VSCHLogik::klima) samt lesbarer Begründung mit den Messwerten.
      */
-    private function warm(array $g, ?float $aussen, ?bool $vorher): array
+    private function klima(array $g, ?float $aussen, ?int $wp, ?string $vorher): array
     {
-        $innen = $this->messwert((int)$g['RaumTemp']);
-        [$wert, $grund] = VSCHLogik::zuWarm($innen, $aussen, $this->ReadPropertyFloat('InnenGrenze'), $this->ReadPropertyFloat('AussenSommer'), $vorher);
-        // Anzeige so, wie Symcon den Wert formatiert (Einheit, Dezimalzeichen der Sprache)
-        $ft = fn(?float $v, int $id = 0) => $v === null ? '–' : (string)@GetValueFormatted($id);
         $iI = (int)$g['RaumTemp'];
         $iA = $this->ReadPropertyInteger('TemperaturID');
+        $innen = $this->messwert($iI);
+        [$wert, $grund] = VSCHLogik::klima($innen, $aussen, $wp, $this->ReadPropertyFloat('HeizGrenze'), $this->ReadPropertyFloat('InnenGrenze'),
+            $this->ReadPropertyFloat('AussenSommer'), $vorher);
+        // Anzeige so, wie Symcon den Wert formatiert (Einheit, Dezimalzeichen der Sprache)
+        $ft = fn(?float $v, int $id) => $v === null ? '–' : (string)@GetValueFormatted($id);
         switch ($grund) {
             case 'raum':
-                return [$wert, $this->t('Sun on the facade, room warm (%s)', $ft($innen, $iI))];
+                return [$wert, $this->t('room warm (%s): cooling needed, shade', $ft($innen, $iI))];
+            case 'wpkuehlt':
+                return [$wert, $this->t('heat pump is cooling: shade')];
+            case 'wpheizt':
+                return [$wert, $this->t('heat pump is heating: the sun may warm the room (room %s)', $ft($innen, $iI))];
+            case 'raumkalt':
+                return [$wert, $this->t('room %s below %s °C: the sun may warm it', $ft($innen, $iI), VSCHLogik::zahl($this->ReadPropertyFloat('HeizGrenze')))];
             case 'sommer':
-                return [$wert, $this->t('Sun on the facade, summer (outside %s)', $ft($aussen, $iA))];
+                return [$wert, $this->t('summer (outside %s): shade', $ft($aussen, $iA))];
             case 'winter':
-                return [$wert, $innen === null
-                    ? $this->t('Sun on the facade, cool outside (%s): the sun may warm the house', $ft($aussen, $iA))
-                    : ($aussen === null
-                        ? $this->t('Sun on the facade, room %s: the sun may warm it', $ft($innen, $iI))
-                        : $this->t('Sun on the facade, cool outside (%s), room %s: the sun may warm the house', $ft($aussen, $iA), $ft($innen, $iI)))];
+                return [$wert, $this->t('cool outside (%s): the sun may warm the house', $ft($aussen, $iA))];
+            case 'behaglich':
+                return [$wert, $this->t('room comfortable (%s): neither heating nor cooling needed', $ft($innen, $iI))];
         }
         return [null, ''];
+    }
+
+    /** Betriebsart der Wärmepumpe (Verbund-Enum 0–5) oder null. */
+    private function wpModus(): ?int
+    {
+        $id = $this->ReadPropertyInteger('WPModusID');
+        return $id > 0 && IPS_VariableExists($id) ? (int)GetValue($id) : null;
+    }
+
+    private function wpText(int $m): string
+    {
+        return [0 => $this->t('standby'), 1 => $this->t('heating'), 2 => $this->t('cooling'), 3 => $this->t('hot water'),
+            4 => $this->t('heating + hot water'), 5 => $this->t('cooling + hot water')][$m] ?? (string)$m;
+    }
+
+    /** Aktiver Rauch-/Brandmelder („Rauchmelder Küche“) oder ''. */
+    private function notfall(): string
+    {
+        foreach ($this->notfallMelder() as $id) {
+            if (IPS_VariableExists($id) && (bool)GetValue($id)) {
+                return $this->name($id);
+            }
+        }
+        return '';
+    }
+
+    /** @return int[] Variablen der Rauch-/Brandmelder aus der Liste „Notfall“ */
+    private function notfallMelder(): array
+    {
+        return array_values(array_filter(array_map(fn($x) => (int)($x['Melder'] ?? 0), $this->listeWerte($this->ReadPropertyString('Notfall')))));
+    }
+
+    /**
+     * Fenster/Tür für diesen Behang: ['zu'|'lueften'|'sperre', Text].
+     * Im Zweifel ist jeder offene Kontakt eine Tür → nicht herunter (Aussperrschutz, die sichere Richtung). Am Namen lässt sich
+     * Fenster und Tür nicht verlässlich unterscheiden (bodentiefe „Fenster“ sind Türen; Dietmar 24.11.: „Wir haben nur Türen“).
+     * Lüftungsposition nur, wenn ein Griff „gekippt“ meldet oder die Spalte „Kontakt offen“ sie für diesen Behang erlaubt.
+     */
+    private function fensterLage(array $g): array
+    {
+        $sperre = false;
+        $lueften = false;
+        $namen = [];
+        foreach ([$g['Kontakt'], $g['Kontakt2'] ?? 0, $g['Kontakt3'] ?? 0, $g['Kontakt4'] ?? 0] as $k) {
+            if ($k <= 0 || !IPS_VariableExists($k)) {
+                continue;
+            }
+            $zust = $this->kontaktZustand($k);
+            if ($zust === 'zu') {
+                continue;
+            }
+            $namen[] = $this->name($k) . ' (' . ($zust === 'gekippt' ? $this->t('tilted') : $this->t('open')) . ')';
+            if ($zust === 'offen') {
+                $sperre = true;
+            } else {
+                $lueften = true;
+            }
+        }
+        if (!$sperre && !$lueften) {
+            return ['zu', $this->t('closed')];
+        }
+        $art = (int)$g['BeiOffen'];
+        if ($art === 1) {
+            $sperre = true;
+        } elseif ($art === 2) {
+            $sperre = false;
+        }
+        return [$sperre ? 'sperre' : 'lueften', implode(', ', $namen) . ' → '
+            . ($sperre ? $this->t('not lowering (lockout protection)') : $this->t('at most ventilation position'))];
+    }
+
+    /** 'zu', 'gekippt' oder 'offen'. Mehrstufige Griffe über den angezeigten Text („gekippt“, „tilted“), sonst wie ein Kontakt. */
+    private function kontaktZustand(int $id): string
+    {
+        $v = GetValue($id);
+        if (!is_bool($v)) {
+            $text = mb_strtolower((string)@GetValueFormatted($id));
+            if (preg_match('/kipp|tilt/', $text)) {
+                return 'gekippt';
+            }
+            if (is_string($v)) {
+                return preg_match('/offen|open|geöffnet/', $text) ? 'offen' : 'zu';
+            }
+        }
+        return $this->kontaktOffen($id) ? 'offen' : 'zu';
     }
 
     /** Raumhelligkeit (nur zum Herunterfahren): erreicht die Sonne den Raum? [?bool, Begründung] */
@@ -726,6 +903,9 @@ class Verschattung extends IPSModule
     public function UIVorschau(string $fassadenJson, int $auswahl, string $tag): void
     {
         $werte = $this->listeWerte($fassadenJson);
+        if ($werte === []) {
+            $werte = $this->listeWerte($this->ReadPropertyString('Fassaden'));
+        }
         $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($werte, $auswahl, $tag));
         $this->UpdateFormField('Himmel', 'image', $this->himmelBild($werte, $auswahl, $tag));
         $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, $auswahl, $tag));
@@ -736,7 +916,7 @@ class Verschattung extends IPSModule
      * leere Sensorfelder (Wind, Regen, Helligkeit, Temperatur) füllen. Nur ins offene Formular, nichts wird überschrieben.
      * Die Fassade bleibt die einzige Angabe des Nutzers.
      */
-    public function UIAutomatik(string $geraeteJson, int $wind, int $regen, int $hell, int $temp, int $sperre = 0): string
+    public function UIAutomatik(string $geraeteJson, int $wind, int $regen, int $hell, int $temp, int $sperre = 0, int $wp = 0, string $notfallJson = '[]'): string
     {
         $inst = $this->momentaufnahme();
         $geraete = $this->listeWerte($geraeteJson);
@@ -786,6 +966,17 @@ class Verschattung extends IPSModule
                 $this->UpdateFormField($feld, 'value', $sens[$feld]);
                 $this->UpdateFormField($feld . 'Verbindung', 'caption', $this->verbindungsText($feld, $sens[$feld], ['hinweise' => []]));
                 $gesetzt[] = $this->sensorName($feld) . ': ' . $this->name($sens[$feld]);
+            }
+        }
+        if ($wp === 0 && ($w = $this->wpErkennen()) > 0) {
+            $this->UpdateFormField('WPModusID', 'value', $w);
+            $gesetzt[] = $this->t('Heat pump') . ': ' . $this->name($w);
+        }
+        if ($this->listeWerte($notfallJson) === []) {
+            $melder = VSCHErkennung::rauchmelder($inst);
+            if ($melder !== []) {
+                $this->UpdateFormField('Notfall', 'values', json_encode(array_map(fn($m) => ['Melder' => $m], $melder)));
+                $gesetzt[] = $this->t('%d smoke detectors', count($melder));
             }
         }
         $zeilen = [$this->t('%d devices detected (%d with window contact).', count($neu), $mitKontakt + $ergaenzt)];
@@ -1045,7 +1236,8 @@ class Verschattung extends IPSModule
                 $this->eigenerStandort() ? $this->t('chosen here') : $this->t('from the Location instance'));
         $tage = [['caption' => $this->t('Today'), 'value' => 'heute'], ['caption' => $this->t('21 June'), 'value' => 'juni'], ['caption' => $this->t('21 December'), 'value' => 'dezember']];
         // Listen kommen im Skript als Symcon-Listenobjekt an: erst in ein Array kopieren (Muster aus Automat, live bewährt)
-        $vorschauAufruf = '$f = []; foreach ($Fassaden as $x) { $f[] = $x; } VSCH_UIVorschau($id, json_encode($f), (int)$VorschauFassade, (string)$VorschauTag);';
+        // Live-Befund 24.11.: $Fassaden fehlt im Aktionsbereich, solange die Fassadenliste nicht geladen ist → gespeicherte Fassaden nehmen
+        $vorschauAufruf = '$f = []; foreach (($Fassaden ?? []) as $x) { $f[] = $x; } VSCH_UIVorschau($id, json_encode($f), (int)$VorschauFassade, (string)$VorschauTag);';
 
         $elements = [];
         if (!$this->ReadAttributeBoolean('PurposeIntroGone')) {
@@ -1102,9 +1294,16 @@ class Verschattung extends IPSModule
                     ['caption' => 'Shading position (%)', 'name' => 'Beschattung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 100]],
                     ['caption' => 'Room temperature', 'name' => 'RaumTemp', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
                     ['caption' => 'Room brightness', 'name' => 'RaumHell', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'SelectVariable']],
+                    ['caption' => 'Contact open', 'name' => 'BeiOffen', 'width' => '200px', 'add' => 0, 'edit' => ['type' => 'Select', 'options' => [
+                        ['caption' => 'do not lower (door)', 'value' => 0], ['caption' => 'ventilation position (window)', 'value' => 2]]]],
+                    ['caption' => 'Sun max. into room (cm)', 'name' => 'Tiefe', 'width' => '190px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1000]],
+                    ['caption' => 'Window height (cm)', 'name' => 'FensterHoehe', 'width' => '170px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 600]],
+                    ['caption' => 'Sill height (cm)', 'name' => 'Bruestung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 300]],
                 ]],
-            ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID);'],
-            ['type' => 'Label', 'name' => 'KontaktHint', 'caption' => 'Up to four window/door contacts per device (e.g. several sashes or a window front). If one of them is open, the device is not lowered.'],
+            ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } $n = []; foreach (($Notfall ?? []) as $x) { $n[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID, (int)($WPModusID ?? 0), json_encode($n));'],
+            ['type' => 'Label', 'name' => 'KontaktHint', 'caption' => 'Up to four window/door contacts per device. Open: the device is not lowered (lockout protection) – every open contact counts as a door, because the name does not tell whether one can walk through. Handles that report "tilted" lower at most to the ventilation position. For real windows set the column "Contact open" to "ventilation position (window)".'],
+            ['type' => 'HorizontalSlider', 'name' => 'Lueftung', 'caption' => 'Ventilation position: lower at most to (%)', 'minimum' => 0, 'maximum' => 100, 'stepSize' => 5, 'width' => '600px'],
+            ['type' => 'Label', 'name' => 'TiefeHint', 'caption' => 'Optional glare protection: with "Sun max. into room", window height and sill height the device goes down only as far as needed, so that the sun reaches at most that far into the room. Used when neither heating nor cooling is needed; when cooling, the device shades fully.'],
             ['type' => 'Label', 'name' => 'GeraeteHint', 'caption' => 'Any device with a position variable works (e.g. Z-Wave, Shelly, KNX, Homematic, EnOcean, Zigbee). Shading position 0 = default of the type (roller shutter 75 %, venetian blind and awning 100 %). Use the test run to check the direction.'],
         ]];
 
@@ -1140,6 +1339,14 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'name' => 'NetzWetterHint', 'visible' => $sicht, 'caption' => 'Open-Meteo, every 15 minutes. Slower than a sensor and does not replace one: the limit is 10 km/h lower than for the sensor.'],
             ['type' => 'CheckBox', 'name' => 'MarkiseOhneWetter', 'caption' => 'Extend awnings without weather source', 'visible' => $sicht],
             ['type' => 'Label', 'name' => 'MarkiseOhneWetterHint', 'visible' => $sicht, 'caption' => 'Without any weather source awnings never extend automatically. Tick this only if you accept the risk (e.g. a sheltered awning).'],
+        ]];
+
+        // 4b. Notfall
+        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🔥  Emergency', 'items' => [
+            ['type' => 'Label', 'caption' => 'If a smoke or fire detector reports an alarm, all devices go up immediately – also at night, after manual operation and with the automatic switched off – to keep escape routes free. Afterwards the automatic continues; nothing is lowered at night.'],
+            ['type' => 'List', 'name' => 'Notfall', 'caption' => 'Smoke/fire detectors', 'rowCount' => 4, 'add' => true, 'delete' => true,
+                'columns' => [['caption' => 'Alarm variable', 'name' => 'Melder', 'width' => 'auto', 'add' => 0, 'edit' => ['type' => 'SelectVariable']]]],
+            ['type' => 'Label', 'caption' => '"Detect devices and sensors" enters the detectors. Empty list = no emergency opening.'],
         ]];
 
         // 5. Feinheiten
@@ -1182,6 +1389,7 @@ class Verschattung extends IPSModule
         ]];
 
         $actions[] = ['type' => 'Label', 'caption' => $this->t('Current state: %s', (string)@$this->GetValue('Status'))];
+        $actions[] = ['type' => 'Button', 'caption' => '❓ Why? (test run, nothing moves)', 'onClick' => 'echo VSCH_UIWarum($id);'];
 
         return [
             'elements' => $elements,
@@ -1332,6 +1540,47 @@ class Verschattung extends IPSModule
 
     /** [lat, lon] aus eigener Auswahl oder Standort-Instanz; null = keiner. */
     /**
+     * Betriebsart-Variable einer Wärmepumpe aus dem Verbundvertrag `heatpump` (<PRÄFIX>_GetFunctions, Feld operatingModeNormID,
+     * Enum 0 standby/1 heizen/2 kühlen/3 WW/4 heizen+WW/5 kühlen+WW). Allgemeine Suche wie NRGDashboard/EMS, Zeitbudget 3 s.
+     */
+    private function wpErkennen(): int
+    {
+        $t0 = microtime(true);
+        foreach (IPS_GetModuleList() as $guid) {
+            if (microtime(true) - $t0 > 3.0) {
+                break;
+            }
+            $mod = @IPS_GetModule($guid);
+            $fn = (string)($mod['Prefix'] ?? '') . '_GetFunctions';
+            if (!is_array($mod) || (int)($mod['ModuleType'] ?? 0) !== 3 || ($mod['Prefix'] ?? '') === '' || !function_exists($fn)) {
+                continue;
+            }
+            foreach (IPS_GetInstanceListByModuleID($guid) as $id) {
+                if ((int)(IPS_GetInstance($id)['InstanceStatus'] ?? 0) === 104) {
+                    continue;
+                }
+                try {
+                    $data = call_user_func($fn, $id);
+                } catch (\Throwable $e) {
+                    continue 2;
+                }
+                $data = is_string($data) ? json_decode($data, true) : $data;
+                if (!is_array($data) || $data === []) {
+                    continue;
+                }
+                foreach (array_is_list($data) ? $data : [$data] as $e) {
+                    $typ = (string)($e['contractType'] ?? ($e['Type'] ?? ($e['type'] ?? ($e['function'] ?? ''))));
+                    $vid = (int)($e['operatingModeNormID'] ?? 0);
+                    if ($typ === 'heatpump' && $vid > 0 && IPS_VariableExists($vid)) {
+                        return $vid;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Klarer Himmel an diesem Ort mittags: [Juni, Dezember] in W/m² (Haurwitz). Zeigt am Schieberegler,
      * welche Einstrahlung bei uns überhaupt möglich ist. Ohne Standort: 50° N.
      */
@@ -1369,7 +1618,10 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'name' => $p . ($a ? 'TempInfo' : 'TemperaturIDVerbindung'), 'caption' => $this->verbindungsText('TemperaturID', $this->ReadPropertyInteger('TemperaturID'), $vorschlag)],
             ['type' => 'HorizontalSlider', 'name' => $p . 'AussenSommer', 'caption' => $this->t('Summer from outdoor temperature (°C)'), 'minimum' => 0, 'maximum' => 35, 'stepSize' => 1, 'width' => '600px'] + $wert('AussenSommer'),
             ['type' => 'HorizontalSlider', 'name' => $p . 'InnenGrenze', 'caption' => $this->t('Room too warm from (°C)'), 'minimum' => 18, 'maximum' => 30, 'stepSize' => 0.5, 'width' => '600px'] + $wert('InnenGrenze'),
-            ['type' => 'Label', 'name' => $p . 'TempHint', 'caption' => $this->t('Shades when the room is too warm or it is summer outside. In winter (cool outside, room not too warm) the device stays up and the sun warms the house. The room temperature comes from the device list (column "Room temperature"). Without temperatures the module shades whenever the sun shines.')],
+            ['type' => 'HorizontalSlider', 'name' => $p . 'HeizGrenze', 'caption' => $this->t('Room needs heat below (°C)'), 'minimum' => 15, 'maximum' => 25, 'stepSize' => 0.5, 'width' => '600px'] + $wert('HeizGrenze'),
+            ['type' => 'SelectVariable', 'name' => $p . ($a ? 'WP' : 'WPModusID'), 'caption' => $this->t('Heat pump: operating mode (optional)')] + $sel('WPModusID'),
+            ['type' => 'Label', 'name' => $p . 'WPHint', 'caption' => $this->t('Found automatically from NRG-Stack heat pump modules. Heating → the sun may warm the house; cooling → shade.')],
+            ['type' => 'Label', 'name' => $p . 'TempHint', 'caption' => $this->t('The device is the cheapest heating and cooling of the room: room too warm, heat pump cooling or summer outside → shade. Room below the heating limit, heat pump heating or cool outside → the sun warms the house. In between only glare protection (if set up). The room temperature comes from the device list (column "Room temperature"). Without temperatures the module shades whenever the sun shines.')],
             ['type' => 'Label', 'caption' => '💡 ' . $this->t('Room brightness: only for lowering')],
             ['type' => 'HorizontalSlider', 'name' => $p . 'RaumHellAn', 'caption' => $this->t('Sun reaches the room from (W/m²)'), 'minimum' => 0, 'maximum' => 20, 'stepSize' => 0.5, 'width' => '600px'] + $wert('RaumHellAn'),
             ['type' => 'Label', 'name' => $p . 'RaumHellHint', 'caption' => $this->t('If the brightness sensor of the room (column "Room brightness") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 2–20 W/m², clouds below 1 W/m².')],
@@ -1442,6 +1694,8 @@ class Verschattung extends IPSModule
                 'LamelleUmgekehrt' => (bool)($g['LamelleUmgekehrt'] ?? false), 'Kontakt' => (int)($g['Kontakt'] ?? 0), 'Kontakt2' => (int)($g['Kontakt2'] ?? 0),
                 'Kontakt3' => (int)($g['Kontakt3'] ?? 0), 'Kontakt4' => (int)($g['Kontakt4'] ?? 0),
                 'RaumTemp' => (int)($g['RaumTemp'] ?? 0), 'RaumHell' => (int)($g['RaumHell'] ?? 0),
+                'BeiOffen' => (int)($g['BeiOffen'] ?? 0), 'Tiefe' => (int)($g['Tiefe'] ?? 0),
+                'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0),
                 'Beschattung' => $besch > 0 ? $besch : VSCHLogik::VORGABEN[$typ]['beschattung'],
                 'key' => 'g' . (int)($g['Position'] ?? 0),
             ];

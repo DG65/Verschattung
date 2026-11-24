@@ -176,7 +176,11 @@ trait VSCHAssistent
             ],
             [
                 'name' => 'wann', 'caption' => $this->t('Step 7 of 8 · When to shade'),
-                'items' => $this->sonnenFelder('W', ['hinweise' => []]),
+                'items' => array_merge($this->sonnenFelder('W', ['hinweise' => []]), [
+                    ['type' => 'Label', 'caption' => '🔥 ' . $this->t('Emergency')],
+                    ['type' => 'CheckBox', 'name' => 'WNotfall', 'caption' => $this->t('Smoke detector alarm: all devices up'), 'value' => $this->notfallMelder() !== []],
+                    ['type' => 'Label', 'name' => 'WNotfallInfo', 'caption' => $this->t('Keeps escape routes free – also at night and with the automatic switched off.')],
+                ]),
                 'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp]));',
                 'onUndo' => '// nichts rückgängig zu machen',
             ],
@@ -190,7 +194,7 @@ trait VSCHAssistent
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"hell" => (int)$WHell, "sonneAn" => (float)$WSonneAn, "temp" => (int)$WTemp, "aussenSommer" => (float)$WAussenSommer, '
-                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellAn" => (float)$WRaumHellAn]));',
+                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellAn" => (float)$WRaumHellAn, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
             ],
         ];
         return [
@@ -352,6 +356,14 @@ trait VSCHAssistent
             // sichtbar machen, woher der Wert kommt und dass er lebt
             $this->UpdateFormField($feld . 'Info', 'caption', $this->verbindungsText($rolle, $id, $sens));
         }
+        if ($this->ReadPropertyInteger('WPModusID') === 0 && ($w = $this->wpErkennen()) > 0) {
+            $this->UpdateFormField('WWP', 'value', $w);
+        }
+        $melder = VSCHErkennung::rauchmelder($inst);
+        $this->UpdateFormField('WNotfall', 'value', $melder !== []);
+        $this->UpdateFormField('WNotfallInfo', 'caption', $melder === []
+            ? $this->t('No smoke detector found.')
+            : $this->t('%d smoke detectors found. Keeps escape routes free – also at night and with the automatic switched off.', count($melder)));
         // Wertet WarnHub die Wetterstation aus, sagt das die Seite ausdrücklich (WWarnHubDeckt) – hier nichts weiter
     }
 
@@ -522,7 +534,14 @@ trait VSCHAssistent
         $this->UpdateFormField('MarkiseOhneWetter', 'value', (bool)($d['ohne'] ?? false));
         $this->UpdateFormField('HelligkeitID', 'value', (int)($d['hell'] ?? 0));
         $this->UpdateFormField('TemperaturID', 'value', (int)($d['temp'] ?? 0));
-        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellAn' => 'RaumHellAn'] as $q => $feld) {
+        if (isset($d['wp'])) {
+            $this->UpdateFormField('WPModusID', 'value', (int)$d['wp']);
+        }
+        if (isset($d['notfall'])) {
+            $melder = $d['notfall'] ? VSCHErkennung::rauchmelder($this->momentaufnahme()) : [];
+            $this->UpdateFormField('Notfall', 'values', json_encode(array_map(fn($m) => ['Melder' => $m], $melder)));
+        }
+        foreach (['sonneAn' => 'SonneAn', 'aussenSommer' => 'AussenSommer', 'innenGrenze' => 'InnenGrenze', 'raumHellAn' => 'RaumHellAn', 'heizGrenze' => 'HeizGrenze'] as $q => $feld) {
             if (isset($d[$q])) {
                 $this->UpdateFormField($feld, 'value', (float)$d[$q]);
             }

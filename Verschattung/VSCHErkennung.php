@@ -550,4 +550,40 @@ class VSCHErkennung
         }
         return $s;
     }
+
+    // ------------------------------------------------------------------ Rauchmelder
+
+    /**
+     * Rauch-/Brandmelder: je Instanz die Alarmvariable (bool). Ohne Test-, Batterie-, Sabotage- und Stummschaltvariablen.
+     * @return int[]
+     */
+    public static function rauchmelder(array $instanzen): array
+    {
+        $out = [];
+        foreach ($instanzen as $i) {
+            $ort = self::norm($i['name'] . ' ' . ($i['ort'] ?? ''));
+            // Wortanfang: „Verbrauch“ ist kein Rauch (live 24.11.)
+            if (!preg_match('/\brauch|smoke|\bbrand|feuer|\bfire|co melder|kohlenmonoxid/', $ort) || preg_match('/kamin|ofen|grill|wasser|water/', $ort)) {
+                continue;
+            }
+            $wahl = null;
+            foreach ($i['vars'] as $v) {
+                $n = self::norm($v[1] . ' ' . $v[2]);
+                if ($v[3] !== 0 || preg_match('/test|batter|sabotage|tamper|erreichbar|reachable|update|stumm|mute|silence|fehler|error|stoerung|fault|verschmutz|dirt|config|lowbat|unreach/', $n)) {
+                    continue;
+                }
+                if (preg_match('/alarm|rauch|smoke|fire|feuer|brand/', $n)) {
+                    $wahl = $v[0];
+                    break;
+                }
+                if ($wahl === null && preg_match('/state|status|zustand/', $n)) {
+                    $wahl = $v[0];
+                }
+            }
+            if ($wahl !== null) {
+                $out[] = $wahl;
+            }
+        }
+        return $out;
+    }
 }

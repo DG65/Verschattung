@@ -55,14 +55,17 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 
 - **Sonne auf der Fassade:** Die Sonne steht höchstens 80° seitlich der Fassadenrichtung und mindestens 1° über dem Gelände-Horizont. Der Sonnenstand wird im Modul selbst berechnet (NOAA).
 - **Scheint die Sonne wirklich?** Einstrahlung in W/m² (Wetterstation bevorzugt; Lux-Sensoren werden umgerechnet, 1 W/m² ≈ 120 lx – die Einheit der Variable entscheidet). Beschatten ab / Beenden unter mit Hysterese, Vorgabe 250 / 150 W/m². Klarer Himmel mittags auf 48° N: etwa 930 W/m² im Juni, 280 W/m² im Dezember.
-- **Sommer oder Winter:** Beschattet wird, wenn der Raum zu warm ist (Raumtemperatur je Behang, Vorgabe 24 °C) **oder** draußen Sommer ist (Außentemperatur, Vorgabe 18 °C). Im Winter – außen kühl, Raum nicht zu warm – bleibt der Behang oben und die Sonne wärmt das Haus. Ohne Temperaturen beschattet das Modul immer bei Sonne.
+- **Der Behang als günstigste Heizung und Kühlung:** *Kühlbedarf* – Raum zu warm (Vorgabe 24 °C), Wärmepumpe kühlt oder draußen Sommer (Vorgabe 18 °C) – heißt voll beschatten. *Heizbedarf* – Wärmepumpe heizt, Raum unter 21 °C oder außen kühl – heißt: Behang oben, die Sonne wärmt das Haus. Dazwischen (Raum behaglich) nur Blendschutz. Die Wärmepumpe findet das Modul über den Verbundvertrag `heatpump`. Ohne Temperaturen beschattet es immer bei Sonne.
+- **Blendschutz je Fenster (optional):** Mit „Sonne max. in Raum“, Fensterhöhe und Brüstung fährt der Behang nur so weit herunter, dass die Sonne höchstens so tief hereinfällt.
 - **Raumhelligkeit nur zum Herunterfahren:** Bleibt der Helligkeitssensor im Raum unter der Schwelle (Vorgabe 1,5 W/m² ≈ 180 lx), erreicht die Sonne den Raum nicht und der Behang bleibt oben. Hochgefahren wird nie danach – mit heruntergefahrenem Behang ist der Raum ohnehin dunkel.
 - Raumtemperatur und Raumhelligkeit erkennt das Modul je Behang über den Raumnamen (Spalten „Raumtemperatur“, „Raumhelligkeit“ der Geräteliste).
 - **Verzögerungen** (Standard 3 min bis Beschatten, 15 min bis Ende) verhindern Hin- und Herfahren.
 - **Raffstores:** Die Lamellen werden so gestellt, dass direkte Sonne gerade nicht durchkommt (Cut-off nach dem Profilwinkel), und erst ab 8° Änderung nachgeführt.
 - **Handbedienung hat Vorrang:** Wer ein Gerät von Hand fährt, hat Ruhe, bis sich die Sonnenlage ändert.
 - **Zurückgefahren** wird nur, was das Modul selbst gefahren hat, und nur bei Tageslicht. Das Schließen in der Dämmerung bleibt beim Nutzer oder einer anderen Automatik.
-- **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz).
+- **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür. Meldet ein Griff „gekippt“ oder ist die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ gestellt, fährt er höchstens bis zur Lüftungsposition.
+- **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch, auch nachts und bei ausgeschalteter Automatik.
+- **„❓ Warum?“** zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten, ohne dass etwas fährt.
 
 ## Wetterschutz
 

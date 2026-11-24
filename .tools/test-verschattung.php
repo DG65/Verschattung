@@ -166,17 +166,48 @@ $r3 = VSCHLogik::entscheide(['sonneAn' => false] + $G, $U, $r2['z'], $T, $t0 + 1
 // Einstrahlung, Sommer/Winter, Raumhelligkeit (0.4.0)
 $rw = VSCHLogik::entscheide($G, ['hell' => false, 'hellGrund' => 'zu wenig'] + $U, [], $T, $t0);
 check('D30 Sonne auf der Fassade, Einstrahlung zu gering: nicht beschatten, Grund mit Wert', $rw['z']['kandidat'] === null && $rw['grund'] === 'zu wenig', $rw['grund']);
-$rw = VSCHLogik::entscheide($G, ['warm' => false, 'warmGrund' => 'Winter'] + $U, [], $T, $t0);
+$rw = VSCHLogik::entscheide($G, ['klima' => 'heizen', 'klimaGrund' => 'Winter'] + $U, [], $T, $t0);
 check('D31 Winter: Sonnenwärme nutzen, Behang bleibt oben', $rw['z']['kandidat'] === null && $rw['grund'] === 'Winter');
-$rw = VSCHLogik::entscheide($G, ['warm' => true, 'warmGrund' => 'Raum warm'] + $U, [], $T, $t0);
+$rw = VSCHLogik::entscheide($G, ['klima' => 'kuehlen', 'klimaGrund' => 'Raum warm'] + $U, [], $T, $t0);
 check('D32 Raum warm: beschatten, Grund nennt die Wärme', $rw['z']['kandidat'] === true && strpos($rw['grund'], 'Raum warm') === 0, $rw['grund']);
 $rw = VSCHLogik::entscheide($G, ['raumHell' => false, 'raumHellGrund' => 'Raum dunkel'] + $U, [], $T, $t0);
 check('D33 Raumhelligkeit unter Schwelle: nicht herunterfahren', $rw['z']['kandidat'] === null && $rw['grund'] === 'Raum dunkel');
 $rw = VSCHLogik::entscheide($G, ['raumHell' => false] + $U, ['soll' => true, 'wir' => true], $T, $t0);
 check('D34 Behang unten, Raum dunkel: bleibt unten (Hochfahren nie nach Raumhelligkeit)', $rw['ziel'] === 'beschatten' && $rw['z']['soll'] === true, json_encode($rw));
-check('D35 Sommer/Winter-Regel', VSCHLogik::zuWarm(25.0, 5.0, 24, 18, null) === [true, 'raum'] && VSCHLogik::zuWarm(21.0, 22.0, 24, 18, null) === [true, 'sommer']
-    && VSCHLogik::zuWarm(21.0, 5.0, 24, 18, null) === [false, 'winter'] && VSCHLogik::zuWarm(null, null, 24, 18, null) === [null, '']
-    && VSCHLogik::zuWarm(23.6, null, 24, 18, true) === [true, 'raum'] && VSCHLogik::zuWarm(23.6, null, 24, 18, false) === [false, 'winter']);
+$kl = fn(?float $i, ?float $a, ?int $wp, ?string $v = null) => VSCHLogik::klima($i, $a, $wp, 21, 24, 18, $v);
+check('D35 Heizen/Kühlen/neutral: Raum warm vor allem, dann Wärmepumpe, Raum kalt, Sommer, Winter, behaglich',
+    $kl(25.0, 5.0, 1) === ['kuehlen', 'raum'] && $kl(22.0, 5.0, 2) === ['kuehlen', 'wpkuehlt'] && $kl(22.0, 25.0, 4) === ['heizen', 'wpheizt']
+    && $kl(20.0, 25.0, null) === ['heizen', 'raumkalt'] && $kl(22.0, 20.0, null) === ['kuehlen', 'sommer'] && $kl(null, 5.0, null) === ['heizen', 'winter']
+    && $kl(22.0, 5.0, null) === ['neutral', 'behaglich'] && $kl(22.0, 5.0, 0) === ['neutral', 'behaglich'] && $kl(null, null, null) === [null, '']);
+check('D35b Hysterese 0,5 K', $kl(23.6, null, null, 'kuehlen') === ['kuehlen', 'raum'] && $kl(23.6, null, null) === ['neutral', 'behaglich']
+    && $kl(21.3, null, null, 'heizen') === ['heizen', 'raumkalt'] && $kl(21.3, null, null) === ['neutral', 'behaglich']);
+$rw = VSCHLogik::entscheide($G, ['klima' => 'neutral', 'klimaGrund' => 'behaglich'] + $U, [], $T, $t0);
+check('D38 neutral ohne Blendschutz: nicht beschatten', $rw['z']['kandidat'] === null && $rw['grund'] === 'behaglich');
+$rw = VSCHLogik::entscheide(['tiefe' => [0.4, 'Blendschutz 40']] + $G, ['klima' => 'neutral', 'klimaGrund' => 'behaglich'] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D39 neutral mit Blendschutz: Teilposition 40 %', $rw['ziel'] === 'beschatten' && abs((float)$rw['anteil'] - 0.4) < 0.001 && str_contains($rw['grund'], 'Blendschutz 40'), json_encode($rw));
+$rw = VSCHLogik::entscheide(['tiefe' => [0.4, 'Blendschutz 40']] + $G, ['klima' => 'kuehlen', 'klimaGrund' => 'warm'] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D40 Kühlbedarf schlägt Blendschutz: volle Beschattung', $rw['ziel'] === 'beschatten' && $rw['anteil'] === null);
+$rw = VSCHLogik::entscheide(['tiefe' => [0.0, 'nur 30 cm']] + $G, $U, [], $T, $t0);
+check('D41 Sonne kommt nicht weit genug herein: nicht beschatten', $rw['z']['kandidat'] === null && $rw['grund'] === 'nur 30 cm');
+$rw = VSCHLogik::entscheide($G, ['fenster' => 'lueften', 'lueftung' => 0.7] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D42 Fenster offen/gekippt: höchstens Lüftungsposition', $rw['ziel'] === 'beschatten' && abs((float)$rw['anteil'] - 0.7) < 0.001 && str_contains($rw['grund'], '70'), $rw['grund']);
+$rw = VSCHLogik::entscheide($G, ['fenster' => 'sperre'] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D43 Tür offen: nicht herunter (Aussperrschutz)', $rw['ziel'] === null);
+$rw = VSCHLogik::entscheide(['typ' => 'rollladen'] + $G, ['notfall' => 'Rauchmelder Küche', 'automatik' => false, 'tag' => false] + $U, ['soll' => true, 'wir' => true, 'hand' => true], $T, $t0);
+check('D44 Notfall: hoch, auch nachts, bei Handbedienung und ausgeschalteter Automatik', $rw['ziel'] === 'offen' && $rw['z']['hand'] === null && str_contains($rw['grund'], 'Rauchmelder Küche'));
+$rw = VSCHLogik::entscheide($G, ['weg' => ['Sonne 180°']] + $U, [], $T, $t0);
+check('D45 Entscheidungsweg: Messwerte vorn, Ergebnis mit Pfeil am Ende', $rw['weg'][0] === 'Sonne 180°' && str_starts_with(end($rw['weg']), '→ '), json_encode($rw['weg']));
+$ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
+check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
+    && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
+check('D47 Tiefe: steile Sonne kommt kaum herein → 0; nicht eingerichtet → null', VSCHLogik::tiefeAnteil(80.0, 50, 150, 80)[0] == 0.0 && VSCHLogik::tiefeAnteil(45.0, 0, 150, 80) === null);
+$RM = VSCHErkennung::rauchmelder([
+    1 => ['name' => 'Rauchmelder Küche', 'ort' => '', 'vars' => [[11, 'Batterie', 'LOWBAT', 0, '~Battery', false], [12, 'Test', 'TEST', 0, '', false], [13, 'Alarm', 'SMOKE_DETECTOR_ALARM_STATUS', 0, '~Alert', false]]],
+    2 => ['name' => 'Rauchmelder Flur', 'ort' => '', 'vars' => [[21, 'Zustand', 'State', 0, '~Alert', false]]],
+    3 => ['name' => 'Wassermelder Keller', 'ort' => '', 'vars' => [[31, 'Alarm', '', 0, '~Alert', false]]],
+    4 => ['name' => 'Kaminofen', 'ort' => 'Wohnzimmer', 'vars' => [[41, 'Feuer', '', 0, '', false]]],
+    5 => ['name' => 'Messung Hausverbrauch', 'ort' => 'Verbrauch', 'vars' => [[51, 'Status', '', 0, '', false]]]]);
+check('D49 Rauchmelder: Alarmvariable, nicht Batterie/Test; Wassermelder, Kaminofen und „Verbrauch“ nie', $RM === [13, 21], json_encode($RM));
 check('D36 Klarer Himmel 48° N: Juni ≈ 930, Dezember ≈ 280 W/m²', abs(VSCHLogik::klarHimmel(90 - 48.34 + 23.44) - 930) < 30 && abs(VSCHLogik::klarHimmel(90 - 48.34 - 23.44) - 280) < 40,
     round(VSCHLogik::klarHimmel(65.1)) . '/' . round(VSCHLogik::klarHimmel(18.2)));
 check('D37 Lux → W/m²: 120 lx ≈ 1 W/m²', VSCHLogik::luxZuWm2(30000) == 250.0);
@@ -436,6 +467,39 @@ check('G32 W/m²: die Einheit entscheidet – Lux umgerechnet (auch Froggit „S
     && $w2->invoke($m, 988) == 250.0 && $w2->invoke($m, 0) === null);
 check('G33 Verbindung zeigt den umgerechneten Wert', strpos($vt->invoke($m, 'HelligkeitID', 985, []), '≈ 250 W/m²') !== false && strpos($vt->invoke($m, 'HelligkeitID', 987, []), '≈') === false);
 check('G22 Probefahrt-Text Einzahl', strpos(VSCHText::t('1 device of facade %s is moving. If it moves the wrong way, change its "0 %% means" column.', 'A'), '1 Gerät der Fassade A fährt') === 0);
+// 0.5.0: Warum-Probelauf, Tür/Fenster, Notfall, Wärmepumpe
+$fl = new ReflectionMethod($m, 'fensterLage'); $fl->setAccessible(true);
+mkinst(990100, 'Terrassentür Links', 0); mkvar(990101, 0, true, 'Zustand', 990100, false, '~Window');
+mkinst(990110, 'Fenster Bad', 0); mkvar(990111, 0, true, 'Zustand', 990110, false, '~Window');
+mkinst(990120, 'Griff Küche', 0); mkvar(990121, 1, 1, 'Griff', 990120, false, ''); $GLOBALS['GVF'][990121] = 'gekippt';
+check('G40 Tür offen → Aussperrschutz', $fl->invoke($m, ['Kontakt' => 990101, 'BeiOffen' => 0])[0] === 'sperre');
+check('G41 auch „Fenster“ offen → Aussperrschutz (Name sagt nicht, ob man hinausgeht; Dietmar 24.11.)', $fl->invoke($m, ['Kontakt' => 990111, 'BeiOffen' => 0])[0] === 'sperre');
+check('G42 Spalte „Kontakt offen: Lüftungsposition (Fenster)“ erlaubt Lüften', $fl->invoke($m, ['Kontakt' => 990111, 'BeiOffen' => 2])[0] === 'lueften');
+check('G43 Griff meldet „gekippt“ → Lüften', $fl->invoke($m, ['Kontakt' => 990121, 'BeiOffen' => 0])[0] === 'lueften');
+SetValue(990111, false);
+check('G44 alles zu', $fl->invoke($m, ['Kontakt' => 990111, 'Kontakt2' => 0, 'BeiOffen' => 0])[0] === 'zu');
+$vorher = [$m->attrs['Zustand'] ?? '', count($GLOBALS['BEFEHLE'] ?? [])];
+$txt = $m->UIWarum();
+check('G45 „Warum?“: Probelauf ohne Fahrt und ohne Zustandsänderung, mit Messwerten je Gerät', $vorher === [$m->attrs['Zustand'] ?? '', count($GLOBALS['BEFEHLE'] ?? [])]
+    && str_contains($txt, 'Raffstore Büro') && str_contains($txt, 'Fassade A') && str_contains($txt, '→ '), $txt);
+// Notfall
+mkinst(990200, 'Rauchmelder Flur', 0); mkvar(990201, 0, false, 'Alarm', 990200, false, '~Alert');
+$m->props['Notfall'] = json_encode([['Melder' => 990201]]);
+SetValue(990201, true);
+$GLOBALS['BEFEHLE'] = [];
+$m->Tick();
+$offen601 = array_values(array_filter($GLOBALS['BEFEHLE'], fn($b) => $b[0] === 601));
+check('G46 Notfall: Rauchmelder-Alarm fährt die Behänge hoch', $offen601 !== [] && (float)end($offen601)[1] === 0.0 && str_contains((string)$m->GetValue('Status'), 'Notfall'), json_encode($GLOBALS['BEFEHLE']) . ' ' . $m->GetValue('Status'));
+SetValue(990201, false);
+$m->props['Notfall'] = '[]';
+// Wärmepumpe über den Verbundvertrag
+$GLOBALS['MODULINFO']['{WPTEST}'] = ['ModuleType' => 3, 'Prefix' => 'WPTEST'];
+$GLOBALS['MODULES']['{WPTEST}'] = [990300];
+mkinst(990300, 'Wärmepumpe', 0); mkvar(990301, 1, 1, 'Betriebsart', 990300, false, '');
+function WPTEST_GetFunctions(int $id): array { return [['contractType' => 'heatpump', 'contractVersion' => '1.19', 'operatingModeNormID' => 990301]]; }
+$we = new ReflectionMethod($m, 'wpErkennen'); $we->setAccessible(true);
+check('G47 Wärmepumpe: Betriebsart aus dem heatpump-Vertrag gefunden', $we->invoke($m) === 990301);
+unset($GLOBALS['MODULINFO']['{WPTEST}']);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

@@ -39,7 +39,7 @@ function IPS_GetVariable($id): array
     $o = $GLOBALS['OBJ'][(int)$id];
     return ['VariableType' => $o['type'], 'VariableProfile' => '', 'VariableCustomProfile' => $o['profile'], 'VariablePresentation' => isset($o['suffix']) ? ['SUFFIX' => $o['suffix']] : [], 'VariableCustomPresentation' => [], 'VariableUpdated' => $o['updated'] ?? 0];
 }
-function GetValueFormatted($id): string { $v = $GLOBALS['OBJ'][(int)$id]['value']; return is_bool($v) ? ($v ? 'true' : 'false') : str_replace('.', ',', (string)$v); }
+function GetValueFormatted($id): string { if (isset($GLOBALS['GVF'][(int)$id])) { return $GLOBALS['GVF'][(int)$id]; } $v = $GLOBALS['OBJ'][(int)$id]['value']; return is_bool($v) ? ($v ? 'true' : 'false') : str_replace('.', ',', (string)$v); }
 function IPS_GetVariableList(): array { return array_keys(array_filter($GLOBALS['OBJ'], fn($o) => $o['kind'] === 2)); }
 function GetValue($id) { return $GLOBALS['OBJ'][(int)$id]['value']; }
 function SetValue($id, $v): bool { $GLOBALS['OBJ'][(int)$id]['value'] = $v; return true; }
@@ -75,6 +75,8 @@ function IPS_GetInstance(int $id): array
     return ['InstanceID' => $id, 'InstanceStatus' => 102, 'ModuleInfo' => ['ModuleID' => $guid, 'ModuleName' => '']];
 }
 function IPS_GetInstanceListByModuleID(string $guid): array { return $GLOBALS['MODULES'][$guid] ?? []; }
+function IPS_GetModuleList(): array { return array_keys($GLOBALS['MODULINFO'] ?? []); }
+function IPS_GetModule(string $guid): array { return $GLOBALS['MODULINFO'][$guid] ?? []; }
 function IPS_GetProperty(int $id, string $n) { return $GLOBALS['CONF_PROP'][$id][$n] ?? ''; }
 function IPS_VariableProfileExists(string $p): bool { return isset($GLOBALS['PROFILES'][$p]); }
 function IPS_GetVariableProfile(string $p): array { return $GLOBALS['PROFILES'][$p]; }

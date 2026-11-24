@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 (in Entwicklung)
+
+- **Der Behang als günstigste Heizung und Kühlung des Raums** (Dietmar 24.11.): drei Lagen statt nur Sommer/Winter.
+  - **Kühlbedarf** (Raum zu warm, Wärmepumpe kühlt oder draußen Sommer) → voll beschatten.
+  - **Heizbedarf** (Wärmepumpe heizt, Raum unter der Heizgrenze – neuer Schieberegler, Vorgabe 21 °C – oder außen kühl) → Sonne herein.
+  - **Neutral** (Raum behaglich) → nur Blendschutz, wenn eingerichtet, sonst offen. Hysterese 0,5 K.
+  - **Wärmepumpe** wird über den Verbundvertrag `heatpump` (Betriebsart `operatingModeNormID`) automatisch gefunden, bei WPHub, HeishaMon und jedem anderen Modul mit diesem Vertrag. Live: WPHub und HeishaMon melden Heizen + Warmwasser.
+- **Blendschutz je Fenster:** neue Spalten „Sonne max. in Raum (cm)“, „Fensterhöhe“ und „Brüstung“. Der Behang fährt nur so weit herunter, dass die Sonne höchstens so tief in den Raum fällt, und folgt dem Sonnenstand. Gilt bei neutraler Lage; bei Kühlbedarf beschattet er voll.
+- **Fenster und Türen:** Jeder offene Kontakt gilt im Zweifel als Tür → nicht herunterfahren (Aussperrschutz), denn am Namen lässt sich nicht erkennen, ob man hinausgehen kann (Dietmar: „Wir haben nur Türen“). Meldet ein Griff „gekippt“, fährt der Behang höchstens auf die **Lüftungsposition** (Schieberegler, Vorgabe 70 %). Für echte Fenster ohne Kippmeldung erlaubt die Spalte „Kontakt offen: Lüftungsposition (Fenster)“ dasselbe.
+- **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch – auch nachts, nach Handbedienung und bei ausgeschalteter Automatik. Neues Panel „🔥 Notfall“ mit der Melderliste; „Geräte und Sensoren erkennen“ und der Assistent (Schritt 7) tragen die Melder ein. Live gefunden: Rauchmelder Heizung (Rauch) und Rauchmelder Vorrat (Hitze).
+- **„❓ Warum?“:** Probelauf ohne Fahrt und ohne Zustandsänderung. Zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten: Sonnenstand, Einstrahlung, Fassade und Horizont, Raum und Klima, Fenster/Tür, Wetter, Ergebnis.
+- Behoben: „Neu zeichnen“ in der Vorschau meldete „Undefined variable $Fassaden“ (live 24.11.).
+
+
 ## 0.4.0 (in Entwicklung)
 
 - **Wann beschatten – mit Messwerten statt nur nach Sonnenstand** (Dietmar 24.11.: „Woran machst Du fest, dass nun Sonne auf der Fassade ist?“):

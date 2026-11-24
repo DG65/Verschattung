@@ -73,6 +73,19 @@ final class VSCHLogik
     {
         $z += ['soll' => false, 'kandidat' => null, 'kandidatSeit' => 0, 'hand' => null, 'wir' => false];
         $typ = (string)$g['typ'];
+        $weg = (array)($u['weg'] ?? []); // Entscheidungsweg für „Warum?“ (das Modul gibt die Messwerte vor)
+        $fertig = function (?string $ziel, ?float $lamelle, string $grund, array $z, ?float $anteil = null) use (&$weg): array {
+            $weg[] = '→ ' . $grund;
+            return ['ziel' => $ziel, 'lamelle' => $lamelle, 'grund' => $grund, 'z' => $z, 'anteil' => $anteil, 'weg' => $weg];
+        };
+
+        // 0. Notfall (Rauch-/Brandmelder): alles hoch, vor allem anderen – auch nachts, bei Handbedienung und ausgeschalteter Automatik
+        if ((string)($u['notfall'] ?? '') !== '') {
+            $z['hand'] = null;
+            $z['soll'] = false;
+            $z['kandidat'] = null;
+            return $fertig('offen', null, VSCHText::t('Emergency: %s – up', (string)$u['notfall']), ['wir' => true] + $z);
+        }
 
         // 1. Wetterschutz
         $wetter = (string)($u['wetter']['art'] ?? '');
@@ -80,41 +93,59 @@ final class VSCHLogik
             $z['hand'] = null;
             $z['soll'] = false;
             $z['kandidat'] = null;
-            return ['ziel' => 'offen', 'lamelle' => null, 'grund' => VSCHText::t('Weather protection: %s', (string)($u['wetter']['grund'] ?? '')), 'z' => ['wir' => true] + $z];
+            return $fertig('offen', null, VSCHText::t('Weather protection: %s', (string)($u['wetter']['grund'] ?? '')), ['wir' => true] + $z);
         }
         // WarnHub hat genau dieses Gerät gesichert (Vertrag protection 1.0): nicht bewegen, auch Rollläden nicht
         if (($u['schutz'] ?? null) !== null) {
-            return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Secured by WarnHub: %s', (string)$u['schutz']), 'z' => $z];
+            return $fertig(null, null, VSCHText::t('Secured by WarnHub: %s', (string)$u['schutz']), $z);
         }
         if ($wetter === 'festhalten' && $typ !== 'rollladen') {
-            return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Not moving: %s', (string)($u['wetter']['grund'] ?? '')), 'z' => $z];
+            return $fertig(null, null, VSCHText::t('Not moving: %s', (string)($u['wetter']['grund'] ?? '')), $z);
         }
 
-        // 2. Wunsch aus Sonne, Helligkeit, Temperatur
+        // 2. Wunsch: Der Behang ist die günstigste Heizung und Kühlung des Raums.
+        //    Heizbedarf → Sonne herein; Kühlbedarf → voll beschatten; neutral → nur Blendschutz (Tiefe), sonst offen.
         $wunsch = (bool)$g['sonneAn'];
+        $anteil = null; // null = volle Beschattungsposition des Geräts
         $warum = $wunsch ? VSCHText::t('Sun on the facade') : (($u['tag'] ?? true) ? VSCHText::t('No direct sun on the facade') : VSCHText::t('Night'));
-        // Scheint die Sonne wirklich? Einstrahlung (W/m²) gegen die Schwelle – sonst nur Geometrie
+        $weg[] = $warum;
         if ($wunsch && ($u['hell'] ?? null) === false) {
             $wunsch = false;
             $warum = (string)($u['hellGrund'] ?? VSCHText::t('Sun on the facade, but not bright enough'));
+            $weg[] = $warum;
         }
-        if ($wunsch && ($u['warm'] ?? null) === true && ($u['warmGrund'] ?? '') !== '') {
-            $warum = (string)$u['warmGrund'];
-        }
-        // Wärme: Raum zu warm ODER Sommer (außen warm) → beschatten; Winter mit kühlem Raum → Sonnenwärme nutzen
-        if ($wunsch && ($u['warm'] ?? null) === false) {
-            $wunsch = false;
-            $warum = (string)($u['warmGrund'] ?? VSCHText::t('Sun on the facade, but below the temperature threshold'));
+        $klima = $u['klima'] ?? null;
+        if ($wunsch) {
+            $tiefe = $g['tiefe'] ?? null; // [Anteil 0..1, Text] aus der Fenstergeometrie, null = nicht eingerichtet
+            if ($klima === 'heizen') {
+                $wunsch = false;
+                $warum = (string)($u['klimaGrund'] ?? '');
+            } elseif ($klima === 'kuehlen') {
+                $warum = (string)($u['klimaGrund'] ?? $warum);
+            } elseif (is_array($tiefe)) {
+                if ((float)$tiefe[0] <= 0.02) {
+                    $wunsch = false;
+                } else {
+                    $anteil = (float)$tiefe[0];
+                }
+                $warum = ($klima === 'neutral' ? (string)($u['klimaGrund'] ?? '') . ' · ' : '') . (string)$tiefe[1];
+            } elseif ($klima === 'neutral') {
+                $wunsch = false;
+                $warum = (string)($u['klimaGrund'] ?? '');
+            }
+            $weg[] = $warum;
         }
         // Raumhelligkeit nur zum Herunterfahren: fällt die Sonne wirklich in diesen Raum? (Hochfahren nicht danach,
         // sonst Hin und Her – ist der Behang unten, wird der Raum dunkel.)
         if ($wunsch && !(bool)$z['soll'] && ($u['raumHell'] ?? null) === false) {
             $wunsch = false;
             $warum = (string)($u['raumHellGrund'] ?? VSCHText::t('The sun does not reach the room'));
+            $weg[] = $warum;
         }
         if ($wunsch && $typ === 'markise' && !($u['wetterQuelle'] ?? false) && !($u['ohneWetterBestaetigt'] ?? false)) {
             $wunsch = false;
             $warum = VSCHText::t('Awning: no weather source, so no automatic extension');
+            $weg[] = $warum;
         }
 
         // 3. Verzögerung: der neue Wunsch muss eine Weile anstehen
@@ -126,7 +157,7 @@ final class VSCHLogik
             $warte = $wunsch ? (int)$t['an'] : (int)$t['aus'];
             if ($now - (int)$z['kandidatSeit'] < $warte) {
                 $rest = (int)ceil(($warte - ($now - (int)$z['kandidatSeit'])) / 60);
-                return ['ziel' => null, 'lamelle' => null, 'grund' => $warum . ' · ' . VSCHText::t('waiting %d min', max(1, $rest)), 'z' => $z];
+                return $fertig(null, null, $warum . ' · ' . VSCHText::t('waiting %d min', max(1, $rest)), $z);
             }
             $z['soll'] = $wunsch;
         }
@@ -135,26 +166,86 @@ final class VSCHLogik
         // 4. Handbedienung: Ruhe, bis sich die Lage ändert
         if ($z['hand'] !== null) {
             if ($z['hand'] === $z['soll']) {
-                return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Operated by hand — automatic resumes when the sun situation changes'), 'z' => $z];
+                return $fertig(null, null, VSCHText::t('Operated by hand — automatic resumes when the sun situation changes'), $z);
             }
             $z['hand'] = null;
         }
         if (!($u['automatik'] ?? true)) {
-            return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Automatic switched off'), 'z' => $z];
+            return $fertig(null, null, VSCHText::t('Automatic switched off'), $z);
         }
 
-        // 5. Ausführen
+        // 5. Ausführen. Fenster/Tür: Tür offen → nicht herunter (Aussperrschutz); Fenster offen/gekippt → höchstens Lüftungsposition.
+        $fenster = (string)($u['fenster'] ?? (($u['fensterOffen'] ?? false) ? 'sperre' : 'zu'));
         if ($z['soll']) {
-            if (($u['fensterOffen'] ?? false) && $typ !== 'markise') {
-                return ['ziel' => null, 'lamelle' => null, 'grund' => VSCHText::t('Window/door open — not lowering'), 'z' => $z];
+            if ($typ !== 'markise' && $fenster === 'sperre') {
+                return $fertig(null, null, VSCHText::t('Window/door open — not lowering'), $z);
+            }
+            if ($typ !== 'markise' && $fenster === 'lueften') {
+                $l = (float)($u['lueftung'] ?? 0.7);
+                $anteil = min($anteil ?? 1.0, $l);
+                $warum .= ' · ' . VSCHText::t('window open: ventilation position %d %%', (int)round($l * 100));
             }
             $lamelle = ($typ === 'raffstore' && ($g['lamellen'] ?? false)) ? self::lamellenWinkel((float)$g['profil']) : null;
-            return ['ziel' => 'beschatten', 'lamelle' => $lamelle, 'grund' => $warum, 'z' => ['wir' => true] + $z];
+            return $fertig('beschatten', $lamelle, $warum, ['wir' => true] + $z, $anteil);
         }
         if ($z['wir'] && ($u['tag'] ?? true)) {
-            return ['ziel' => 'offen', 'lamelle' => null, 'grund' => $warum, 'z' => ['wir' => false] + $z];
+            return $fertig('offen', null, $warum, ['wir' => false] + $z);
         }
-        return ['ziel' => null, 'lamelle' => null, 'grund' => $warum, 'z' => $z];
+        return $fertig(null, null, $warum, $z);
+    }
+
+    /**
+     * Heizen, Kühlen oder neutral – der Behang als günstigste Heizung und Kühlung des Raums.
+     * Reihenfolge: Raum zu warm → kühlen; Wärmepumpe kühlt → kühlen; Wärmepumpe heizt → heizen; Raum unter der Heizgrenze → heizen;
+     * außen Sommer → kühlen; außen kühl ohne Raumwert → heizen (Winter); Raum behaglich → neutral. Ohne Werte null.
+     * $wp: Betriebsart nach Verbund-Enum (0 standby, 1 heizen, 2 kühlen, 3 WW, 4 heizen+WW, 5 kühlen+WW), null = keine WP.
+     * Hysterese 0,5 K über $vorher. Rückgabe [?string 'heizen'|'kuehlen'|'neutral', Grundschlüssel].
+     */
+    public static function klima(?float $innen, ?float $aussen, ?int $wp, float $heizGrenze, float $innenGrenze, float $sommerAb, ?string $vorher): array
+    {
+        $hk = $vorher === 'kuehlen' ? 0.5 : 0.0;
+        $hh = $vorher === 'heizen' ? 0.5 : 0.0;
+        if ($innen !== null && $innen >= $innenGrenze - $hk) {
+            return ['kuehlen', 'raum'];
+        }
+        if (in_array($wp, [2, 5], true)) {
+            return ['kuehlen', 'wpkuehlt'];
+        }
+        if (in_array($wp, [1, 4], true)) {
+            return ['heizen', 'wpheizt'];
+        }
+        if ($innen !== null && $innen < $heizGrenze + $hh) {
+            return ['heizen', 'raumkalt'];
+        }
+        if ($aussen !== null && $aussen >= $sommerAb - $hk) {
+            return ['kuehlen', 'sommer'];
+        }
+        if ($innen === null && $aussen !== null) {
+            return ['heizen', 'winter'];
+        }
+        if ($innen !== null) {
+            return ['neutral', 'behaglich'];
+        }
+        return [null, ''];
+    }
+
+    /**
+     * Blendschutz nach Tiefe (senkrechtes Fenster): Wie weit muss der Behang herunter, damit die Sonne höchstens $tiefe cm
+     * in den Raum fällt? Sonnenfleck-Tiefe am Boden = Höhe der freien Oberkante / tan(Profilwinkel).
+     * Rückgabe [Anteil 0..1 des Fensters, das verdeckt werden muss, Tiefe in cm bei offenem Fenster] oder null (nicht eingerichtet).
+     */
+    public static function tiefeAnteil(float $profil, float $tiefe, float $hoehe, float $bruestung): ?array
+    {
+        if ($tiefe <= 0 || $hoehe <= 0) {
+            return null;
+        }
+        if ($profil <= 0.5) {
+            return [1.0, 9999.0];
+        }
+        $tan = tan(deg2rad(min(89.9, $profil)));
+        $offen = ($bruestung + $hoehe) / $tan;
+        $f = 1 - ($tiefe * $tan - $bruestung) / $hoehe;
+        return [max(0.0, min(1.0, $f)), $offen];
     }
 
     /**
@@ -310,25 +401,5 @@ final class VSCHLogik
     public static function luxZuWm2(float $lux): float
     {
         return $lux / 120;
-    }
-
-    /**
-     * Ist es zu warm, um die Sonne hereinzulassen? Raum über der Grenze ODER Sommer (außen über der Sommergrenze).
-     * Winter (außen kühl) mit kühlem Raum → false: Sonnenwärme nutzen. Ohne beide Werte → null (Temperatur spielt keine Rolle).
-     * Hysterese 0,5 K über $vorher. Rückgabe: [?bool, Grundschlüssel ('raum'|'sommer'|'winter'|'')]
-     */
-    public static function zuWarm(?float $innen, ?float $aussen, float $innenGrenze, float $sommerAb, ?bool $vorher): array
-    {
-        if ($innen === null && $aussen === null) {
-            return [null, ''];
-        }
-        $h = $vorher ? -0.5 : 0.0;
-        if ($innen !== null && $innen >= $innenGrenze + $h) {
-            return [true, 'raum'];
-        }
-        if ($aussen !== null && $aussen >= $sommerAb + $h) {
-            return [true, 'sommer'];
-        }
-        return [false, 'winter'];
     }
 }
