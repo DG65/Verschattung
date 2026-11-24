@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1 (in Entwicklung)
+
+- **Lageplan nutzt die Breite** (Dietmar 24.11.): gleiche Höhe und gleicher Maßstab, aber links und rechts mehr Umgebung – im Assistenten (Schritt „Haus“, 900 px) und im Formular (900 px). Nachbarn, die vorher am Rand abgeschnitten waren, sind jetzt zu sehen.
+- Fassadenliste im Formular und im Assistenten mit Platz für mindestens 6 Fassaden (vorher 3 bzw. 4 Zeilen).
+- Geräteliste im Formular und in den Assistenten-Schritten „Ausrichtung“ und „Geräte“ mit mindestens 10 Zeilen, bei mehr Behängen eine Zeile mehr als Behänge (vorher 6 bzw. 8).
+
+
 ## 0.8.0 (in Entwicklung)
 
 - **„Was zu ist, bleibt zu“** (Dietmar 24.11., Kinderzimmer): Steht ein Behang schon weiter unten, als die Beschattung verlangt (Höhe und Lamellen), fährt das Modul ihn nicht – vorher hätte es einen ganz geschlossenen Rollladen auf 75 % hochgefahren und geschlossene Lamellen geöffnet. Es merkt ihn auch nicht als eigenen und fährt ihn deshalb nach der Sonne nicht hoch. Öffnet ihn jemand, gilt wieder die normale Automatik.

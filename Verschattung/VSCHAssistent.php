@@ -57,7 +57,7 @@ trait VSCHAssistent
                         ['type' => 'Button', 'caption' => $this->t('Apply to all'),
                             'onClick' => $liste('WAusrichtung') . 'VSCH_UIAssistentAlleRichtung($id, json_encode($WAusrichtungA), (string)$WAlleRichtung);'],
                     ]],
-                    ['type' => 'List', 'name' => 'WAusrichtung', 'rowCount' => 8, 'add' => false, 'delete' => false, 'values' => $this->assistentAusrichtungZeilen($fassaden, $offen),
+                    ['type' => 'List', 'name' => 'WAusrichtung', 'rowCount' => max(10, count($this->geraete()) + 1), 'add' => false, 'delete' => false, 'values' => $this->assistentAusrichtungZeilen($fassaden, $offen),
                         'columns' => array_merge([
                             ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'save' => true],
                             ['caption' => $this->t('Type'), 'name' => 'TypText', 'width' => '160px', 'save' => true],
@@ -94,8 +94,8 @@ trait VSCHAssistent
                     ['type' => 'Button', 'caption' => $this->t('🏠 Detect house'),
                         'onClick' => 'VSCH_UIAssistentHaus($id, (int)$WStandortArt, ' . $standortJson . ');'],
                     ['type' => 'Label', 'name' => 'WHausStatus', 'caption' => $fassaden === [] ? $this->t('Not detected yet.') : '🔗 ' . $this->geoStatus()],
-                    ['type' => 'Image', 'name' => 'WGrundriss', 'image' => $this->grundrissBild($fassaden, -1, 'heute'), 'center' => true, 'width' => '360px'],
-                    ['type' => 'List', 'name' => 'WFassaden', 'rowCount' => 4, 'add' => true, 'delete' => true, 'values' => $fassaden, 'columns' => [
+                    ['type' => 'Image', 'name' => 'WGrundriss', 'image' => $this->grundrissBild($fassaden, -1, 'heute', self::PLAN_ASSISTENT), 'center' => true, 'width' => '900px'],
+                    ['type' => 'List', 'name' => 'WFassaden', 'rowCount' => max(6, count($fassaden)), 'add' => true, 'delete' => true, 'values' => $fassaden, 'columns' => [
                         ['caption' => $this->t('Letter'), 'name' => 'Kennung', 'width' => '70px', 'add' => '?', 'edit' => ['type' => 'ValidationTextBox']],
                         ['caption' => $this->t('Name'), 'name' => 'Name', 'width' => 'auto', 'add' => '', 'edit' => ['type' => 'ValidationTextBox']],
                         ['caption' => $this->t('Direction (°)'), 'name' => 'Azimut', 'width' => '120px', 'add' => 180, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 359, 'digits' => 1]],
@@ -118,7 +118,7 @@ trait VSCHAssistent
                             'onClick' => $liste('WGeraete') . 'VSCH_UIAssistentAlle($id, json_encode($WGeraeteA), (string)$WAlleFassade);'],
                     ]],
                     ['type' => 'Image', 'name' => 'WGeraeteBild', 'image' => $this->grundrissBild($fassaden, -1, 'heute'), 'center' => true, 'width' => '300px'],
-                    ['type' => 'List', 'name' => 'WGeraete', 'rowCount' => 8, 'add' => false, 'delete' => true, 'values' => $geraete, 'columns' => [
+                    ['type' => 'List', 'name' => 'WGeraete', 'rowCount' => max(10, count($this->geraete()) + 1), 'add' => false, 'delete' => true, 'values' => $geraete, 'columns' => [
                         ['caption' => $this->t('Device'), 'name' => 'Name', 'width' => 'auto', 'edit' => ['type' => 'ValidationTextBox']],
                         ['caption' => $this->t('Facade'), 'name' => 'Fassade', 'width' => '110px', 'edit' => ['type' => 'Select', 'options' => $optFassade]],
                         ['caption' => $this->t('Type'), 'name' => 'Typ', 'width' => '140px', 'edit' => ['type' => 'Select', 'options' => $optTyp]],
@@ -301,7 +301,7 @@ trait VSCHAssistent
         }
         $this->UpdateFormField('WFassaden', 'values', json_encode($r['werte']));
         $this->UpdateFormField('WHausStatus', 'caption', '🔗 ' . $this->geoStatus() . ' · ' . $this->t('%d facades', count($r['werte'])));
-        $this->UpdateFormField('WGrundriss', 'image', $this->grundrissBild($r['werte'], -1, 'heute'));
+        $this->UpdateFormField('WGrundriss', 'image', $this->grundrissBild($r['werte'], -1, 'heute', self::PLAN_ASSISTENT));
     }
 
     /** Beim Weiter von Seite 2: Geräte und Sensoren erkennen, Seite 3/5/6 vorbefüllen. Vorhandene Zeilen bleiben. */
@@ -603,7 +603,7 @@ trait VSCHAssistent
         if ((bool)($d['info'] ?? false)) {
             $info = $this->ausrichtungInsInfo($geraete, $fassaden);
         }
-        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($fassaden, 0, 'heute'));
+        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($fassaden, 0, 'heute', self::PLAN_FORM));
         $this->UpdateFormField('GeoStatus', 'caption', $this->geoStatus() !== '' ? '🔗 ' . $this->geoStatus() : $this->t('Not detected yet.'));
         $this->UpdateFormField('Quellen', 'caption', $this->quellenText());
         return $this->t('The form is filled in: %d facades, %d devices. Now click "Apply changes".', count($fassaden), count($geraete))

@@ -400,6 +400,10 @@ $gml = '<wfs:FeatureCollection><wfs:member><nora:v_al_gebaeude><nora:gebaeudefun
     . '<wfs:member><nora:v_al_gebaeude><nora:gebaeudefunktion_name>Wohnhaus</nora:gebaeudefunktion_name><nora:geom><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>420010 5355000 420022 5355000 420022 5355009 420010 5355009 420010 5355000</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></nora:geom></nora:v_al_gebaeude></wfs:member></wfs:FeatureCollection>';
 $gp = VSCHGeo::gmlPolygone($gml, 25832);
 check('F33 ALKIS-GML: Gebäudefunktion je Objekt gelesen', count($gp) === 2 && $gp[0]['art'] === 'Garage' && $gp[1]['art'] === 'Wohnhaus', json_encode(array_column($gp, 'art')));
+$hausB = ['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'nachbarn' => [[[-50, -3], [-40, -3], [-40, 6], [-50, 6]]]];
+$p420 = base64_decode(substr(VSCHGrafik::grundriss($hausB, [], [], -1, 'Europe/Berlin'), 26));
+$p1050 = base64_decode(substr(VSCHGrafik::grundriss($hausB, [], [], -1, 'Europe/Berlin', 1050), 26));
+check('F34 Lageplan breiter: gleiche Höhe und Maßstab, mehr Umgebung links/rechts', str_contains($p1050, 'viewBox="0 0 1050 420"') && substr_count($p1050, '<polygon') > substr_count($p420, '<polygon'));
 check('F28 Himmelsbild zeichnet Nachbargebäude', str_contains(base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 2], [180, 2]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont', $gh, 'Nachbarhaus'), 26)), 'Nachbarhaus'));
 
 // ---------------------------------------------------------------------------

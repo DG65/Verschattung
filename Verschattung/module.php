@@ -34,6 +34,9 @@ class Verschattung extends IPSModule
     use VSCHKachel;
 
     /** Standort, den der Assistent gerade prüft (überlagert Eigenschaft/Standort-Instanz). */
+    /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
+    private const PLAN_FORM = 900;
+    private const PLAN_ASSISTENT = 1050;
     private ?array $koordinatenAssistent = null;
     /** Hindernis-Horizont je Fassadenrichtung (Gelände + Nachbargebäude), nur für einen Aufruf gemerkt. */
     private array $hindernisMerk = [];
@@ -966,7 +969,7 @@ class Verschattung extends IPSModule
         }
         $this->UpdateFormField('Fassaden', 'values', json_encode($r['werte']));
         $this->UpdateFormField('GeoStatus', 'caption', '🔗 ' . $this->geoStatus());
-        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($r['werte'], 0, 'heute'));
+        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($r['werte'], 0, 'heute', self::PLAN_FORM));
         $this->UpdateFormField('Himmel', 'image', $this->himmelBild($r['werte'], 0, 'heute'));
         $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($r['werte'], 0, 'heute'));
         return $r['text'];
@@ -1012,7 +1015,7 @@ class Verschattung extends IPSModule
         if ($werte === []) {
             $werte = $this->listeWerte($this->ReadPropertyString('Fassaden'));
         }
-        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($werte, $auswahl, $tag));
+        $this->UpdateFormField('Grundriss', 'image', $this->grundrissBild($werte, $auswahl, $tag, self::PLAN_FORM));
         $this->UpdateFormField('Himmel', 'image', $this->himmelBild($werte, $auswahl, $tag, $gebaeude));
         $this->UpdateFormField('Vorschau', 'caption', $this->vorschauText($werte, $auswahl, $tag, $gebaeude));
     }
@@ -1376,8 +1379,8 @@ class Verschattung extends IPSModule
 
         // 2. Mein Haus
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🏠  My house', 'expanded' => true, 'items' => [
-            ['type' => 'Image', 'name' => 'Grundriss', 'image' => $this->grundrissBild($fassaden, 0, 'heute'), 'center' => true, 'width' => '420px'],
-            ['type' => 'List', 'name' => 'Fassaden', 'caption' => 'Facades', 'rowCount' => max(3, count($fassaden)), 'add' => true, 'delete' => true,
+            ['type' => 'Image', 'name' => 'Grundriss', 'image' => $this->grundrissBild($fassaden, 0, 'heute', self::PLAN_FORM), 'center' => true, 'width' => self::PLAN_FORM . 'px'],
+            ['type' => 'List', 'name' => 'Fassaden', 'caption' => 'Facades', 'rowCount' => max(6, count($fassaden)), 'add' => true, 'delete' => true,
                 'columns' => [
                     ['caption' => 'Letter', 'name' => 'Kennung', 'width' => '70px', 'add' => '?', 'edit' => ['type' => 'ValidationTextBox']],
                     ['caption' => 'Name', 'name' => 'Name', 'width' => 'auto', 'add' => '', 'edit' => ['type' => 'ValidationTextBox']],
@@ -1385,7 +1388,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Active', 'name' => 'Aktiv', 'width' => '80px', 'add' => true, 'edit' => ['type' => 'CheckBox']],
                 ]],
             ['type' => 'Label', 'name' => 'FassadenHint', 'caption' => 'Direction = view out of the window: 0° north, 90° east, 180° south, 270° west. Correct it if the detection is wrong, or add facades by hand.'],
-            ['type' => 'List', 'name' => 'Geraete', 'caption' => 'Devices', 'rowCount' => 6, 'add' => true, 'delete' => true, 'sort' => ['column' => 'Fassade', 'direction' => 'ascending'],
+            ['type' => 'List', 'name' => 'Geraete', 'caption' => 'Devices', 'rowCount' => max(10, count($this->geraete()) + 1), 'add' => true, 'delete' => true, 'sort' => ['column' => 'Fassade', 'direction' => 'ascending'],
                 'columns' => [
                     ['caption' => 'Name', 'name' => 'Name', 'width' => '180px', 'add' => '', 'edit' => ['type' => 'ValidationTextBox']],
                     ['caption' => 'Facade', 'name' => 'Fassade', 'width' => '130px', 'add' => '', 'edit' => ['type' => 'Select', 'options' => $optGeraetFassade]],
@@ -1520,12 +1523,12 @@ class Verschattung extends IPSModule
     //  Grafik und Texte fürs Formular
     // =====================================================================
 
-    private function grundrissBild(array $fassaden, int $auswahl, string $tag): string
+    private function grundrissBild(array $fassaden, int $auswahl, string $tag, int $breite = 420): string
     {
         $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
         $pos = $this->koordinaten();
         $bahn = $pos === null ? [] : VSCHSonne::bahn($pos[0], $pos[1], $this->tagDatum($tag), date_default_timezone_get(), 10);
-        return VSCHGrafik::grundriss($haus, $this->fassadenMitKanten($fassaden, $haus), $bahn, $auswahl, date_default_timezone_get());
+        return VSCHGrafik::grundriss($haus, $this->fassadenMitKanten($fassaden, $haus), $bahn, $auswahl, date_default_timezone_get(), $breite);
     }
 
     private function himmelBild(array $fassaden, int $auswahl, string $tag, bool $gebaeude = true): string

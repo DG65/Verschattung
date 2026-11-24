@@ -26,10 +26,13 @@ final class VSCHGrafik
     /**
      * $haus: ['eigen' => [[x,y]…], 'nachbarn' => [...]], $fassaden: Liste ['az','seg'(optional)], $bahn: [[ts,az,alt]…], $auswahl: Index.
      */
-    public static function grundriss(array $haus, array $fassaden, array $bahn, int $auswahl, string $tz): string
+    public static function grundriss(array $haus, array $fassaden, array $bahn, int $auswahl, string $tz, int $breite = 420): string
     {
+        // Höhe und Maßstab wie bisher (420 Einheiten); $breite > 420 zeigt links und rechts mehr Umgebung (Dietmar 24.11.)
         $w = 420;
+        $bw = max($w, $breite);
         $c = $w / 2;
+        $cx = $bw / 2;
         $umfang = 10.0;
         foreach (array_merge([$haus['eigen'] ?? []], []) as $poly) {
             foreach ($poly as $p) {
@@ -37,13 +40,13 @@ final class VSCHGrafik
             }
         }
         $s = ($w / 2 - 70) / max(15.0, $umfang * 1.6); // eigenes Haus füllt gut die Mitte
-        $pt = function ($p) use ($c, $s) {
-            return self::n($c + $p[0] * $s) . ',' . self::n($c - $p[1] * $s);
+        $pt = function ($p) use ($cx, $c, $s) {
+            return self::n($cx + $p[0] * $s) . ',' . self::n($c - $p[1] * $s);
         };
-        $o = '<rect width="' . $w . '" height="' . $w . '" rx="8" fill="#ffffff"/>';
-        $sichtbar = function ($poly) use ($c, $s, $w) {
+        $o = '<rect width="' . $bw . '" height="' . $w . '" rx="8" fill="#ffffff"/>';
+        $sichtbar = function ($poly) use ($s, $w, $bw) {
             foreach ($poly as $p) {
-                if (abs($p[0] * $s) < $w / 2 && abs($p[1] * $s) < $w / 2) {
+                if (abs($p[0] * $s) < $bw / 2 && abs($p[1] * $s) < $w / 2) {
                     return true;
                 }
             }
@@ -66,7 +69,7 @@ final class VSCHGrafik
             if ($b[2] > 0) {
                 $a = deg2rad($b[1]);
                 $rr = $r - $b[2] * 1.2;
-                $punkte[] = self::n($c + sin($a) * $rr) . ',' . self::n($c - cos($a) * $rr);
+                $punkte[] = self::n($cx + sin($a) * $rr) . ',' . self::n($c - cos($a) * $rr);
             }
         }
         if ($punkte !== []) {
@@ -78,7 +81,7 @@ final class VSCHGrafik
             if ($b[2] > 0 && in_array($h, ['09:00', '12:00', '15:00', '18:00'], true)) {
                 $a = deg2rad($b[1]);
                 $rr = $r - $b[2] * 1.2;
-                $x = $c + sin($a) * $rr;
+                $x = $cx + sin($a) * $rr;
                 $y = $c - cos($a) * $rr;
                 $o .= '<circle cx="' . self::n($x) . '" cy="' . self::n($y) . '" r="7" fill="' . self::SONNE . '"/>'
                     . '<text x="' . self::n($x) . '" y="' . self::n($y - 11) . '" font-size="10" text-anchor="middle" fill="#5f665c">' . substr($h, 0, 2) . '</text>';
@@ -97,7 +100,7 @@ final class VSCHGrafik
                 $best = 0;
                 foreach ($segs as $sg) {
                     $l = hypot($sg[1][0] - $sg[0][0], $sg[1][1] - $sg[0][1]);
-                    $o .= '<line x1="' . self::n($c + $sg[0][0] * $s) . '" y1="' . self::n($c - $sg[0][1] * $s) . '" x2="' . self::n($c + $sg[1][0] * $s) . '" y2="' . self::n($c - $sg[1][1] * $s)
+                    $o .= '<line x1="' . self::n($cx + $sg[0][0] * $s) . '" y1="' . self::n($c - $sg[0][1] * $s) . '" x2="' . self::n($cx + $sg[1][0] * $s) . '" y2="' . self::n($c - $sg[1][1] * $s)
                         . '" stroke="' . $farbe . '" stroke-width="' . $breit . '" stroke-linecap="round"/>';
                     if ($l > $best) {
                         $best = $l;
@@ -106,21 +109,21 @@ final class VSCHGrafik
                 }
                 $mx = ($lang[0][0] + $lang[1][0]) / 2 * $s;
                 $my = ($lang[0][1] + $lang[1][1]) / 2 * $s;
-                $bx = $c + $mx + sin($az) * 18;
+                $bx = $cx + $mx + sin($az) * 18;
                 $by = $c - $my - cos($az) * 18;
             } else {
-                $bx = $c + sin($az) * 60;
+                $bx = $cx + sin($az) * 60;
                 $by = $c - cos($az) * 60;
-                $o .= '<line x1="' . self::n($c) . '" y1="' . self::n($c) . '" x2="' . self::n($bx) . '" y2="' . self::n($by) . '" stroke="' . $farbe . '" stroke-width="' . $breit . '"/>';
+                $o .= '<line x1="' . self::n($cx) . '" y1="' . self::n($c) . '" x2="' . self::n($bx) . '" y2="' . self::n($by) . '" stroke="' . $farbe . '" stroke-width="' . $breit . '"/>';
             }
             $o .= '<circle cx="' . self::n($bx) . '" cy="' . self::n($by) . '" r="' . ($i === $auswahl ? 13 : 11) . '" fill="' . $farbe . '" stroke="#ffffff" stroke-width="2"/>'
                 . '<text x="' . self::n($bx) . '" y="' . self::n($by + 4.5) . '" font-size="13" font-weight="600" text-anchor="middle" fill="#ffffff">' . self::kennung($i) . '</text></g>';
         }
         // Nordpfeil und Maßstab (10 m)
-        $o .= '<path d="M' . ($w - 24) . ',14 l7,18 l-7,-5 l-7,5z" fill="#1d211c"/><text x="' . ($w - 24) . '" y="46" font-size="11" font-weight="600" text-anchor="middle" fill="#1d211c">N</text>';
+        $o .= '<path d="M' . ($bw - 24) . ',14 l7,18 l-7,-5 l-7,5z" fill="#1d211c"/><text x="' . ($bw - 24) . '" y="46" font-size="11" font-weight="600" text-anchor="middle" fill="#1d211c">N</text>';
         $o .= '<line x1="14" y1="' . ($w - 16) . '" x2="' . self::n(14 + 10 * $s) . '" y2="' . ($w - 16) . '" stroke="#1d211c" stroke-width="2"/><text x="14" y="' . ($w - 22) . '" font-size="10" fill="#5f665c">10 m</text>';
-        $defs = '<defs><clipPath id="k"><rect width="' . $w . '" height="' . $w . '" rx="8"/></clipPath></defs>';
-        return self::uri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $w . ' ' . $w . '" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">' . $defs . $o . '</svg>');
+        $defs = '<defs><clipPath id="k"><rect width="' . $bw . '" height="' . $w . '" rx="8"/></clipPath></defs>';
+        return self::uri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $bw . ' ' . $w . '" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">' . $defs . $o . '</svg>');
     }
 
     /**
