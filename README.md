@@ -63,6 +63,8 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 - **Raffstores:** Die Lamellen werden so gestellt, dass direkte Sonne gerade nicht durchkommt (Cut-off nach dem Profilwinkel), und erst ab 8° Änderung nachgeführt.
 - **Handbedienung hat Vorrang:** Wer ein Gerät von Hand fährt, hat Ruhe, bis sich die Sonnenlage ändert.
 - **Zurückgefahren** wird nur, was das Modul selbst gefahren hat, und nur bei Tageslicht. Das Schließen in der Dämmerung bleibt beim Nutzer oder einer anderen Automatik.
+- **Was zu ist, bleibt zu:** Steht ein Behang schon weiter unten als nötig (Höhe und Lamellen), bleibt er so und wird später auch nicht hochgefahren.
+- **Schalter je Behang:** „Automatik <Name>“ (Variable und Kachel). Aus → nur noch Notfall und Wetterschutz.
 - **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür. Meldet ein Griff „gekippt“ oder ist die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ gestellt, fährt er höchstens bis zur Lüftungsposition.
 - **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch, auch nachts und bei ausgeschalteter Automatik.
 - **„❓ Warum?“** zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten, ohne dass etwas fährt.

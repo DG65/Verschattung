@@ -217,6 +217,21 @@ $rwO = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 100]] + $GR, $
 check('D56 Regelung ganz offen und noch zu dunkel → Beschatten endet', $rwO['z']['kandidat'] === false);
 $rwK = VSCHLogik::entscheide(['regel' => ['ziel' => 200, 'ist' => 400]] + $GR, ['klima' => 'kuehlen', 'klimaGrund' => 'warm'] + $U, ['soll' => true, 'wir' => true], $T, $t0);
 check('D57 Kühlbedarf: volle Beschattung, keine Helligkeitsregelung', $rwK['ziel'] === 'beschatten' && $rwK['anteil'] === null);
+// Schalter je Behang und „Was zu ist, bleibt zu“ (0.8.0)
+$rw = VSCHLogik::entscheide($G, ['geraetAktiv' => false] + $U, ['soll' => true, 'wir' => true], $T, $t0);
+check('D58 Automatik je Behang aus: nichts fahren', $rw['ziel'] === null && str_contains($rw['grund'], 'Automatik für diesen Behang aus'), $rw['grund']);
+$rw = VSCHLogik::entscheide($G, ['geraetAktiv' => false, 'notfall' => 'Rauchmelder'] + $U, [], $T, $t0);
+check('D59 … aber Notfall fährt ihn trotzdem hoch', $rw['ziel'] === 'offen');
+$GZ = ['beschattung' => 1.0, 'ist' => ['zu' => 1.0, 'lamelle' => 90.0]] + $G;
+$rw = VSCHLogik::entscheide($GZ, $U, ['soll' => true], $T, $t0);
+check('D60 Behang schon ganz zu (Lamellen zu): bleibt so, nicht als eigen gemerkt', $rw['ziel'] === null && $rw['z']['wir'] === false && str_contains($rw['grund'], 'bleibt so'), $rw['grund']);
+$rw2 = VSCHLogik::entscheide(['sonneAn' => false] + $GZ, $U, $rw['z'], $T, $t0 + 2000);
+$rw2 = VSCHLogik::entscheide(['sonneAn' => false] + $GZ, $U, $rw2['z'], $T, $t0 + 4000);
+check('D61 … und wird nach der Sonne nicht hochgefahren (Kinderzimmer)', $rw2['ziel'] === null, json_encode([$rw2['ziel'], $rw2['grund']]));
+$rw = VSCHLogik::entscheide(['beschattung' => 1.0, 'ist' => ['zu' => 0.3, 'lamelle' => 0.0]] + $G, $U, ['soll' => true], $T, $t0);
+check('D62 Behang halb offen: wird beschattet', $rw['ziel'] === 'beschatten' && $rw['z']['wir'] === true);
+$rw = VSCHLogik::entscheide(['typ' => 'rollladen', 'lamellen' => false, 'beschattung' => 0.75, 'ist' => ['zu' => 1.0, 'lamelle' => null]] + $G, $U, ['soll' => true], $T, $t0);
+check('D63 Rollladen ganz zu, Beschattung 75 %: wird nicht auf 75 % hochgefahren', $rw['ziel'] === null);
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -589,6 +604,21 @@ check('G52 IPSView-Seite: nur Anzeige, Hintergrund übernommen', ($hj['bedienbar
 $_GET = [];
 ob_start(); $m->ProcessHookData(); $hh = (string)ob_get_clean();
 check('G53 IPSView-Seite lädt sich jede Minute neu', str_contains($hh, 'setInterval') && str_contains($hh, 'verschattung12345?json=1'));
+// Schalter je Behang als Variable
+$m->ApplyChanges();
+$sid = @IPS_GetObjectIDByIdent('Aktiv601', 12345);
+check('G55 Schalter „Automatik <Name>“ je Behang, neu eingeschaltet', $sid !== false && GetValue($sid) === true && $GLOBALS['OBJ'][$sid]['action'] === true);
+$m->RequestAction('Aktiv601', false);
+$kd2 = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $mm) ? $mm[1] : 'null', true);
+$g601 = array_values(array_filter($kd2['geraete'], fn($g) => $g['schalter'] === 'Aktiv601'))[0] ?? null;
+check('G56 Schalter per RequestAction; Kachel zeigt ihn mit Regeln', GetValue($sid) === false && ($g601['aktiv'] ?? null) === false && str_contains($kd2['regeln'] ?? '', 'Was') === false && ($kd2['regeln'] ?? '') !== '');
+$m->RequestAction('Aktiv601', true);
+$alt = $m->props['Geraete'];
+$m->props['Geraete'] = json_encode(array_values(array_filter(json_decode($alt, true), fn($g) => $g['Position'] !== 601)));
+$m->ApplyChanges();
+check('G57 Behang aus der Liste entfernt → Schalter entfernt', @IPS_GetObjectIDByIdent('Aktiv601', 12345) === false);
+$m->props['Geraete'] = $alt;
+$m->ApplyChanges();
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

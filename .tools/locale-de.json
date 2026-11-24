@@ -345,5 +345,18 @@
     "📱  Tile and IPSView": "📱  Kachel und IPSView",
     "The tile shows the house from above with the sunlit facades, today's sky with sun, horizon and neighbouring buildings, clouds or blue sky from the measured irradiance, and every device with its position and the reason. Tap a device to see the whole decision path. The tile can switch the automatic on and off.": "Die Kachel zeigt das Haus von oben mit den beschienenen Fassaden, den heutigen Himmel mit Sonne, Horizont und Nachbargebäuden, Wolken oder blauen Himmel aus der gemessenen Einstrahlung und jeden Behang mit Stellung und Grund. Ein Tipp auf einen Behang zeigt den ganzen Entscheidungsweg. Auf der Kachel lässt sich die Automatik ein- und ausschalten.",
     "IPSView or browser: create a WebView element and enter http://<Symcon-IP>:3777%s as the address (optionally ?bg=1c1c1e for a background colour). The page refreshes itself every minute and only shows, it does not operate anything.": "IPSView oder Browser: ein WebView-Element anlegen und als Adresse http://<Symcon-IP>:3777%s eintragen (optional ?bg=1c1c1e für eine Hintergrundfarbe). Die Seite aktualisiert sich jede Minute und zeigt nur an, sie bedient nichts.",
-    "heat pump is heating: the sun may warm the house": "Wärmepumpe heizt: Die Sonne darf das Haus wärmen"
+    "heat pump is heating: the sun may warm the house": "Wärmepumpe heizt: Die Sonne darf das Haus wärmen",
+    "Automatic switched off for this device": "Automatik für diesen Behang aus",
+    "Already further closed than needed – stays as it is": "Steht schon weiter unten als nötig – bleibt so",
+    "Automatic %s": "Automatik %s",
+    "auto": "auto",
+    "How the automatic works": "So arbeitet die Automatik",
+    "1. Sun on the facade and irradiance above the threshold – otherwise nothing moves.": "1. Sonne auf der Fassade und Einstrahlung über der Schwelle – sonst fährt nichts.",
+    "2. Room too warm, heat pump cooling or summer outside → shade fully. Heat pump heating, room cool or winter outside → the device stays up, the sun warms the house. In between: glare protection or the target brightness of the room, if set.": "2. Raum zu warm, Wärmepumpe kühlt oder draußen Sommer → voll beschatten. Wärmepumpe heizt, Raum kühl oder draußen Winter → der Behang bleibt oben, die Sonne wärmt das Haus. Dazwischen: Blendschutz oder die Ziel-Helligkeit des Raums, wenn eingestellt.",
+    "3. Already further down than shading needs (height and slats)? The device stays as it is and is not raised later either.": "3. Steht der Behang schon weiter unten, als die Beschattung braucht (Höhe und Lamellen)? Dann bleibt er so und wird auch später nicht hochgefahren.",
+    "4. Moved by hand: the device is left alone until the sun situation changes.": "4. Von Hand gefahren: Der Behang hat Ruhe, bis sich die Sonnenlage ändert.",
+    "5. Only what the module lowered itself is raised again, and only by day. Closing in the evening is up to you.": "5. Hochgefahren wird nur, was das Modul selbst heruntergefahren hat, und nur bei Tag. Abends schließt das Modul nichts.",
+    "6. Door open → not lowered. Window tilted → at most to the ventilation position.": "6. Tür offen → nicht herunter. Fenster gekippt → höchstens bis zur Lüftungsposition.",
+    "7. Switch \"Automatic\" per device: off → the device is left alone. Only emergency and weather protection still move it.": "7. Schalter „Automatik“ je Behang: aus → der Behang hat Ruhe. Nur Notfall und Wetterschutz fahren ihn dann noch.",
+    "8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.": "8. Notfall (Rauchmelder) → alle Behänge hoch. Wind, Regen, Sturm → Markisen und Raffstores fahren ein. Beides immer, auch bei ausgeschalteter Automatik."
 }

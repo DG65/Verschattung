@@ -42,6 +42,12 @@ body{box-sizing:border-box;padding:var(--margin-top,14px) var(--margin-side,14px
 .weg{display:none;font-size:12px;color:var(--fg2);padding:2px 10px 8px 44px;white-space:pre-line}
 .zeile.offen + .weg{display:block}
 .leer{font-size:13px;color:var(--fg2)}
+.mini{flex:none;font:inherit;font-size:11px;color:var(--fg2);background:transparent;border:1px solid var(--rand);border-radius:10px;padding:2px 8px;cursor:pointer}
+.mini.an{color:#b26a00;background:var(--sonnebg);border-color:transparent}
+.mini:disabled{opacity:.5;cursor:default}
+.zeile.aus .name,.zeile.aus .sym{opacity:.5}
+.info{font-size:12px;color:var(--fg2);background:var(--fl);border-radius:10px;padding:8px 12px;white-space:pre-line;line-height:1.5}
+.infoknopf{font:inherit;font-size:12px;color:var(--fg2);background:transparent;border:0;padding:0;cursor:pointer;text-align:left}
 </style>
 </head>
 <body>
@@ -49,6 +55,7 @@ body{box-sizing:border-box;padding:var(--margin-top,14px) var(--margin-side,14px
 <script>
 var daten = null;
 var offen = {};
+var infoOffen = false;
 
 function T(k) { return (daten && daten.texte && daten.texte[k]) || k; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
@@ -57,6 +64,10 @@ function zahl(v, n) { return v == null ? '–' : Number(v).toLocaleString(undefi
 // Kachel: requestAction an die Instanz. IPSView-Seite: keine Bedienung.
 function automatik() {
   if (typeof requestAction === 'function' && daten) { requestAction('Automatik', !daten.automatik); }
+}
+function geraetSchalten(i) {
+  var g = daten && daten.geraete[i];
+  if (g && typeof requestAction === 'function') { requestAction(g.schalter, !g.aktiv); }
 }
 
 // Himmel je Zustand: Farbverlauf, Wolken, Regen, Sterne
@@ -192,13 +203,24 @@ function zeichnen() {
   o += '<div class="liste">';
   if (!(daten.geraete || []).length) { o += '<div class="leer">' + esc(T('No device assigned')) + '</div>'; }
   (daten.geraete || []).forEach(function (g, i) {
-    o += '<div class="zeile' + (offen[i] ? ' offen' : '') + '" data-i="' + i + '">' + symbol(g)
+    o += '<div class="zeile' + (offen[i] ? ' offen' : '') + (g.aktiv === false ? ' aus' : '') + '" data-i="' + i + '">' + symbol(g)
       + '<div class="txt"><div class="name">' + esc(g.name) + '</div><div class="grund">' + esc(g.grund) + '</div></div>'
-      + '<div class="prozent">' + (g.zu == null ? '' : Math.round(g.zu * 100) + ' %') + '</div></div>'
+      + '<div class="prozent">' + (g.zu == null ? '' : Math.round(g.zu * 100) + ' %') + '</div>'
+      + '<button class="mini' + (g.aktiv === false ? '' : ' an') + '" data-s="' + i + '"' + (daten.bedienbar ? '' : ' disabled') + ' title="' + esc(T('Automatic')) + '">'
+      + esc(g.aktiv === false ? T('off') : T('auto')) + '</button></div>'
       + '<div class="weg">' + esc((g.weg || []).join('\n')) + '</div>';
   });
   o += '</div>';
+  if (daten.regeln) {
+    o += '<button class="infoknopf" id="info">ℹ️ ' + esc(T('How the automatic works')) + (infoOffen ? ' ▴' : ' ▾') + '</button>';
+    if (infoOffen) { o += '<div class="info">' + esc(daten.regeln) + '</div>'; }
+  }
   k.innerHTML = o;
+  var ib = document.getElementById('info');
+  if (ib) { ib.onclick = function () { infoOffen = !infoOffen; zeichnen(); }; }
+  Array.prototype.forEach.call(k.querySelectorAll('.mini'), function (b) {
+    b.onclick = function (e) { e.stopPropagation(); geraetSchalten(b.getAttribute('data-s')); };
+  });
   var b = document.getElementById('auto');
   if (b) { b.onclick = automatik; }
   Array.prototype.forEach.call(k.querySelectorAll('.zeile'), function (z) {
@@ -226,8 +248,10 @@ function handleMessage(nachricht) {
   var neu = typeof nachricht === 'string' ? JSON.parse(nachricht) : nachricht;
   if (!neu) { return; }
   var texte = daten && daten.texte;
+  var regeln = daten && daten.regeln;
   daten = neu;
   if (!daten.texte && texte) { daten.texte = texte; }
+  if (!daten.regeln && regeln) { daten.regeln = regeln; }
   hintergrund(daten.bg);
   zeichnen();
 }

@@ -137,6 +137,9 @@ class IPSModule
         if ($keep && $id === false) {
             mkvar($GLOBALS['NEXT']++, $type, [false, 0, 0.0, ''][$type], $name, $this->InstanceID, false, $profile, $ident);
         }
+        if (!$keep && $id !== false) {
+            unset($GLOBALS['OBJ'][$id]);
+        }
     }
     public function EnableAction(string $ident): void { $id = @IPS_GetObjectIDByIdent($ident, $this->InstanceID); if ($id !== false) { $GLOBALS['OBJ'][$id]['action'] = true; } }
     public function SetValue(string $ident, $v): void { $GLOBALS['OBJ'][IPS_GetObjectIDByIdent($ident, $this->InstanceID)]['value'] = $v; }

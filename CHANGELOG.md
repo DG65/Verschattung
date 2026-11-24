@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 (in Entwicklung)
+
+- **„Was zu ist, bleibt zu“** (Dietmar 24.11., Kinderzimmer): Steht ein Behang schon weiter unten, als die Beschattung verlangt (Höhe und Lamellen), fährt das Modul ihn nicht – vorher hätte es einen ganz geschlossenen Rollladen auf 75 % hochgefahren und geschlossene Lamellen geöffnet. Es merkt ihn auch nicht als eigenen und fährt ihn deshalb nach der Sonne nicht hoch. Öffnet ihn jemand, gilt wieder die normale Automatik.
+- **Schalter „Automatik“ je Behang:** Variable „Automatik <Name>“ unter der Instanz (für Visualisierung, IPSView, Skripte, Szenen) und ein Schalter „auto/aus“ in jeder Kachelzeile. Aus → der Behang hat Ruhe; nur Notfall und Wetterschutz fahren ihn dann noch. Schalter entfernter Behänge verschwinden.
+- **„So arbeitet die Automatik“**: dieselben acht Regeln in der Kachel (aufklappbar) und im Formular unter „Dokumentation & Hilfe“, damit niemand etwas sucht, was es nicht gibt.
+
+
 ## 0.7.2 (in Entwicklung)
 
 - **Behoben:** 0.7.1 brach mit „end(): Argument #1 could not be passed by reference“ ab, sobald ein Behang noch keinen Grund hatte (frisch angelegte Instanz, Behang an inaktiver Fassade). Betroffen waren Kachel, IPSView-Seite und – bei solchen Behängen – auch der Regeltakt. Live-Befund 24.11. 21:52; neuer Test G54 deckt den Fall ab.

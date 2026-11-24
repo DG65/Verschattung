@@ -122,6 +122,7 @@ class Verschattung extends IPSModule
             $this->SetValue('Automatik', true); // nur beim Anlegen: danach entscheidet der Nutzer
         }
         $this->MaintainVariable('Status', $this->t('Status'), VARIABLETYPE_STRING, '', 2, true);
+        $this->schalterJeBehang();
 
         foreach ($this->GetMessageList() as $sender => $msgs) {
             foreach ($msgs as $m) {
@@ -152,6 +153,11 @@ class Verschattung extends IPSModule
 
     public function RequestAction($Ident, $Value)
     {
+        if (preg_match('/^Aktiv\d+$/', (string)$Ident)) {
+            $this->SetValue($Ident, (bool)$Value); // Automatik je Behang (Variable, Kachel, IPSView-Skript)
+            $this->Tick();
+            return;
+        }
         if ($Ident === 'Automatik') {
             $this->SetValue('Automatik', (bool)$Value);
             $this->Tick();
@@ -313,7 +319,10 @@ class Verschattung extends IPSModule
             ];
             $zielLux = (int)$g['ZielLux'] > 0 ? (float)$g['ZielLux'] : $this->ReadPropertyFloat('ZielLux');
             $istLux = $zielLux > 0 ? $this->lux((int)$g['RaumHell']) : null;
+            [$istZu, $istLam] = $this->istStellung($g);
+            $u['geraetAktiv'] = $this->geraetAktiv($g);
             $ger = ['typ' => $g['Typ'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
+                'beschattung' => $g['Beschattung'] / 100, 'ist' => ['zu' => $istZu, 'lamelle' => $istLam],
                 'regel' => $istLux !== null ? ['ziel' => $zielLux, 'ist' => $istLux] : null];
             $r = VSCHLogik::entscheide($ger, $u, (array)($z[$k] ?? []), $zeiten, $now);
             $wege[$g['Name']] = $r['weg'];
@@ -378,6 +387,71 @@ class Verschattung extends IPSModule
      * Scheint die Sonne? Einstrahlung (W/m², Lux umgerechnet) gegen SonneAn/SonneAus mit Hysterese.
      * Rückgabe [?bool, Begründung wenn zu wenig]; ohne Sensor [null, ''] (dann zählt nur die Geometrie).
      */
+    /** „So arbeitet die Automatik“ – dieselben Regeln in Kachel und Formular, damit niemand etwas sucht, was es nicht gibt. */
+    private function regelnText(): string
+    {
+        return implode("\n", [
+            $this->t('1. Sun on the facade and irradiance above the threshold – otherwise nothing moves.'),
+            $this->t('2. Room too warm, heat pump cooling or summer outside → shade fully. Heat pump heating, room cool or winter outside → the device stays up, the sun warms the house. In between: glare protection or the target brightness of the room, if set.'),
+            $this->t('3. Already further down than shading needs (height and slats)? The device stays as it is and is not raised later either.'),
+            $this->t('4. Moved by hand: the device is left alone until the sun situation changes.'),
+            $this->t('5. Only what the module lowered itself is raised again, and only by day. Closing in the evening is up to you.'),
+            $this->t('6. Door open → not lowered. Window tilted → at most to the ventilation position.'),
+            $this->t('7. Switch "Automatic" per device: off → the device is left alone. Only emergency and weather protection still move it.'),
+            $this->t('8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.'),
+        ]);
+    }
+
+    /**
+     * Je Behang ein Schalter „Automatik <Name>“ (Ident Aktiv<Positions-ID>), neu angelegt eingeschaltet.
+     * Schalter von Behängen, die nicht mehr in der Liste stehen, werden entfernt (eigene Variablen der Instanz).
+     */
+    private function schalterJeBehang(): void
+    {
+        $soll = [];
+        foreach ($this->geraete() as $i => $g) {
+            if ($g['Position'] <= 0) {
+                continue;
+            }
+            $ident = 'Aktiv' . $g['Position'];
+            $soll[$ident] = true;
+            $neu = @$this->GetIDForIdent($ident) === false;
+            $this->MaintainVariable($ident, $this->t('Automatic %s', $g['Name']), VARIABLETYPE_BOOLEAN, '~Switch', 10 + $i, true);
+            $this->EnableAction($ident);
+            if ($neu) {
+                $this->SetValue($ident, true);
+            }
+        }
+        foreach (IPS_GetChildrenIDs($this->InstanceID) as $c) {
+            $ident = (string)(IPS_GetObject($c)['ObjectIdent'] ?? '');
+            if (preg_match('/^Aktiv\d+$/', $ident) && !isset($soll[$ident])) {
+                $this->MaintainVariable($ident, '', VARIABLETYPE_BOOLEAN, '', 0, false);
+            }
+        }
+    }
+
+    /** Ist die Automatik für diesen Behang eingeschaltet? (ohne Schalter: ja) */
+    private function geraetAktiv(array $g): bool
+    {
+        $id = @$this->GetIDForIdent('Aktiv' . $g['Position']);
+        return $id === false || (bool)GetValue($id);
+    }
+
+    /** Stellung jetzt: [Anteil zu 0..1 oder null, Lamellen 0..90° oder null]. */
+    private function istStellung(array $g): array
+    {
+        $max = $this->maxWert($g['Position']);
+        $v = (float)GetValue($g['Position']);
+        $zu = $max > 0 ? max(0.0, min(1.0, $this->nullIstOffen($g) ? $v / $max : 1 - $v / $max)) : null;
+        $lam = null;
+        if ($g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
+            $lm = $this->maxWert($g['Lamelle']);
+            $lv = (float)GetValue($g['Lamelle']);
+            $lam = $lm > 0 ? ($g['LamelleUmgekehrt'] ? 90 * (1 - $lv / $lm) : 90 * $lv / $lm) : null;
+        }
+        return [$zu, $lam];
+    }
+
     private function hell(array &$z): array
     {
         $w = $this->wm2($this->ReadPropertyInteger('HelligkeitID'));
@@ -1281,6 +1355,8 @@ class Verschattung extends IPSModule
         }
         $elements[] = ['type' => 'Button', 'caption' => '🧭 Start setup assistant', 'onClick' => 'VSCH_UIAssistentOeffnen($id);'];
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📖  Documentation & help', 'items' => [
+            ['type' => 'Label', 'caption' => 'ℹ️ ' . $this->t('How the automatic works')],
+            ['type' => 'Label', 'caption' => $this->regelnText()],
             ['type' => 'Label', 'caption' => 'Easiest way: the setup assistant guides you through location, house, devices, test run, weather protection and when to shade. You only choose the facade for each device.'],
             ['type' => 'Label', 'caption' => 'Manual operation has priority: if you move a device by hand, the module leaves it alone until the sun situation changes.'],
             ['type' => 'Label', 'caption' => 'The module only moves back what it has moved itself, and only in daylight. Closing at dusk stays with you or another automation.'],

@@ -167,21 +167,16 @@ trait VSCHKachel
             if ($g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
                 continue;
             }
-            $max = $this->maxWert($g['Position']);
-            $v = (float)GetValue($g['Position']);
-            $zu = $max > 0 ? ($this->nullIstOffen($g) ? $v / $max : 1 - $v / $max) : null;
-            $lam = null;
-            if ($g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
-                $lm = $this->maxWert($g['Lamelle']);
-                $lv = (float)GetValue($g['Lamelle']);
-                $lam = $lm > 0 ? round($g['LamelleUmgekehrt'] ? 90 * (1 - $lv / $lm) : 90 * $lv / $lm) : null;
-            }
-            $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'zu' => $zu === null ? null : round(max(0, min(1, $zu)), 2),
+            [$zu, $lam] = $this->istStellung($g);
+            $lam = $lam === null ? null : round($lam);
+            $daten['geraete'][] = ['name' => $g['Name'], 'typ' => $g['Typ'], 'zu' => $zu === null ? null : round($zu, 2),
+                'schalter' => 'Aktiv' . $g['Position'], 'aktiv' => $this->geraetAktiv($g),
                 'lamelle' => $lam, 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
                 'weg' => $wege[$g['Name']] ?? []];
         }
         if ($mitTexten) {
             $daten['texte'] = $this->kachelTexte();
+            $daten['regeln'] = $this->regelnText();
         }
         return $daten;
     }
@@ -209,6 +204,8 @@ trait VSCHKachel
             'twilight' => $this->t('twilight'),
             'night' => $this->t('night'),
             'no sensor' => $this->t('no sensor'),
+            'auto' => $this->t('auto'),
+            'How the automatic works' => $this->t('How the automatic works'),
         ];
     }
 

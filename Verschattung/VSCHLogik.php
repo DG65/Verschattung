@@ -103,6 +103,11 @@ final class VSCHLogik
             return $fertig(null, null, VSCHText::t('Not moving: %s', (string)($u['wetter']['grund'] ?? '')), $z);
         }
 
+        // Automatik für dieses Gerät aus (Schalter je Behang): nur Notfall und Wetterschutz oben fahren es noch
+        if (($u['geraetAktiv'] ?? true) === false) {
+            return $fertig(null, null, VSCHText::t('Automatic switched off for this device'), $z);
+        }
+
         // 2. Wunsch: Der Behang ist die günstigste Heizung und Kühlung des Raums.
         //    Heizbedarf → Sonne herein; Kühlbedarf → voll beschatten; neutral → nur Blendschutz (Tiefe), sonst offen.
         $wunsch = (bool)$g['sonneAn'];
@@ -208,6 +213,16 @@ final class VSCHLogik
                     $anteil = min($anteil ?? 1.0, $r['anteil']);
                 }
                 $weg[] = $r['text'];
+            }
+            // „Was zu ist, bleibt zu“ (Dietmar 24.11., Kinderzimmer): Steht der Behang schon weiter unten als die Beschattung
+            // verlangt (Höhe und Lamellen), fährt das Modul ihn nicht – und merkt ihn nicht als eigenen, fährt ihn also später
+            // auch nicht hoch. Gilt nur, solange das Modul ihn nicht selbst gefahren hat.
+            if (!$z['wir'] && is_array($g['ist'] ?? null) && $g['ist']['zu'] !== null) {
+                $ziel = min((float)($g['beschattung'] ?? 1.0), $anteil ?? 1.0);
+                $istLam = $g['ist']['lamelle'] ?? null;
+                if ((float)$g['ist']['zu'] >= $ziel - 0.03 && ($lamelle === null || $istLam === null || (float)$istLam >= $lamelle - 5)) {
+                    return $fertig(null, null, VSCHText::t('Already further closed than needed – stays as it is'), $z);
+                }
             }
             return $fertig('beschatten', $lamelle, $warum, ['wir' => true] + $z, $anteil);
         }
