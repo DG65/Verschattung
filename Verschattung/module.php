@@ -100,6 +100,7 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('HeizGrenze', 21);
         $this->RegisterPropertyInteger('Heizung', 0); // 0 unbekannt · 1 Heizkörper (schnell) · 2 Fußbodenheizung (träge) · 3 gemischt – für Abnehmer der Sonnenwärme (Vertrag shading)
         $this->RegisterPropertyFloat('GWert', 0.5);
+        $this->RegisterPropertyInteger('NachtMorgen', 420); // Nachtfunktion: morgens frühestens (Minuten nach Mitternacht), 0 = mit der Sonne
         $this->RegisterPropertyInteger('AnwesenheitID', 0); // leer: „Simulation aktiv“ der Anwesenheitssimulation, falls installiert
         $this->RegisterPropertyInteger('AnwesenheitArt', 0); // 0: true = jemand zu Hause · 1: true = niemand zu Hause // Gesamtenergiedurchlass der Verglasung: 2-fach 0,6 · 3-fach 0,5 · Sonnenschutzglas 0,35
         $this->RegisterPropertyInteger('WPModusID', 0);
@@ -342,7 +343,8 @@ class Verschattung extends IPSModule
         }
         $hell = $this->hell($z);
         // Nacht für die Nachtfunktion: unter −4° dunkel, morgens erst ab 2° wieder Tag (kein Flattern in der Dämmerung)
-        $nacht = $sonne['alt'] < -4 || ((bool)($z['_nacht'] ?? false) && $sonne['alt'] < 2);
+        $minute = (int)date('G', $now) * 60 + (int)date('i', $now);
+        $nacht = $sonne['alt'] < -4 || ((bool)($z['_nacht'] ?? false) && ($sonne['alt'] < 2 || $minute < $this->ReadPropertyInteger('NachtMorgen')));
         if (!$probe) {
             $z['_nacht'] = $nacht;
         }
@@ -1635,7 +1637,10 @@ class Verschattung extends IPSModule
         foreach ($this->geraete() as $g) {
             $s = (array)($z[$g['key']] ?? []);
             $out[] = ['name' => $g['Name'], 'facade' => $g['Fassade'], 'type' => $g['Typ'], 'positionID' => $g['Position'],
-                'shading' => (bool)($s['soll'] ?? false), 'manual' => ($s['hand'] ?? null) !== null, 'reason' => (string)($s['grund'] ?? ''),
+                // shading: die Verschattung hält diesen Behang gerade wirklich gegen die Sonne – nur mit eingeschalteter Automatik
+                // (gesamt und je Behang) und ohne Handbedienung; Abnehmer (Automat) überlassen ihr dann das Öffnen
+                'shading' => (bool)($s['soll'] ?? false) && (bool)$this->GetValue('Automatik') && $this->geraetAktiv($g) && ($s['hand'] ?? null) === null,
+                'manual' => ($s['hand'] ?? null) !== null, 'reason' => (string)($s['grund'] ?? ''),
                 'gainNowW' => $heute && isset($w['jetzt']) ? (int)round((float)($w['jeJetzt'][$g['key']] ?? 0)) : null,
                 'gainTodayWh' => $heute ? (int)round((float)($w['je'][$g['key']] ?? 0)) : null,
                 'fault' => isset($s['stoerung']['text']) ? (string)$s['stoerung']['text'] : null,
@@ -2265,6 +2270,11 @@ class Verschattung extends IPSModule
             $felder[] = ['type' => 'CheckBox', 'name' => 'WHeisha', 'caption' => '', 'value' => false, 'visible' => false]; // Feld immer da, onConfirm liest es
         }
         if (!$a) {
+            $felder[] = ['type' => 'Label', 'caption' => '🌙 ' . $this->t('At night (column "At night")')];
+            $felder[] = ['type' => 'Select', 'name' => 'NachtMorgen', 'caption' => $this->t('Open in the morning at the earliest'), 'width' => '600px', 'options' => array_merge(
+                [['caption' => $this->t('with the sun'), 'value' => 0]],
+                array_map(fn($m) => ['caption' => sprintf('%02d:%02d', intdiv($m, 60), $m % 60), 'value' => $m], range(300, 600, 30)))];
+            $felder[] = ['type' => 'Label', 'caption' => $this->t('Devices closed by the night function open again in the morning when the sun is up and not before this time – so bedrooms stay dark.')];
             $felder[] = ['type' => 'Label', 'caption' => '🏖 ' . $this->t('Away / holiday')];
             $felder[] = ['type' => 'SelectVariable', 'name' => 'AnwesenheitID', 'caption' => $this->t('Presence (optional)'), 'width' => '600px'];
             $felder[] = ['type' => 'Select', 'name' => 'AnwesenheitArt', 'caption' => $this->t('The variable means'), 'width' => '600px', 'options' => [

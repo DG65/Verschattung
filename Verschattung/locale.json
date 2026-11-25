@@ -422,7 +422,11 @@
             "Back to automatic": "Zurück zur Automatik",
             "Unknown scene: %s": "Unbekannte Szene: %s",
             "%s: %d devices": "%s: %d Behänge",
-            "left out (door open): %s": "ausgelassen (Tür offen): %s"
+            "left out (door open): %s": "ausgelassen (Tür offen): %s",
+            "At night (column \"At night\")": "Nachts (Spalte „Nachts“)",
+            "Open in the morning at the earliest": "Morgens frühestens öffnen",
+            "with the sun": "mit der Sonne",
+            "Devices closed by the night function open again in the morning when the sun is up and not before this time – so bedrooms stay dark.": "Was die Nachtfunktion geschlossen hat, öffnet morgens, wenn die Sonne da ist – aber nicht vor dieser Uhrzeit, damit Schlafzimmer dunkel bleiben."
         }
     }
 }

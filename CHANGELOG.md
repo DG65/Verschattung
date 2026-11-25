@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.1 (in Entwicklung)
+
+- **Nachtfunktion: „Morgens frühestens öffnen“** (Feinheiten, Vorgabe 07:00, wählbar „mit der Sonne“ oder 05:00–10:00): Was die Nachtfunktion geschlossen hat, öffnet morgens erst, wenn die Sonne da ist **und** die Uhrzeit erreicht ist – Schlafzimmer bleiben dunkel. Anlass: Abstimmung mit DG65-Toolkit Automat (Typ „Rollladen“ hat schon „frühestens“).
+- **`VSCH_GetState`: `devices[].shading` genauer** – nur noch wahr, wenn die Verschattung den Behang gerade wirklich beschattet (Automatik gesamt und je Behang an, keine Handbedienung). Automat überlässt solchen Behängen morgens das Öffnen und holt es nach, sobald `shading` auf falsch wechselt.
+
+
 ## 0.17.0 (in Entwicklung)
 
 - **Szenen-Tasten (Idee 6):** auf der Kachel „Alle auf“, „Alle zu“, „Lüften“, „Automatik“, im Skript `VSCH_Szene($id, 'auf'|'zu'|'lueften'|'automatik')`. Eine Szene wirkt wie eine Handbedienung (Ruhe bis zum nächsten Sonnenwechsel, Nachtfunktion ruht bis morgen), „Automatik“ gibt die Behänge sofort zurück. Offene Türen werden nicht zugefahren (Aussperrschutz), Markisen fahren nur ein, Notfall und Wetterschutz gehen vor; der Gerätewächter prüft auch Szenen-Fahrten.

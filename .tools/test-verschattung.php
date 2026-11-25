@@ -754,6 +754,10 @@ $GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick();
 $zuN = GetValue(601); $lamN = GetValue(602);
 $GLOBALS['CLOCK'] = ts('2026-12-11 10:00'); $m->Tick();
 check('G70 Regeltakt: Winternacht → Raffstore ganz zu mit Lamellen zu; Morgen → wieder auf', $zuN === 100 && $lamN === 100 && GetValue(601) === 0, json_encode([$zuN, $lamN, GetValue(601)]));
+$GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick(); $m->props['NachtMorgen'] = 660; // 11:00
+$GLOBALS['CLOCK'] = ts('2026-12-11 10:00'); $m->Tick(); $frueh = GetValue(601);
+$GLOBALS['CLOCK'] = ts('2026-12-11 11:05'); $m->Tick(); $spaet = GetValue(601); $m->props['NachtMorgen'] = 420;
+check('G70b „Morgens frühestens 11:00“: um 10:00 noch zu, nach 11:00 auf', $frueh === 100 && $spaet === 0, json_encode([$frueh, $spaet]));
 [$m->props['Geraete'], $m->props['TemperaturID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherN, 0, 4);
 SetValue(601, $sicherN[4]); SetValue(602, $sicherN[5]);
 // HeishaMon-Abfrage (1.46.0): Hinweis + Schalter nur, wenn dort verfügbar und aus; Einschalten nur über dessen Schaltvariable
