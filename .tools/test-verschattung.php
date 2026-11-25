@@ -1289,6 +1289,73 @@ $ff = json_decode($m->GetConfigurationForm(), true);
 check('J50 ohne Station in WarnHub: Felder sichtbar', ($sicht($ff, 'WindID')['visible'] ?? true) !== false && ($sicht($ff, 'WarnHubDeckt')['visible'] ?? true) === false);
 
 // ---------------------------------------------------------------------------
+heading('K Formular-Konvention (SUITE.md Formular-Optik)');
+$cap = function (array $f, string $name) {
+    foreach ($f['elements'] as $e) {
+        if (($e['name'] ?? '') === $name) {
+            return $e;
+        }
+    }
+    return null;
+};
+$capsE = fn(array $f) => array_map(fn($e) => $e['caption'] ?? '', $f['elements']);
+$m->attrs['SeenNews'] = '';
+$m->attrs['ForumHintGone'] = false;
+$m->props['FormLayout'] = '[]';
+$fk = json_decode($m->GetConfigurationForm(), true);
+$news = $cap($fk, 'NewsPanel');
+check('K1 Neu-Panel sichtbar, aufgeklappt, neueste Version in der Überschrift', $news !== null && ($news['expanded'] ?? false) === true && strpos(VSCHText::t($news['caption']), '0.18.0') !== false, $news['caption'] ?? '-');
+$ce = $capsE($fk);
+$iNews = array_search('NewsPanel', array_map(fn($e) => $e['name'] ?? '', $fk['elements']), true);
+$iDoku = array_search('📖  Documentation & help', $ce, true);
+check('K2 Reihenfolge oben: Wozu, Neu, Doku', $iNews === 1 && $iDoku === 2, "$iNews/$iDoku");
+$doku = $fk['elements'][$iDoku];
+check('K3 Doku eingeklappt mit Versionsnummer und Forum-Link', empty($doku['expanded']) && strpos(json_encode($doku, JSON_UNESCAPED_UNICODE), '0.18.0') !== false && strpos(json_encode($doku), '145044') !== false);
+$n = count($ce);
+check('K4 unten: Aufbau, Rückmeldungen, Über dieses Modul', strpos($ce[$n - 3], 'Form: layout') !== false && $ce[$n - 2] === '💬  Feedback' && $ce[$n - 1] === '🧡  About this module', implode(' | ', array_slice($ce, -3)));
+$lic = json_encode($fk['elements'][$n - 1], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+check('K5 Über dieses Modul: eingeklappt, ohne Namen, Lizenz-, PayPal-Link, Kontakt', empty($fk['elements'][$n - 1]['expanded']) && !isset($fk['elements'][$n - 1]['name'])
+    && strpos($lic, 'Verschattung/blob/beta/LICENSE') !== false && strpos($lic, 'paypal.me/DietmarGureth') !== false && strpos($lic, 'dietmar@gureth.eu') !== false);
+check('K6 altes Lizenz-Panel entfernt', strpos(json_encode($fk, JSON_UNESCAPED_UNICODE), '⚖️') === false);
+$m->AckNews();
+check('K7 „Verstanden“ merkt die installierte Version und blendet aus', $m->attrs['SeenNews'] === '0.18.0' && $cap(json_decode($m->GetConfigurationForm(), true), 'NewsPanel') === null);
+$m->attrs['SeenNews'] = '0.17.5';
+$news = $cap(json_decode($m->GetConfigurationForm(), true), 'NewsPanel');
+$nt = json_encode($news, JSON_UNESCAPED_UNICODE);
+check('K8 nur die Lücke: ab 0.17.6, nicht 0.17.5', strpos($nt, 'Version 0.17.6:') !== false && strpos($nt, 'Version 0.18.0:') !== false && strpos($nt, 'Version 0.17.5:') === false);
+$m->AckForumHint();
+check('K9 Forum-Hinweis einmal wegklickbar', $m->attrs['ForumHintGone'] === true && !in_array('💬  Feedback', $capsE(json_decode($m->GetConfigurationForm(), true)), true));
+// Aufbau: Wetter nach vorn, Haus zu, Notfall aus, Vorschau aufgeklappt, unbekannter Schlüssel egal
+$m->props['FormLayout'] = json_encode([
+    ['Key' => 'wetter', 'Pos' => 1], ['Key' => 'standort', 'Pos' => 2], ['Key' => 'haus', 'Closed' => true, 'Pos' => 3],
+    ['Key' => 'notfall', 'Hidden' => true, 'Closed' => true, 'Pos' => 4], ['Key' => 'vorschau', 'Opened' => true, 'Pos' => 1], ['Key' => 'gibtsnicht', 'Hidden' => true],
+]);
+$fl = json_decode($m->GetConfigurationForm(), true);
+$ce = $capsE($fl);
+$iW = array_search('🌬️  Weather protection', $ce, true);
+$iS = array_search('📍  Location & map data', $ce, true);
+$iH = array_search('🏠  My house', $ce, true);
+$iN = array_search('🔥  Emergency', $ce, true);
+check('K10 Reihenfolge nach Position', $iW !== false && $iW < $iS && $iS < $iH && $iH < $iN, "$iW/$iS/$iH/$iN");
+check('K11 zugeklappt wirkt', ($fl['elements'][$iH]['expanded'] ?? null) === false);
+check('K12 ausgeblendet = visible:false, Felder bleiben, Ausgeblendet vor Zugeklappt', ($fl['elements'][$iN]['visible'] ?? true) === false && strpos(json_encode($fl['elements'][$iN]), 'Notfall') !== false);
+$ca = array_map(fn($e) => $e['caption'] ?? '', $fl['actions']);
+$iV = array_search('☀️  Preview', $ca, true);
+$iSch = array_search('⏯️  Automatic per device', $ca, true);
+check('K13 actions: Position innerhalb der Aktionen, aufgeklappt wirkt', $iV !== false && $iV < $iSch && ($fl['actions'][$iV]['expanded'] ?? false) === true, "$iV/$iSch");
+$lay = $fl['elements'][count($fl['elements']) - 2];
+check('K14 Aufbau-Panel zählt Ausgeblendete und nennt sie', strpos($lay['caption'], '1 ausgeblendet') !== false && strpos(json_encode($lay, JSON_UNESCAPED_UNICODE), 'Notfall') !== false, $lay['caption']);
+$liste = null;
+foreach ($lay['items'] as $x) { if (($x['name'] ?? '') === 'FormLayout') { $liste = $x; } }
+check('K15 Liste: alle neun Fachpanels, Aktionen gekennzeichnet, Schlüssel gespeichert', $liste !== null && count($liste['values']) === 9 && strpos(json_encode($liste['values'], JSON_UNESCAPED_UNICODE), 'unten bei den Aktionen') !== false && $liste['columns'][1]['save'] === true);
+$m->fieldUpdates = [];
+$r = $m->ResetFormLayout();
+$rows = null;
+foreach ($m->fieldUpdates as $u) { if ($u[0] === 'FormLayout' && $u[1] === 'values') { $rows = json_decode($u[2], true); } }
+check('K16 Zurücksetzen: Standardliste per UpdateFormField, Hinweis auf „Übernehmen“', is_array($rows) && count($rows) === 9 && $rows[0]['Key'] === 'standort' && $rows[8]['Pos'] === 9 && strpos($r, 'Übernehmen') !== false);
+$m->props['FormLayout'] = '[]';
+$m->attrs['ForumHintGone'] = false;
+
 heading('H Übersetzung und Formularregeln');
 $code = (string)file_get_contents($root . '/Verschattung/module.php');
 check('H1 kein IPS_SetProperty/IPS_ApplyChanges', !preg_match('/IPS_SetProperty|IPS_ApplyChanges/', $code));
@@ -1304,6 +1371,11 @@ foreach (glob($root . '/Verschattung/*.php') as $datei) {
         if ($t !== '' && preg_match('/[a-z]/i', $t)) {
             $texte[$t] = true;
         }
+    }
+}
+foreach ((new ReflectionClassConstant('Verschattung', 'NEWS_VERSIONS'))->getValue() as $zeilen) {
+    foreach ($zeilen as $z) {
+        $texte[$z] = true;
     }
 }
 $fehlt = array_values(array_filter(array_keys($texte), fn($t) => !isset($GLOBALS['DE'][$t])));

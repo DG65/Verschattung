@@ -73,8 +73,27 @@ class Verschattung extends IPSModule
     /** Ein Befehl gilt als verloren, wenn das Gerät so lange danach nicht in der Nähe des Ziels steht (s); dann einmal wiederholen. */
     private const NACHKONTROLLE_S = 300;
 
-    // „Neu bis Version“: erst ab der ersten veröffentlichten Version gepflegt.
-    private const NEWS_VERSIONS = [];
+    // „Neu bis Version“ (SUITE.md Formular-Optik 1): Schlüssel = Version ohne Suffix, Zeilen englisch (Deutsch in locale.json).
+    // Gepflegt ab der Veröffentlichung im Forum (0.17.5); davor steht die Geschichte im CHANGELOG.
+    private const NEWS_VERSIONS = [
+        '0.17.5' => [
+            '🧭 Setup assistant: entries are kept when you go back a page.',
+        ],
+        '0.17.6' => [
+            '💬 Forum thread for questions, wishes and bugs (link under "Documentation & help").',
+        ],
+        '0.18.0' => [
+            '🆕 This panel: what is new since the last update. "Got it" hides it until the next version.',
+            '🪟 New: choose the form layout yourself – which areas are expanded, collapsed or hidden and in which order ("Form: layout" at the bottom).',
+            'ℹ️ The version number is now always shown under "Documentation & help".',
+        ],
+    ];
+    private const LIBRARY_GUID = '{AC9C6695-857A-40BE-B770-13C510985906}';
+    private const REPO_URL = 'https://github.com/DG65/Verschattung';
+    private const PAYPAL_URL = 'https://paypal.me/DietmarGureth';
+    // Fachpanels für „Formular: Aufbau“ (SUITE.md 3a): stabiler Schlüssel → Bereich (elements/actions)
+    private const LAYOUT_KEYS = ['standort' => 'e', 'haus' => 'e', 'wetter' => 'e', 'notfall' => 'e', 'feinheiten' => 'e', 'kachel' => 'e',
+        'schalter' => 'a', 'probe' => 'a', 'vorschau' => 'a'];
 
     public function __construct($InstanceID)
     {
@@ -91,6 +110,7 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyString('Standort', '{"latitude":0,"longitude":0}');
         $this->RegisterPropertyString('Fassaden', '[]');
         $this->RegisterPropertyString('Geraete', '[]');
+        $this->RegisterPropertyString('FormLayout', '[]');
         $this->RegisterPropertyInteger('HelligkeitID', 0);
         $this->RegisterPropertyFloat('HellAn', 25000);
         $this->RegisterPropertyFloat('HellAus', 12000);
@@ -136,6 +156,8 @@ class Verschattung extends IPSModule
         $this->RegisterAttributeInteger('RegenSeit', 0);
         $this->RegisterAttributeString('NetzBoe', '{}');
         $this->RegisterAttributeBoolean('PurposeIntroGone', false);
+        $this->RegisterAttributeString('SeenNews', '');
+        $this->RegisterAttributeBoolean('ForumHintGone', false);
         $this->RegisterAttributeString('AssistentEntwurf', '{}');
         $this->RegisterAttributeString('Verlauf', '[]'); // heute je 10 min: [Zeit, W/m², beschattete Behänge] für das Tagesband der Kachel
 
@@ -1756,6 +1778,32 @@ class Verschattung extends IPSModule
         $this->UpdateFormField('PurposeIntroPanel', 'visible', false);
     }
 
+    /** „Verstanden“ im Neu-Panel: merkt die installierte Version (ohne Suffix). */
+    public function AckNews(): void
+    {
+        $lib = @IPS_GetLibrary(self::LIBRARY_GUID);
+        $this->WriteAttributeString('SeenNews', (string)preg_replace('/-.*$/', '', is_array($lib) ? (string)($lib['Version'] ?? '') : ''));
+        $this->UpdateFormField('NewsPanel', 'visible', false);
+    }
+
+    public function AckForumHint(): void
+    {
+        $this->WriteAttributeBoolean('ForumHintGone', true);
+        $this->UpdateFormField('ForumHintPanel', 'visible', false);
+    }
+
+    /** VSCH_ResetFormLayout($id): string — Aufbau im offenen Formular auf Standard (gilt nach „Übernehmen“). */
+    public function ResetFormLayout(): string
+    {
+        $rows = [];
+        $i = 0;
+        foreach (self::LAYOUT_KEYS as $k => $bereich) {
+            $rows[] = ['Key' => $k, 'Panel' => $this->layoutName($k), 'Opened' => false, 'Closed' => false, 'Hidden' => false, 'Pos' => ++$i];
+        }
+        $this->UpdateFormField('FormLayout', 'values', json_encode($rows, JSON_UNESCAPED_UNICODE));
+        return $this->t('ℹ️ All areas visible again and in default order. Click "Apply changes" below to save.');
+    }
+
     /** Zustand aller Geräte als JSON (für Skripte, Kachel, Fehlersuche). */
     /**
      * Lesender Vertrag „shading“ (1.1, additiv zu 1.0 = nur devices): Lage, Sonnenwärme jetzt/heute und die Erwartung
@@ -1975,18 +2023,28 @@ class Verschattung extends IPSModule
                 ['type' => 'Button', 'caption' => 'Got it – do not show again', 'onClick' => 'VSCH_AckPurposeIntro($id);'],
             ]];
         }
-        $elements[] = ['type' => 'Button', 'caption' => '🧭 Start setup assistant', 'onClick' => 'VSCH_UIAssistentOeffnen($id);'];
+        $news = $this->newsBanner();
+        if ($news !== null) {
+            $elements[] = $news;
+        }
+        $lib = @IPS_GetLibrary(self::LIBRARY_GUID);
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📖  Documentation & help', 'items' => [
+            ['type' => 'Label', 'caption' => is_array($lib) && isset($lib['Version'])
+                ? $this->t('ℹ️ NRG-Stack Verschattung version %s (build %s)', (string)$lib['Version'], (string)($lib['Build'] ?? '?'))
+                : 'ℹ️ NRG-Stack Verschattung'],
             ['type' => 'Label', 'caption' => 'ℹ️ ' . $this->t('How the automatic works')],
             ['type' => 'Label', 'caption' => $this->regelnText()],
             ['type' => 'Label', 'caption' => 'Easiest way: the setup assistant guides you through location, house, devices, test run, weather protection and when to shade. You only choose the facade for each device.'],
             ['type' => 'Label', 'caption' => 'Manual operation has priority: if you move a device by hand, the module leaves it alone until the sun situation changes.'],
             ['type' => 'Label', 'caption' => 'The module only moves back what it has moved itself, and only in daylight. Closing at dusk stays with you or another automation.'],
             ['type' => 'Button', 'caption' => 'Open documentation', 'onClick' => 'echo "' . self::DOC_URL . '";', 'link' => true],
+            ['type' => 'Button', 'caption' => '💬 Forum thread: questions, wishes, bugs', 'onClick' => "echo '" . self::FORUM_URL . "';", 'link' => true],
         ]];
+        $elements[] = ['type' => 'Button', 'caption' => '🧭 Start setup assistant', 'onClick' => 'VSCH_UIAssistentOeffnen($id);'];
+        $fach = [];
 
         // 1. Standort & Geodaten
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📍  Location & map data', 'expanded' => $fassaden === [], 'items' => [
+        $fach['standort'] = ['type' => 'ExpansionPanel', 'caption' => '📍  Location & map data', 'expanded' => $fassaden === [], 'items' => [
             ['type' => 'Label', 'name' => 'StandortText', 'caption' => $standortText],
             ['type' => 'SelectLocation', 'name' => 'Standort', 'caption' => 'Own location (optional)'],
             ['type' => 'Label', 'name' => 'StandortHint', 'caption' => 'Leave empty to use the Location instance. Set it here if the house is not exactly at that point.'],
@@ -1997,7 +2055,7 @@ class Verschattung extends IPSModule
         ]];
 
         // 2. Mein Haus
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🏠  My house', 'expanded' => true, 'items' => [
+        $fach['haus'] = ['type' => 'ExpansionPanel', 'caption' => '🏠  My house', 'expanded' => true, 'items' => [
             ['type' => 'Image', 'name' => 'Grundriss', 'image' => $this->grundrissBild($fassaden, 0, 'heute', self::PLAN_FORM), 'center' => true, 'width' => '100%'],
             ['type' => 'List', 'name' => 'Fassaden', 'caption' => 'Facades', 'rowCount' => max(6, count($fassaden)), 'add' => true, 'delete' => true,
                 'columns' => [
@@ -2049,7 +2107,7 @@ class Verschattung extends IPSModule
         $warnHub = function_exists('WHUB_GetActiveWarnings') && IPS_GetInstanceListByModuleID(self::WARNHUB_GUID) !== [];
         $deckt = $this->warnHubDecktStation();
         $sicht = !$deckt; // Felder, die WarnHub mit der Wetterstation überflüssig macht
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🌬️  Weather protection', 'items' => [
+        $fach['wetter'] = ['type' => 'ExpansionPanel', 'caption' => '🌬️  Weather protection', 'items' => [
             ['type' => 'Label', 'caption' => $this->wetterStatus($warnHub)],
             ['type' => 'Label', 'name' => 'WarnHubDeckt', 'visible' => $deckt, 'caption' => $this->warnHubDecktText()],
             ['type' => 'Label', 'caption' => 'Awnings and venetian blinds retract on wind and severe weather — this has priority over everything, also over manual operation. Roller shutters are not moved by wind.'],
@@ -2079,7 +2137,7 @@ class Verschattung extends IPSModule
         ]];
 
         // 4b. Notfall
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🔥  Emergency', 'items' => [
+        $fach['notfall'] = ['type' => 'ExpansionPanel', 'caption' => '🔥  Emergency', 'items' => [
             ['type' => 'Label', 'caption' => 'If a smoke or fire detector reports an alarm, all devices go up immediately – also at night, after manual operation and with the automatic switched off – to keep escape routes free. Afterwards the automatic continues; nothing is lowered at night.'],
             ['type' => 'List', 'name' => 'Notfall', 'caption' => 'Smoke/fire detectors', 'rowCount' => 4, 'add' => true, 'delete' => true,
                 'columns' => [['caption' => 'Alarm variable', 'name' => 'Melder', 'width' => 'auto', 'add' => 0, 'edit' => ['type' => 'SelectVariable']]]],
@@ -2087,7 +2145,7 @@ class Verschattung extends IPSModule
         ]];
 
         // 5. Feinheiten
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🌡️  Fine tuning', 'items' => [
+        $fach['feinheiten'] = ['type' => 'ExpansionPanel', 'caption' => '🌡️  Fine tuning', 'items' => [
             ...$this->sonnenFelder('', $vorschlag),
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'NumberSpinner', 'name' => 'VerzoegerungAn', 'caption' => 'Delay before shading', 'suffix' => 'min', 'minimum' => 0, 'maximum' => 60],
@@ -2096,16 +2154,11 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'name' => 'VerzoegerungAnHint', 'caption' => 'Prevents moving back and forth with passing clouds.'],
         ]];
 
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '📱  Tile and IPSView', 'items' => [
+        $fach['kachel'] = ['type' => 'ExpansionPanel', 'caption' => '📱  Tile and IPSView', 'items' => [
             ['type' => 'Label', 'caption' => 'The tile shows the house from above with the sunlit facades, today\'s sky with sun, horizon and neighbouring buildings, clouds or blue sky from the measured irradiance, and every device with its position and the reason. Tap a device to see the whole decision path. The tile can switch the automatic on and off.'],
             ['type' => 'Label', 'caption' => $this->t('IPSView or browser: create a WebView element and enter http://<Symcon-IP>:3777%s as the address (optionally ?bg=1c1c1e for a background colour). The page refreshes itself every minute and only shows, it does not operate anything.', $this->hookPfad())],
         ]];
 
-        $elements[] = ['type' => 'Button', 'caption' => '💬 Forum thread: questions, wishes, bugs', 'onClick' => "echo '" . self::FORUM_URL . "';", 'link' => true];
-        $elements[] = ['type' => 'ExpansionPanel', 'caption' => '⚖️  License', 'items' => [
-            ['type' => 'Label', 'caption' => 'NRG-Stack Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.'],
-            ['type' => 'Button', 'caption' => 'Show license', 'onClick' => 'echo "' . self::LICENSE_URL . '";', 'link' => true],
-        ]];
 
         $actions = [];
         $actions[] = $this->assistentFormular($fassaden, $optTyp);
@@ -2116,7 +2169,7 @@ class Verschattung extends IPSModule
                 $schalter[] = ['Name' => $g['Name'], 'Fassade' => $g['Fassade'], 'Aktiv' => $this->geraetAktiv($g), 'Position' => $g['Position']];
             }
         }
-        $actions[] = ['type' => 'ExpansionPanel', 'caption' => '⏯️  Automatic per device', 'items' => [
+        $fach['schalter'] = ['type' => 'ExpansionPanel', 'caption' => '⏯️  Automatic per device', 'items' => [
             ['type' => 'Label', 'caption' => 'Untick a device to take it out of the automatic shading. It is then left alone; only emergency and weather protection still move it. Takes effect immediately – the same switch as on the tile and the variable "Automatic <name>".'],
             ['type' => 'List', 'name' => 'Schalter', 'rowCount' => max(3, count($schalter)), 'add' => false, 'delete' => false, 'values' => $schalter,
                 'onEdit' => 'VSCH_UISchalter($id, (int)$Schalter[\'Position\'], (bool)$Schalter[\'Aktiv\']);',
@@ -2127,7 +2180,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Position', 'name' => 'Position', 'visible' => false],
                 ]],
         ]];
-        $actions[] = ['type' => 'ExpansionPanel', 'caption' => '🔧  Assign devices & test run', 'expanded' => $fassaden !== [] && $this->geraete() === [], 'items' => [
+        $fach['probe'] = ['type' => 'ExpansionPanel', 'caption' => '🔧  Assign devices & test run', 'expanded' => $fassaden !== [] && $this->geraete() === [], 'items' => [
             ['type' => 'Label', 'caption' => 'Choose a facade and check the direction with the test run (only saved devices move).'],
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'Select', 'name' => 'ZuordnenFassade', 'caption' => 'Facade', 'options' => $optFassade],
@@ -2136,7 +2189,7 @@ class Verschattung extends IPSModule
             ]],
         ]];
         // Vorschau (im Aktionsbereich: Auswahlfelder ohne Eigenschaft dürfen nicht in elements, SUITE.md Formular-Optik 3a)
-        $actions[] = ['type' => 'ExpansionPanel', 'caption' => '☀️  Preview', 'items' => [
+        $fach['vorschau'] = ['type' => 'ExpansionPanel', 'caption' => '☀️  Preview', 'items' => [
             ['type' => 'RowLayout', 'items' => [
                 ['type' => 'Select', 'name' => 'VorschauFassade', 'caption' => 'Facade', 'value' => 0, 'options' => array_map(function ($o, $i) {
                     return ['caption' => $o['caption'], 'value' => $i];
@@ -2150,6 +2203,30 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'caption' => 'Light grey: terrain horizon (PVGIS, true to scale). Dark grey: neighbouring buildings (model: storeys × 3 m, without data 2 storeys, 45° gable roof). Coloured band: the part of the sky from which the chosen facade gets sun. Whether shading actually moves then depends on irradiance and temperature.'],
         ]];
 
+        // Formular: Aufbau (SUITE.md 3a) — Reihenfolge je Bereich, Auf-/Zuklappen und Ausblenden für alle Fachpanels
+        $layout = $this->formLayout();
+        foreach ($layout as $k => $l) {
+            $p = $fach[$k];
+            if ($l['open'] === 'open') {
+                $p['expanded'] = true;
+            } elseif ($l['open'] === 'closed') {
+                $p['expanded'] = false;
+            } elseif ($l['open'] === 'hidden') {
+                $p['visible'] = false; // unsichtbar statt weggelassen: Werte bleiben beim „Übernehmen“ erhalten
+            }
+            if (self::LAYOUT_KEYS[$k] === 'e') {
+                $elements[] = $p;
+            } else {
+                $actions[] = $p;
+            }
+        }
+        $elements[] = $this->layoutPanel($layout);
+        $forum = $this->forumHint();
+        if ($forum !== null) {
+            $elements[] = $forum;
+        }
+        $elements[] = $this->licenseHint();
+
         $actions[] = ['type' => 'Label', 'caption' => $this->t('Current state: %s', (string)@$this->GetValue('Status'))];
         $actions[] = ['type' => 'Button', 'caption' => '❓ Why? (test run, nothing moves)', 'onClick' => 'echo VSCH_UIWarum($id);'];
 
@@ -2159,6 +2236,140 @@ class Verschattung extends IPSModule
             'status' => [
                 ['code' => 102, 'icon' => 'active', 'caption' => 'Active'],
                 ['code' => 201, 'icon' => 'error', 'caption' => 'No location: set it in the Location instance or here'],
+            ],
+        ];
+    }
+
+    /** 🆕 Neu bis Version: alle NEWS_VERSIONS-Einträge, die neuer sind als die zuletzt bestätigte Version. */
+    private function newsBanner(): ?array
+    {
+        $seen = $this->ReadAttributeString('SeenNews') ?: '0';
+        $offen = [];
+        foreach (self::NEWS_VERSIONS as $version => $zeilen) {
+            if (version_compare((string)$version, $seen, '>')) {
+                $offen[(string)$version] = $zeilen;
+            }
+        }
+        if ($offen === []) {
+            return null;
+        }
+        uksort($offen, 'version_compare');
+        $items = [];
+        foreach ($offen as $version => $zeilen) {
+            $items[] = ['type' => 'Label', 'caption' => $this->t('Version %s:', $version)];
+            foreach ($zeilen as $z) {
+                $items[] = ['type' => 'Label', 'caption' => $this->t($z)];
+            }
+        }
+        $items[] = ['type' => 'Button', 'caption' => 'Got it – do not show again', 'onClick' => 'VSCH_AckNews($id);'];
+        return ['type' => 'ExpansionPanel', 'name' => 'NewsPanel', 'expanded' => true, 'caption' => $this->t('🆕  New up to version %s', (string)array_key_last($offen)), 'items' => $items];
+    }
+
+    /** Aufbau je Fachpanel: key => ['open' => std|open|closed|hidden, 'pos' => int], sortiert (stabil über den Ursprungsindex). */
+    private function formLayout(): array
+    {
+        $by = [];
+        foreach (json_decode($this->ReadPropertyString('FormLayout'), true) ?: [] as $r) {
+            if (is_array($r) && isset($r['Key'])) {
+                $by[(string)$r['Key']] = $r;
+            }
+        }
+        $out = [];
+        $i = 0;
+        foreach (self::LAYOUT_KEYS as $k => $bereich) {
+            $r = $by[$k] ?? [];
+            // bei mehreren Haken gilt Ausgeblendet vor Zugeklappt vor Aufgeklappt
+            $open = !empty($r['Hidden']) ? 'hidden' : (!empty($r['Closed']) ? 'closed' : (!empty($r['Opened']) ? 'open' : 'std'));
+            $out[$k] = ['open' => $open, 'pos' => isset($r['Pos']) ? max(1, min(99, (int)$r['Pos'])) : $i + 1, 'idx' => $i];
+            $i++;
+        }
+        uasort($out, function ($a, $b) {
+            return [$a['pos'], $a['idx']] <=> [$b['pos'], $b['idx']];
+        });
+        return $out;
+    }
+
+    /** Name eines Fachpanels in der Aufbau-Liste (Panels unten bei den Aktionen gekennzeichnet). */
+    private function layoutName(string $k): string
+    {
+        switch ($k) {
+            case 'standort': return $this->t('📍  Location & map data');
+            case 'haus': return $this->t('🏠  My house');
+            case 'wetter': return $this->t('🌬️  Weather protection');
+            case 'notfall': return $this->t('🔥  Emergency');
+            case 'feinheiten': return $this->t('🌡️  Fine tuning');
+            case 'kachel': return $this->t('📱  Tile and IPSView');
+            case 'schalter': return $this->t('⏯️  Automatic per device') . $this->t(' (below, at the actions)');
+            case 'probe': return $this->t('🔧  Assign devices & test run') . $this->t(' (below, at the actions)');
+            case 'vorschau': return $this->t('☀️  Preview') . $this->t(' (below, at the actions)');
+        }
+        return $k;
+    }
+
+    private function layoutPanel(array $layout): array
+    {
+        $rows = [];
+        $versteckt = [];
+        foreach ($layout as $k => $l) {
+            $name = $this->layoutName($k);
+            $rows[] = ['Key' => $k, 'Panel' => $name, 'Opened' => $l['open'] === 'open', 'Closed' => $l['open'] === 'closed', 'Hidden' => $l['open'] === 'hidden', 'Pos' => $l['pos']];
+            if ($l['open'] === 'hidden') {
+                $versteckt[] = trim($name);
+            }
+        }
+        return [
+            'type' => 'ExpansionPanel', 'expanded' => false,
+            'caption' => $versteckt === [] ? $this->t('🪟  Form: layout') : $this->t('🪟  Form: layout') . $this->t(' (%s hidden)', count($versteckt)),
+            'items' => [
+                ['type' => 'Label', 'caption' => 'Here you decide which areas are expanded on opening, in which order they appear and which you do not want to see at all — e.g. "Emergency" or "Tile and IPSView" once everything is set up. Symcon does not remember expanding and collapsing itself. Takes effect on next opening after "Apply changes".'],
+                ['type' => 'Label', 'caption' => 'No tick means default (as the module intends). If several ticks are set, Hidden wins over Collapsed over Expanded. The position applies within the settings and within the actions below. At the top (What for, New, Documentation & help) and at the bottom (Layout, Feedback, About this module) everything stays where it is.'],
+                ['type' => 'Label', 'caption' => $versteckt === []
+                    ? $this->t('ℹ️ Nothing hidden.')
+                    : $this->t('🙈 Hidden: %s — to show again, remove the tick at "Hidden". Hidden areas keep working, only the display is missing.', implode(', ', $versteckt))],
+                ['type' => 'List', 'name' => 'FormLayout', 'caption' => 'Areas', 'rowCount' => count($rows), 'add' => false, 'delete' => false,
+                    'loadValuesFromConfiguration' => false, 'values' => $rows,
+                    'columns' => [
+                        ['caption' => 'Area', 'name' => 'Panel', 'width' => 'auto', 'add' => '', 'save' => false],
+                        ['caption' => 'Key', 'name' => 'Key', 'width' => '0px', 'visible' => false, 'add' => '', 'save' => true],
+                        ['caption' => 'Expanded', 'name' => 'Opened', 'width' => '120px', 'add' => false, 'edit' => ['type' => 'CheckBox']],
+                        ['caption' => 'Collapsed', 'name' => 'Closed', 'width' => '120px', 'add' => false, 'edit' => ['type' => 'CheckBox']],
+                        ['caption' => '🙈 Hidden', 'name' => 'Hidden', 'width' => '140px', 'add' => false, 'edit' => ['type' => 'CheckBox']],
+                        ['caption' => 'Position', 'name' => 'Pos', 'width' => '100px', 'add' => 1, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 1, 'maximum' => 99]],
+                    ]],
+                ['type' => 'Button', 'caption' => '↩️ Reset to default', 'onClick' => 'echo VSCH_ResetFormLayout($id);'],
+            ],
+        ];
+    }
+
+    /** Forum-Hinweis (SUITE.md 4): einmal wegklickbar, nicht versionsscharf. */
+    private function forumHint(): ?array
+    {
+        if ($this->ReadAttributeBoolean('ForumHintGone')) {
+            return null;
+        }
+        return [
+            'type' => 'ExpansionPanel', 'name' => 'ForumHintPanel', 'expanded' => true, 'caption' => '💬  Feedback',
+            'items' => [
+                ['type' => 'Label', 'caption' => '🧪 NRG-Stack Verschattung is new (beta). Questions, wishes and bugs are welcome in the forum thread. Feedback on devices and map data I cannot test myself is especially helpful (KNX, Homematic, EnOcean, awnings, Austria and Switzerland).'],
+                ['type' => 'Button', 'caption' => '💬 To the forum thread', 'onClick' => "echo '" . self::FORUM_URL . "';", 'link' => true],
+                ['type' => 'Button', 'caption' => 'To the repository', 'onClick' => "echo '" . self::REPO_URL . "';", 'link' => true],
+                ['type' => 'Button', 'caption' => 'Got it – do not show again', 'onClick' => 'VSCH_AckForumHint($id);'],
+            ],
+        ];
+    }
+
+    /** 🧡 Über dieses Modul (SUITE.md 5): verbundweit gleicher Wortlaut, nicht wegklickbar. */
+    private function licenseHint(): array
+    {
+        return [
+            'type' => 'ExpansionPanel', 'expanded' => false, 'caption' => '🧡  About this module',
+            'items' => [
+                ['type' => 'Label', 'caption' => 'Born out of genuine enthusiasm for my own installation — and a few evenings of typing. Still: hobby software or not, this is intellectual property and real work went into it.'],
+                ['type' => 'Label', 'caption' => 'License: PolyForm Noncommercial 1.0.0 — free for private and non-commercial use; commercial use requires a separate license from the rights holder.'],
+                ['type' => 'Button', 'caption' => 'View license text', 'onClick' => "echo '" . self::LICENSE_URL . "';", 'link' => true],
+                ['type' => 'Label', 'caption' => 'Commercial use or questions about the license? Just get in touch: dietmar@gureth.eu'],
+                ['type' => 'Label', 'caption' => 'Do you like the module and would like to leave something anyway? I am happy about a small donation — completely voluntary, nothing required in return.'],
+                ['type' => 'Button', 'caption' => '☕  Donate via PayPal', 'onClick' => "echo '" . self::PAYPAL_URL . "';", 'link' => true],
             ],
         ];
     }

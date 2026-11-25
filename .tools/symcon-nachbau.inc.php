@@ -76,6 +76,7 @@ function IPS_GetInstance(int $id): array
     return ['InstanceID' => $id, 'InstanceStatus' => 102, 'ModuleInfo' => ['ModuleID' => $guid, 'ModuleName' => '']];
 }
 function IPS_GetInstanceListByModuleID(string $guid): array { return $GLOBALS['MODULES'][$guid] ?? []; }
+function IPS_GetLibrary(string $guid): array { return $GLOBALS['LIBRARY'] ?? ['Version' => '0.18.0', 'Build' => 45]; }
 function IPS_GetModuleList(): array { return array_keys($GLOBALS['MODULINFO'] ?? []); }
 function IPS_GetModule(string $guid): array { return $GLOBALS['MODULINFO'][$guid] ?? []; }
 function IPS_GetProperty(int $id, string $n) { return $GLOBALS['CONF_PROP'][$id][$n] ?? ''; }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0 (in Entwicklung)
+
+- **Formular nach der NRG-Stack-Konvention** (Dietmar 25.11.: „Im Modul fehlt ‚Was ist Neu?‘“):
+  - **„🆕 Neu bis Version …“** oben, aufgeklappt: zeigt genau die Neuerungen seit der zuletzt bestätigten Version; „Verstanden – nicht mehr anzeigen“ merkt die installierte Version.
+  - **„📖 Dokumentation & Hilfe“** zeigt dauerhaft Version und Build und verlinkt den Forum-Thread.
+  - **„🪟 Formular: Aufbau“**: je Bereich aufgeklappt, zugeklappt oder ausgeblendet und eine Position (Einstellungen und Aktionen jeweils unter sich); Ausgeblendetes arbeitet weiter, „↩️ Auf Standard zurücksetzen“.
+  - **„💬 Rückmeldungen“**: Forum-Hinweis, einmal wegklickbar (ersetzt den einzelnen Forum-Knopf).
+  - **„🧡 Über dieses Modul“** mit dem verbundweiten Wortlaut (Lizenz, Lizenztext, Kontakt, PayPal) statt „⚖️ Lizenz“.
+
 ## 0.17.6 (in Entwicklung)
 
 - **Forum-Thread verlinkt** (veröffentlicht 25.11., Thread 145044): Knopf „💬 Forum-Thread: Fragen, Wünsche, Fehler“ im Formular, Link in der README.

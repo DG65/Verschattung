@@ -23,6 +23,10 @@ Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später je
 
 Der Assistent speichert nichts selbst – die Einstellungen gehören dem Nutzer. Für Feinarbeit bleibt das Formular darunter.
 
+## Aufbau des Formulars
+
+Oben stehen „Wozu dieses Modul?“, „Neu bis Version …“ (was seit dem letzten Update neu ist; „Verstanden“ blendet es bis zur nächsten Version aus) und „Dokumentation & Hilfe“ mit der Versionsnummer. Darunter folgen die Einstellungen. Unter **„🪟 Formular: Aufbau“** wird je Bereich festgelegt, ob er beim Öffnen aufgeklappt, zugeklappt oder ausgeblendet ist und an welcher Position er steht (die Bereiche unten bei den Aktionen ordnen sich untereinander). Ausgeblendete Bereiche arbeiten weiter. „↩️ Auf Standard zurücksetzen“ holt alles zurück. Ganz unten stehen der Forum-Hinweis und „Über dieses Modul“ mit Lizenz.
+
 ## Einrichtung ohne Assistent
 
 
