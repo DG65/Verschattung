@@ -760,6 +760,15 @@ $fH2 = json_encode(json_decode($m->GetConfigurationForm(), true));
 check('G71 HeishaMon: Hinweis und Knopf, Klick schaltet dessen Variable (RequestAction), danach kein Hinweis mehr', str_contains($fH, 'VSCH_UIHeishaSonne') && in_array([995, true], $GLOBALS['BEFEHLE'], true)
     && GetValue(995) === true && !str_contains($fH2, 'VSCH_UIHeishaSonne') && $m->UIHeishaSonne() !== $tH, $tH);
 unset($GLOBALS['MODULES']['{1919151A-3C0F-4C09-B906-291638EC1469}']);
+// Vorschau (Idee 3): kräftige Sonne heute noch auf welche Fassade
+$kv = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $vm) ? $vm[1] : 'null', true);
+$vz = $kv['vorschau']['zeiten'] ?? [];
+$GLOBALS['MODULES']['{257DD4E8-9705-462E-89FC-56D0A1038353}'] = [900];
+$GLOBALS['PVF'] = ['faktor' => 0.0, 'alter' => 600, 'schnee' => false];
+$kv2 = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $vm) ? $vm[1] : 'null', true);
+unset($GLOBALS['MODULES']['{257DD4E8-9705-462E-89FC-56D0A1038353}']);
+check('G72 Vorschau: Mittag im Juli, Süd → Zeitraum ab jetzt (ohne PV-Prognose „klarer Himmel“); bedeckte Prognose → nichts', ($kv['vorschau']['basis'] ?? '') === 'clearSky' && $vz !== []
+    && $vz[0][0] === 'A' && $vz[0][2] >= $GLOBALS['CLOCK'] && $vz[0][3] > $vz[0][2] && ($kv2['vorschau']['basis'] ?? '') === 'forecast' && ($kv2['vorschau']['zeiten'] ?? null) === [], json_encode([$kv['vorschau'] ?? null, $kv2['vorschau'] ?? null]));
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

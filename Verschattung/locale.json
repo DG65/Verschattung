@@ -396,7 +396,13 @@
             "No Location instance: choose the house on the map and click \"Detect house\".": "Keine Standort-Instanz: Haus auf der Karte wählen und „Haus erkennen“ klicken.",
             "House detected: please check the facades, then click \"Next\" again.": "Haus erkannt: Bitte die Fassaden prüfen und dann noch einmal „Weiter“ klicken.",
             "Please choose the house on the map and click \"Detect house\", or enter at least one facade.": "Bitte das Haus auf der Karte wählen und „Haus erkennen“ klicken oder mindestens eine Fassade eintragen.",
-            "The house is detected when you click \"Next\".": "Das Haus wird mit „Weiter“ erkannt."
+            "The house is detected when you click \"Next\".": "Das Haus wird mit „Weiter“ erkannt.",
+            "Expected today: shading %s": "Heute voraussichtlich beschattet: %s",
+            "Expected today: sun on %s – the devices stay up, the sun heats with us": "Heute voraussichtlich Sonne auf %s – die Behänge bleiben oben, die Sonne heizt mit",
+            "Expected today: sun on %s": "Heute voraussichtlich Sonne auf %s",
+            "No strong sun expected today any more": "Heute keine kräftige Sonne mehr erwartet",
+            "if the sky is clear": "bei klarem Himmel",
+            "expected": "erwartet"
         }
     }
 }

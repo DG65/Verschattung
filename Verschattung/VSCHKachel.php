@@ -189,7 +189,48 @@ trait VSCHKachel
                 'weg' => $wege[$g['Name']] ?? [], 'waerme' => $w === null ? null : (int)round((float)($w['je'][$g['key']] ?? 0))];
         }
         $daten['waerme'] = $this->kachelWaerme($w, $wm2 !== null, $bahn);
+        $daten['vorschau'] = $this->kachelVorschau($bahn, $daten['fassaden'], $now);
         return $daten;
+    }
+
+    /**
+     * Vorschau (Idee 3): Wann scheint die Sonne heute noch kräftig auf welche Fassade? Sonnenzeit der Fassade (Horizont, Nachbarn)
+     * × erwartete Einstrahlung (Wolken aus der PV-Prognose, sonst klarer Himmel) ≥ Schwelle „Beschatten ab“. 10-min-Raster, ab jetzt.
+     * Rückgabe ['basis' => 'forecast'|'clearSky', 'zeiten' => [[Kennung, Name, von, bis], …]].
+     */
+    private function kachelVorschau(array $bahn, array $fassaden, int $now): array
+    {
+        $pv = $this->pvPrognose($now);
+        $schwelle = $this->ReadPropertyFloat('SonneAn');
+        $out = [];
+        foreach ($fassaden as $f) {
+            if (!$f['aktiv'] || $f['zeiten'] === []) {
+                continue;
+            }
+            $start = null;
+            $letzt = null;
+            foreach ($bahn as $p) {
+                [$ts, $az, $alt] = $p;
+                $imFenster = false;
+                foreach ($f['zeiten'] as $z) {
+                    $imFenster = $imFenster || ($ts >= $z[0] && $ts <= $z[1]);
+                }
+                $k = $pv === null ? 1.0 : VSCHLogik::klarheit($this->pvWert($pv, (int)$ts), VSCHLogik::pvKlar($pv['gen'], $pv['pr'], (float)$alt, (float)$az));
+                $hell = $imFenster && $ts + 600 >= $now && $alt > 0 && $k * VSCHLogik::klarHimmel((float)$alt) >= $schwelle;
+                if ($hell) {
+                    $start ??= max((int)$ts, $now);
+                    $letzt = (int)$ts + 600;
+                } elseif ($start !== null) {
+                    $out[] = [$f['kennung'], $f['name'], $start, $letzt];
+                    $start = null;
+                }
+            }
+            if ($start !== null) {
+                $out[] = [$f['kennung'], $f['name'], $start, $letzt];
+            }
+        }
+        usort($out, fn($a, $b) => $a[2] <=> $b[2]);
+        return ['basis' => $pv !== null ? 'forecast' : 'clearSky', 'zeiten' => $out];
     }
 
     /**
@@ -233,6 +274,12 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'Expected today: shading %s' => $this->t('Expected today: shading %s'),
+            'Expected today: sun on %s – the devices stay up, the sun heats with us' => $this->t('Expected today: sun on %s – the devices stay up, the sun heats with us'),
+            'Expected today: sun on %s' => $this->t('Expected today: sun on %s'),
+            'No strong sun expected today any more' => $this->t('No strong sun expected today any more'),
+            'if the sky is clear' => $this->t('if the sky is clear'),
+            'expected' => $this->t('expected'),
             'Solar heat today' => $this->t('Solar heat today'),
             'into the house' => $this->t('into the house'),
             'kept out' => $this->t('kept out'),

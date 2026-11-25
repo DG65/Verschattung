@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0 (in Entwicklung)
+
+- **Vorschau auf der Kachel (Idee 3):** „Heute voraussichtlich beschattet: Süd 11:20–15:40“ – im Winter „Heute voraussichtlich Sonne auf Süd … – die Behänge bleiben oben, die Sonne heizt mit“. Gerechnet ab jetzt im 10-min-Raster: Sonnenzeit der Fassade (Horizont, Nachbarn) × erwartete Einstrahlung ≥ „Beschatten ab“; Wolken aus der PV-Prognose (wie beim Vertrag shading), ohne sie „bei klarem Himmel“. Im Tagesverlauf gestrichelt unter der Sonnenzeit.
+
+
 ## 0.13.3 (in Entwicklung)
 
 - **Lageplan im Formular in voller Breite** (Dietmar 25.11.): gleicher Maßstab, links und rechts mehr Umgebung. Dafür holt das Modul Nachbargebäude aus ALKIS jetzt ±150 m Ost-West und ±100 m Nord-Süd (bis 1000 Gebäude; vorher ±60 m, 200) und Straßen bis 160 m (vorher 120 m); die OSM-Gebäudeabfrage bleibt bei 100 m, weil Overpass oft ausgelastet ist. Live-Probe 14 Länder: ALKIS antwortet in 3–4 s. Bestehende Instanzen laden die weitere Umgebung nach dem Update einmal von selbst im Hintergrund nach (die Fassadenliste bleibt unverändert).

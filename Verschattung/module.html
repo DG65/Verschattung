@@ -38,6 +38,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .waerme .balken{height:6px;border-radius:3px;background:var(--karte2);margin:12px 0 6px;overflow:hidden;display:flex}
 .waerme .balken i{display:block;height:100%}
 .waerme .klein{font-size:11px;color:var(--fg2);line-height:1.4}
+.zeile.vorschau .wert{font-weight:400;color:var(--fg2)}
 .lage .haupt{font-size:24px;font-weight:600;line-height:1.15}
 .lage .haupt.kuehlen{color:var(--kuehl)} .lage .haupt.heizen{color:var(--heiz)}
 .lage .unter{font-size:13px;color:var(--fg2);margin-top:3px}
@@ -156,6 +157,12 @@ function tagesverlauf(fa, B) {
   ((fa && fa.zeiten) || []).forEach(function (z) {
     o += '<rect x="' + f1(x(z[0])) + '" y="2" width="' + f1(x(z[1]) - x(z[0])) + '" height="6" rx="3" fill="var(--sonne)"/>';
   });
+  // erwartet (Vorschau): gestrichelt unter der Sonnenzeit – blau = Beschattung, orange = Sonne heizt mit
+  var farbeV = daten.lage === 'kuehlen' ? 'var(--kuehl)' : 'var(--heiz)';
+  ((daten.vorschau && daten.vorschau.zeiten) || []).forEach(function (e) {
+    if (fa && e[0] !== fa.kennung) { return; }
+    o += '<line x1="' + f1(x(e[2])) + '" y1="11" x2="' + f1(x(e[3])) + '" y2="11" stroke="' + farbeV + '" stroke-width="2" stroke-dasharray="4 3"/>';
+  });
   var d = ''; (t.klar || []).forEach(function (p, i) { d += (i ? ' L' : 'M') + f1(x(p[0])) + ',' + f1(y(p[1])); });
   if (d) { o += '<path d="' + d + '" fill="none" stroke="var(--fg3)" stroke-width="1.2" stroke-dasharray="3 3"/>'; }
   var m = '', erst = null, letzt = null;
@@ -186,6 +193,17 @@ function symbol(g) {
   }
   return '<svg class="sym" viewBox="0 0 34 34">' + o + '</svg>';
 }
+
+// ------------------------------------------------ Vorschau (Idee 3): wann heute noch kräftige Sonne auf welche Fassade kommt
+function vorschauText() {
+  var v = daten.vorschau; if (!v || daten.sperre) { return ''; }
+  var z = v.zeiten || [];
+  if (!z.length) { return daten.sonne && daten.sonne.alt > 0 ? T('No strong sun expected today any more') : ''; }
+  var teile = z.map(function (e) { return (e[1] || e[0]) + ' ' + uhr(e[2]) + '–' + uhr(e[3]); }).join(', ');
+  var s = daten.lage === 'kuehlen' ? T('Expected today: shading %s') : (daten.lage === 'heizen' ? T('Expected today: sun on %s – the devices stay up, the sun heats with us') : T('Expected today: sun on %s'));
+  return s.replace('%s', teile) + (v.basis === 'clearSky' ? ' (' + T('if the sky is clear') + ')' : '');
+}
+function vorschauZeile() { var t = vorschauText(); return t ? '<div class="zeile vorschau">◷ <span class="wert">' + esc(t) + '</span></div>' : ''; }
 
 // ------------------------------------------------ Sonnenwärme: was die Sonne heute ins Haus bringt und was die Behänge abhalten
 function kwh(wh) { return zahl(wh / 1000, wh >= 10000 ? 0 : 1); }
@@ -233,7 +251,8 @@ function zeichnen() {
     + '<div><b class="zahl">' + (daten.sonne && daten.sonne.alt > 0 ? zahl(daten.sonne.alt) + '°' : '–') + '</b><span>' + esc(T('sun height')) + '</span></div></div>';
   var t = daten.tag || {};
   o += '<div class="zeile">☀︎ <span class="wert">' + (t.auf ? uhr(t.auf) : '–') + '</span> – <span class="wert">' + (t.unter ? uhr(t.unter) : '–') + '</span>'
-    + (fa ? '<span style="margin-left:auto">' + esc(fa.name) + ': <span class="wert">' + esc((fa.zeiten || []).map(function (z) { return uhr(z[0]) + '–' + uhr(z[1]); }).join(', ') || T('none')) + '</span></span>' : '') + '</div></div>';
+    + (fa ? '<span style="margin-left:auto">' + esc(fa.name) + ': <span class="wert">' + esc((fa.zeiten || []).map(function (z) { return uhr(z[0]) + '–' + uhr(z[1]); }).join(', ') || T('none')) + '</span></span>' : '') + '</div>'
+    + vorschauZeile() + '</div>';
   o += waermeKarte() + '</div>';
   o += '<div class="karte diagramm"><div class="titel" style="align-self:stretch">' + esc(T('Sun path today')) + '<span class="rechts">'
     + ((fa && (fa.gebaeude || []).length) ? '<button class="chip" id="nachbarn">' + esc(nachbarnAn ? T('Neighbours on') : T('Neighbours off')) + '</button>' : '') + '</span></div>'
@@ -241,7 +260,7 @@ function zeichnen() {
     + '<div class="legende"><span><i style="background:var(--sonne)"></i>' + esc(T('sun on the facade')) + '</span><span><i style="background:var(--sil)"></i>' + esc(T('terrain')) + '</span>'
     + (fa && (fa.gebaeude || []).length && nachbarnAn ? '<span><i style="background:var(--sil2);opacity:.55"></i>' + esc(T('neighbouring buildings')) + '</span>' : '') + '</div></div></div>';
   // Tagesverlauf
-  o += '<div class="karte verlauf"><div class="titel">' + esc(T('Today')) + '<span class="rechts"><span style="color:var(--sonne)">▬</span> ' + esc(T('sun on the facade')) + ' &nbsp; <span style="color:var(--kuehl)">▬</span> ' + esc(T('shaded')) + '</span></div>' + tagesverlauf(fa, B) + '</div>';
+  o += '<div class="karte verlauf"><div class="titel">' + esc(T('Today')) + '<span class="rechts"><span style="color:var(--sonne)">▬</span> ' + esc(T('sun on the facade')) + ' &nbsp; <span style="color:' + (daten.lage === 'kuehlen' ? 'var(--kuehl)' : 'var(--heiz)') + '">┅</span> ' + esc(T('expected')) + ' &nbsp; <span style="color:var(--kuehl)">▬</span> ' + esc(T('shaded')) + '</span></div>' + tagesverlauf(fa, B) + '</div>';
   // Behänge je Fassade
   fassaden.forEach(function (f) {
     var liste = geraete.filter(function (g) { return g.fassade === f.kennung; });
