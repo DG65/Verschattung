@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.2 (in Entwicklung)
+
+- **Fix: Straßen im Lageplan kamen nicht** (Live-Befund 25.11.). Der Straßendienst (OpenStreetMap/Overpass) braucht bei Dietmar 39 s; der einmalige Hintergrundabruf ging verloren und wurde nie wiederholt, ein „Übernehmen“ brach ihn zudem ab. Jetzt: Antwortet kein Server, gilt das nicht als „keine Straßen“, sondern das Modul versucht es alle 15 Minuten erneut (höchstens einen Tag lang); „Übernehmen“ bricht das nicht mehr ab; der Abruf darf länger laufen.
+
+
 ## 0.13.1 (in Entwicklung)
 
 - **Assistent zeigt das Haus sofort** (Live-Befund 25.11.: neue Instanz, Assistent öffnete sich mit „Das Haus wird gerade erkannt …“ und blieb leer). Ursache: Die Erkennung brauchte 75 s, fast alles für die Straßen des Lageplans (OpenStreetMap/Overpass 27–75 s; Hausumriss und Horizont je 0,3 s). Jetzt erkennt der Assistent beim Öffnen das Haus ohne Straßen (unter 1 s), die Straßen holt der Hintergrund nach.

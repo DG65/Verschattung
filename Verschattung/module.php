@@ -36,6 +36,8 @@ class Verschattung extends IPSModule
     /** Standort, den der Assistent gerade prüft (überlagert Eigenschaft/Standort-Instanz). */
     /** Vertrag „shading“ (GetState). */
     public const VERTRAG = '1.1';
+    /** Wartezeit zwischen zwei Versuchen der Hintergrund-Erkennung (s). */
+    private const ERKENNEN_PAUSE = 900;
     /** Modul PVPrognose (NRG-Stack Prognose): Wolken für die Erwartung. */
     private const PVF_MODUL = '{257DD4E8-9705-462E-89FC-56D0A1038353}';
     /** Modul HeishaMon (NRG-Stack): nutzt ab 1.46.0 die Sonnenwärme zum Absenken der Heizung (Schaltvariable RoomShift_SolarAssist). */
@@ -125,6 +127,7 @@ class Verschattung extends IPSModule
         $this->RegisterTimer('Tick', 0, 'VSCH_Tick($_IPS[\'TARGET\']);');
         $this->RegisterTimer('Erkennen', 0, 'VSCH_HausImHintergrund($_IPS[\'TARGET\']);');
         $this->RegisterAttributeInteger('ErkennenVersucht', 0);
+        $this->RegisterAttributeInteger('ErkennenVersuche', 0);
     }
 
     public function ApplyChanges()
@@ -165,8 +168,9 @@ class Verschattung extends IPSModule
         }
         $this->registriereHook(); // dieselbe Kachel als Seite für IPSView
         // Haus einmal von selbst erkennen, sobald ein Standort da ist (Dietmar 25.11.: der Assistent soll nicht erst auf einen Knopf warten)
-        $erkennen = $this->koordinaten() !== null && $this->erkennenOffen() && $this->now() - $this->ReadAttributeInteger('ErkennenVersucht') > 6 * 3600;
-        $this->SetTimerInterval('Erkennen', $erkennen ? 2000 : 0);
+        // noch offen (Haus oder Straßen): bald versuchen, frühestens 15 min nach dem letzten Versuch – ein „Übernehmen“ bricht das nicht ab
+        $warte = max(2, self::ERKENNEN_PAUSE - ($this->now() - $this->ReadAttributeInteger('ErkennenVersucht')));
+        $this->SetTimerInterval('Erkennen', $this->koordinaten() !== null && $this->erkennenOffen() ? $warte * 1000 : 0);
         $ok = $this->koordinaten() !== null && $this->geraete() !== [];
         $this->SetTimerInterval('Tick', $ok ? 60 * 1000 : 0);
         $this->SetStatus($this->koordinaten() === null ? 201 : 102);
@@ -1106,18 +1110,30 @@ class Verschattung extends IPSModule
     {
         $this->SetTimerInterval('Erkennen', 0);
         $this->WriteAttributeInteger('ErkennenVersucht', $this->now());
+        @set_time_limit(180); // Overpass braucht teils über eine Minute
         if ($this->fassadenAusHaus() === []) {
-            $this->hausErkennen();
-            return;
+            if ($this->listeWerte($this->ReadPropertyString('Fassaden')) === []) {
+                $this->hausErkennen();
+            }
+        } else {
+            // Haus schon da (schnell beim Öffnen des Assistenten erkannt): nur die Straßen für den Lageplan nachholen
+            $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
+            $pos = $this->koordinaten();
+            if ($pos !== null && !array_key_exists('strassen', $haus)) {
+                $s = VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
+                    return $this->abruf($url, $kopf, $post);
+                });
+                if ($s !== null) {
+                    $haus['strassen'] = $s;
+                    $this->WriteAttributeString('Haus', json_encode($haus));
+                }
+            }
         }
-        // Haus schon da (schnell beim Öffnen des Assistenten erkannt): nur die Straßen für den Lageplan nachholen
-        $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
-        $pos = $this->koordinaten();
-        if ($pos !== null && !array_key_exists('strassen', $haus)) {
-            $haus['strassen'] = VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
-                return $this->abruf($url, $kopf, $post);
-            });
-            $this->WriteAttributeString('Haus', json_encode($haus));
+        // Dienst ausgelastet: in 15 Minuten noch einmal (höchstens einen Tag lang)
+        $versuche = $this->erkennenOffen() ? $this->ReadAttributeInteger('ErkennenVersuche') + 1 : 0;
+        $this->WriteAttributeInteger('ErkennenVersuche', $versuche);
+        if ($versuche > 0 && $versuche < 96 && $this->koordinaten() !== null) {
+            $this->SetTimerInterval('Erkennen', self::ERKENNEN_PAUSE * 1000);
         }
     }
 
@@ -1169,8 +1185,9 @@ class Verschattung extends IPSModule
             'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
             'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1],
         ], fn($v) => $v !== null)));
-        if (!$mitStrassen) {
-            $this->SetTimerInterval('Erkennen', 2000);
+        if ($strassen === null) {
+            // Straßen fehlen noch (gar nicht abgefragt oder Dienst ausgelastet): der Hintergrund holt sie nach
+            $this->SetTimerInterval('Erkennen', $mitStrassen ? self::ERKENNEN_PAUSE * 1000 : 2000);
         }
         $werte = $this->fassadenAusHaus();
         return ['ok' => true, 'werte' => $werte, 'text' => $this->t('%d facades found. Please check them in the list and confirm with "Apply changes".', count($werte))];

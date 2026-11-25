@@ -192,18 +192,22 @@ final class VSCHGeo
      * Straßen und Wege im Umkreis (OpenStreetMap, Overpass), nur für den Lageplan.
      * Rückgabe [['typ' => highway, 'name' => string, 'b' => Breite m, 'p' => [[x,y],…] lokal in m], …]; Fehler → [].
      */
-    public static function strassen(float $lat, float $lon, callable $abruf, float $umkreis = 120.0): array
+    public static function strassen(float $lat, float $lon, callable $abruf, float $umkreis = 120.0): ?array
     {
-        $q = '[out:json][timeout:40];way["highway"](around:' . (int)$umkreis . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
-        $body = '';
+        // Rückgabe null = kein Server hat geantwortet (später erneut versuchen); [] = wirklich keine Straße im Umkreis
+        $q = '[out:json][timeout:25];way["highway"](around:' . (int)$umkreis . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
+        $j = null;
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'] as $server) {
             [$code, $body] = $abruf($server, ['Content-Type: application/x-www-form-urlencoded'], 'data=' . rawurlencode($q));
-            if ($code === 200) {
+            $j = $code === 200 ? json_decode($body, true) : null;
+            if (is_array($j) && isset($j['elements'])) {
                 break;
             }
-            $body = '';
+            $j = null;
         }
-        $j = $body === '' ? null : json_decode($body, true);
+        if ($j === null) {
+            return null;
+        }
         $out = [];
         foreach ((array)($j['elements'] ?? []) as $el) {
             $typ = (string)($el['tags']['highway'] ?? '');

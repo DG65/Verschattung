@@ -460,7 +460,7 @@ $abrufOsm = fn($url, $kopf = [], $post = null) => [200, json_encode(['elements' 
     ['tags' => ['highway' => 'construction'], 'geometry' => [['lat' => 48.3, 'lon' => 8.0], ['lat' => 48.301, 'lon' => 8.0]]]]])];
 $st = VSCHGeo::strassen(48.3001, 8.0, $abrufOsm);
 check('F35 Straßen aus OSM: Typ, Name, Breite, lokale Linie; Baustellen weg', count($st) === 1 && $st[0]['name'] === 'Lindenweg' && $st[0]['b'] == 5.5 && count($st[0]['p']) === 2 && abs($st[0]['p'][0][1] + 11.1) < 0.2, json_encode($st));
-check('F36 Straßen-Abruf gescheitert → leer, kein Fehler', VSCHGeo::strassen(48.3, 8.0, fn() => [504, '']) === []);
+check('F36 Straßen-Abruf gescheitert → null (später erneut), kein Fehler; leere Antwort → []', VSCHGeo::strassen(48.3, 8.0, fn() => [504, '']) === null && VSCHGeo::strassen(48.3, 8.0, fn() => [200, '{"elements":[]}']) === []);
 $pS = base64_decode(substr(VSCHGrafik::grundriss(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'strassen' => [['typ' => 'residential', 'name' => 'Lindenweg', 'b' => 5.5, 'p' => [[-40, -12], [40, -12]]]]], [], [], -1, 'Europe/Berlin', 1050), 26));
 check('F37 Lageplan zeichnet Straße mit Namen', substr_count($pS, '<polyline') >= 2 && str_contains($pS, 'Lindenweg'));
 check('F28 Himmelsbild zeichnet Nachbargebäude', str_contains(base64_decode(substr(VSCHGrafik::himmel(['heute' => $bahn], [[0, 2], [180, 2]], 180.0, '#c0592b', 'Europe/Berlin', 'Horizont', $gh, 'Nachbarhaus'), 26)), 'Nachbarhaus'));
@@ -1100,6 +1100,19 @@ $m->attrs['Haus'] = '{}'; $m->abrufe = [];
 json_decode($m->GetConfigurationForm(), true);
 check('J34 Assistent ohne Fassaden: erkennt das Haus beim Öffnen (Kartendienst abgefragt), ohne auf Straßen zu warten', $m->abrufe !== [] && count(array_filter($m->abrufe, fn($u) => str_contains($u, 'highway'))) === 0, json_encode($m->abrufe));
 [$m->props['Geraete'], $m->props['Fassaden']] = [$geraeteAlt, $fassAlt2];
+$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 166.0]]]); // schnell erkannt, ohne Straßen
+$m->attrs['ErkennenVersucht'] = 0;
+$m->ApplyChanges();
+$tJ = $m->timers['Erkennen'] ?? 0;
+$GLOBALS['ABRUF'] = [504, '']; $m->HausImHintergrund(); unset($GLOBALS['ABRUF']);
+$hJ = json_decode($m->attrs['Haus'], true) ?: [];
+check('J35 Straßen fehlen: Hintergrund startet; Dienst ausgelastet → nicht als „keine Straßen“ gespeichert, neuer Versuch in 15 min', $tJ > 0 && !array_key_exists('strassen', $hJ) && ($m->timers['Erkennen'] ?? 0) === 900000, json_encode([$tJ, $m->timers['Erkennen'] ?? null, array_keys($hJ)]));
+$m->ApplyChanges();
+check('J36 „Übernehmen“ bricht den ausstehenden Straßenabruf nicht ab', ($m->timers['Erkennen'] ?? 0) > 0, (string)($m->timers['Erkennen'] ?? 0));
+$GLOBALS['ABRUF'] = [200, '{"elements":[{"type":"way","tags":{"highway":"residential","name":"Testweg"},"geometry":[{"lat":48.0,"lon":8.0},{"lat":48.0005,"lon":8.0}]}]}'];
+$m->HausImHintergrund(); unset($GLOBALS['ABRUF']);
+$hJ = json_decode($m->attrs['Haus'], true) ?: [];
+check('J37b Dienst antwortet: Straßen gespeichert, kein weiterer Versuch', count($hJ['strassen'] ?? []) === 1 && ($m->timers['Erkennen'] ?? 0) === 0, json_encode([$hJ['strassen'] ?? null, $m->timers['Erkennen'] ?? null]));
 $m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
 $m->fieldUpdates = [];
