@@ -240,6 +240,8 @@ function zeichnen() {
   var fa = fassaden.filter(function (f) { return f.kennung === fassadeWahl; })[0] || null;
   var o = '';
   if (daten.sperre) { o += '<div class="hinweis">' + esc(daten.sperre) + '</div>'; }
+  var gestoert = geraete.filter(function (g) { return g.stoerung; });
+  if (gestoert.length) { o += '<div class="hinweis">⚠ ' + esc(gestoert.length === 1 ? T('One device does not reach its target') : T('%d devices do not reach their target').replace('%d', gestoert.length)) + '</div>'; }
   // Lage + Diagramm
   var anJetzt = fassaden.filter(function (f) { return f.sonne; }).map(function (f) { return f.name; });
   o += '<div class="oben"><div class="links"><div class="karte lage"><div><div class="titel">' + esc(T('Shading')) + '<span class="rechts schalter">' + esc(T('Automatic'))
@@ -269,8 +271,8 @@ function zeichnen() {
       var st = g.zu == null ? '' : (g.typ === 'markise' ? (g.zu > .05 ? T('extended') + ' ' + Math.round(g.zu * 100) + ' %' : T('retracted')) : (g.zu < .03 ? T('open') : Math.round(g.zu * 100) + ' % ' + T('closed'))) + (g.lamelle != null && g.typ === 'raffstore' && g.zu > .03 ? ' · ' + g.lamelle + '°' : '');
       o += '<div class="geraet' + (gewaehlt === g._i ? ' gewaehlt' : '') + (g.aktiv === false ? ' aus' : '') + '" data-i="' + g._i + '"><div class="k">' + symbol(g)
         + '<span class="n">' + esc(g.name) + '</span><button class="toggle klein' + (g.aktiv === false ? '' : ' an') + '" data-s="' + g._i + '"' + (daten.bedienbar ? '' : ' disabled') + ' title="' + esc(T('Automatic')) + '"></button></div>'
-        + '<div class="s">' + esc(st) + '</div><div class="g">' + esc(g.grund) + '</div><div class="m">'
-        + (g.raumTemp != null ? '<span class="zahl">' + zahl(g.raumTemp, 1) + ' °C</span>' : '') + (g.raumLux != null ? '<span class="zahl">' + zahl(g.raumLux) + ' lx' + (g.zielLux ? ' → ' + g.zielLux : '') + '</span>' : '') + (g.waerme > 50 ? '<span class="zahl" title="' + esc(T('Solar heat today')) + '">☀︎ ' + kwh(g.waerme) + ' kWh</span>' : '') + '</div></div>';
+        + '<div class="s">' + esc(st) + '</div><div class="g">' + esc(g.grund) + '</div>' + (g.stoerung ? '<div class="g" style="color:var(--warn)">⚠ ' + esc(g.stoerung) + '</div>' : '') + '<div class="m">'
+        + (g.raumTemp != null ? '<span class="zahl">' + zahl(g.raumTemp, 1) + ' °C</span>' : '') + (g.raumLux != null ? '<span class="zahl">' + zahl(g.raumLux) + ' lx' + (g.zielLux ? ' → ' + g.zielLux : '') + '</span>' : '') + (g.waerme > 50 ? '<span class="zahl" title="' + esc(T('Solar heat today')) + '">☀︎ ' + kwh(g.waerme) + ' kWh</span>' : '') + (g.fahrten ? '<span class="zahl" title="' + esc(T('moves today')) + '">↕ ' + g.fahrten + '</span>' : '') + '</div></div>';
       if (gewaehlt === g._i && (g.weg || []).length) { o += '<div class="weg">' + esc(g.weg.join('\n')) + '</div>'; }
     });
     o += '</div></div>';

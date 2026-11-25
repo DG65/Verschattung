@@ -283,6 +283,12 @@ $s3 = VSCHLogik::entscheide(['nachts' => 2, 'ist' => ['zu' => 1.0, 'lamelle' => 
 check('D76 Sommernacht nur mit Einstellung 2 und nur wenn draußen ≥ 2 K kühler: auf', $s1['ziel'] === 'offen' && $s2['ziel'] === null && $s3['ziel'] === null, json_encode([$s1['grund'], $s2['grund'], $s3['grund']]));
 $r1 = VSCHLogik::entscheide(['typ' => 'raffstore', 'lamellen' => true] + $NG, $NU, [], $T, ts('2026-12-10 18:00'));
 check('D77 Raffstore nachts: Lamellen ganz zu (90°)', $r1['ziel'] === 'zu' && $r1['lamelle'] == 90.0);
+// Gerätewächter (Idee 4)
+$B = ['ziel' => 'beschatten', 'ts' => 1000, 'wdh' => 0, 'anteil' => 1.0];
+check('D78 Gerätewächter: am Ziel ok; fährt noch → warten; nach Wiederholung und 5 min nicht am Ziel → Störung; von Hand bewegt → kein Alarm; kein Befehl → ok',
+    VSCHLogik::waechter($B, 100, 99, 5, 0, 1100, 300) === 'ok' && VSCHLogik::waechter($B, 100, 40, 5, 0, 1100, 300) === 'warten'
+    && VSCHLogik::waechter($B, 100, 40, 5, 0, 2000, 300) === 'warten' && VSCHLogik::waechter(['wdh' => 1] + $B, 100, 40, 5, 0, 1400, 300) === 'stoerung'
+    && VSCHLogik::waechter(['wdh' => 1] + $B, 100, 40, 5, 1200, 1400, 300) === 'hand' && VSCHLogik::waechter([], 100, 40, 5, 0, 1400, 300) === 'ok');
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -760,6 +766,19 @@ $fH2 = json_encode(json_decode($m->GetConfigurationForm(), true));
 check('G71 HeishaMon: Hinweis und Knopf, Klick schaltet dessen Variable (RequestAction), danach kein Hinweis mehr', str_contains($fH, 'VSCH_UIHeishaSonne') && in_array([995, true], $GLOBALS['BEFEHLE'], true)
     && GetValue(995) === true && !str_contains($fH2, 'VSCH_UIHeishaSonne') && $m->UIHeishaSonne() !== $tH, $tH);
 unset($GLOBALS['MODULES']['{1919151A-3C0F-4C09-B906-291638EC1469}']);
+// Gerätewächter im Regeltakt: Behang bleibt stecken → nach Wiederholung + 5 min Störung in Variable, Kachel, GetState; Fahrten gezählt
+$sicherW = [$m->attrs['Zustand'], $GLOBALS['CLOCK'], GetValue(601)];
+$m->attrs['Zustand'] = '{}'; SetValue(601, 0); SetValue(602, 0); $GLOBALS['CLOCK'] = ts('2026-07-01 13:30');
+$GLOBALS['STECKT'] = 601; // Nachbau: Befehle an 601 kommen nicht an
+$m->Tick(); $GLOBALS['CLOCK'] += 360; $m->Tick(); $GLOBALS['CLOCK'] += 360; $m->Tick();
+unset($GLOBALS['STECKT']);
+$stW = json_decode($m->GetState(), true);
+$d601 = array_values(array_filter($stW['devices'], fn($d) => $d['positionID'] === 601))[0] ?? [];
+check('G73 Gerätewächter: Raffstore kommt nicht an → Störung in Variable „Gerätewächter“ und GetState, Fahrten gezählt', str_contains((string)$m->GetValue('Geraetewaechter'), 'Raffstore Büro')
+    && is_string($d601['fault'] ?? null) && ($d601['movesToday'] ?? 0) >= 2, json_encode([$m->GetValue('Geraetewaechter'), $d601]));
+SetValue(601, 100); $m->Tick();
+check('G74 … am Ziel angekommen → Störung weg', $m->GetValue('Geraetewaechter') === '', (string)$m->GetValue('Geraetewaechter'));
+[$m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherW, 0, 2); SetValue(601, $sicherW[2]);
 // Vorschau (Idee 3): kräftige Sonne heute noch auf welche Fassade
 $kv = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $vm) ? $vm[1] : 'null', true);
 $vz = $kv['vorschau']['zeiten'] ?? [];

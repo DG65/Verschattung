@@ -144,6 +144,7 @@ class Verschattung extends IPSModule
         $kwh = ['PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION, 'SUFFIX' => ' kWh', 'DIGITS' => 1];
         $this->MaintainVariable('WaermeHeute', $this->t('Solar heat today'), VARIABLETYPE_FLOAT, $kwh, 3, true);
         $this->MaintainVariable('AbgehaltenHeute', $this->t('Heat kept out today'), VARIABLETYPE_FLOAT, $kwh, 4, true);
+        $this->MaintainVariable('Geraetewaechter', $this->t('Device monitor'), VARIABLETYPE_STRING, '', 5, true); // leer = alles in Ordnung
 
         foreach ($this->GetMessageList() as $sender => $msgs) {
             foreach ($msgs as $m) {
@@ -366,6 +367,7 @@ class Verschattung extends IPSModule
             if ($r['ziel'] !== null) {
                 $this->ausfuehren($g, $r['ziel'], $r['lamelle'], $neu, $now, $r['anteil'] ?? null);
             }
+            $this->waechterPruefen($g, $neu, $now);
             $z[$k] = $neu;
             $statusZeilen[] = $g['Name'] . ': ' . $r['grund'];
         }
@@ -382,8 +384,44 @@ class Verschattung extends IPSModule
         if ($this->GetValue('Status') !== $status) {
             $this->SetValue('Status', $status);
         }
+        $this->waechterMelden($z);
         $this->kachelAktualisieren($wege);
         return $wege;
+    }
+
+    /** Gerätewächter je Behang: Störung merken (einmal ins Log), aufheben, sobald der Behang am Ziel ist oder von Hand bewegt wurde. */
+    private function waechterPruefen(array $g, array &$z, int $now): void
+    {
+        $b = (array)($z['befehl'] ?? []);
+        $max = $this->maxWert($g['Position']);
+        $soll = $b === [] ? 0.0 : $this->positionWert($g, (float)($b['anteil'] ?? 0));
+        $ist = (float)GetValue($g['Position']);
+        $lage = VSCHLogik::waechter($b, $soll, $ist, max(2.0, 0.05 * $max), (int)($z['handTs'] ?? 0), $now, self::NACHKONTROLLE_S);
+        if ($lage === 'stoerung') {
+            if (!isset($z['stoerung'])) {
+                [$istZu] = $this->istStellung($g);
+                $text = $this->t('%s does not reach its target (%d %% closed, stands at %d %%)', $g['Name'], (int)round((float)($b['anteil'] ?? 0) * 100), (int)round((float)$istZu * 100));
+                $z['stoerung'] = ['ts' => $now, 'text' => $text];
+                $this->LogMessage($text, KL_WARNING);
+            }
+        } elseif ($lage !== 'warten' && isset($z['stoerung'])) {
+            unset($z['stoerung']);
+        }
+    }
+
+    /** Variable „Gerätewächter“: alle Störungen in einer Zeile, leer = alles in Ordnung. */
+    private function waechterMelden(array $z): void
+    {
+        $texte = [];
+        foreach ($this->geraete() as $g) {
+            if (isset($z[$g['key']]['stoerung']['text'])) {
+                $texte[] = (string)$z[$g['key']]['stoerung']['text'];
+            }
+        }
+        $text = implode(' · ', $texte);
+        if (@$this->GetIDForIdent('Geraetewaechter') !== false && $this->GetValue('Geraetewaechter') !== $text) {
+            $this->SetValue('Geraetewaechter', $text);
+        }
     }
 
     /** Befehl an ein Gerät: Behang auf Ziel, Lamellen nachführen. Wiederholt einmal, wenn ein Befehl verloren ging. */
@@ -400,6 +438,10 @@ class Verschattung extends IPSModule
         if (!$gleich || ($weit && $now - (int)($letzt['ts'] ?? 0) > self::NACHKONTROLLE_S && (int)($letzt['wdh'] ?? 0) < 1)) {
             if ($this->schalten($g['Position'], $wert)) {
                 $z['befehl'] = ['ziel' => $ziel, 'ts' => $now, 'wdh' => $gleich ? (int)($letzt['wdh'] ?? 0) + 1 : 0, 'anteil' => round($anteil, 3)];
+                // Fahrtenzähler (Gerätewächter): heute und insgesamt
+                $f = (array)($z['fahrten'] ?? []);
+                $heute = date('Y-m-d', $now);
+                $z['fahrten'] = ['tag' => $heute, 'heute' => (($f['tag'] ?? '') === $heute ? (int)($f['heute'] ?? 0) : 0) + 1, 'gesamt' => (int)($f['gesamt'] ?? 0) + 1];
             }
         }
         if ($lamelle !== null && $g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
@@ -1500,7 +1542,9 @@ class Verschattung extends IPSModule
             $out[] = ['name' => $g['Name'], 'facade' => $g['Fassade'], 'type' => $g['Typ'], 'positionID' => $g['Position'],
                 'shading' => (bool)($s['soll'] ?? false), 'manual' => ($s['hand'] ?? null) !== null, 'reason' => (string)($s['grund'] ?? ''),
                 'gainNowW' => $heute && isset($w['jetzt']) ? (int)round((float)($w['jeJetzt'][$g['key']] ?? 0)) : null,
-                'gainTodayWh' => $heute ? (int)round((float)($w['je'][$g['key']] ?? 0)) : null];
+                'gainTodayWh' => $heute ? (int)round((float)($w['je'][$g['key']] ?? 0)) : null,
+                'fault' => isset($s['stoerung']['text']) ? (string)$s['stoerung']['text'] : null,
+                'movesToday' => ($s['fahrten']['tag'] ?? '') === date('Y-m-d', $this->now()) ? (int)$s['fahrten']['heute'] : 0, 'movesTotal' => (int)($s['fahrten']['gesamt'] ?? 0)];
         }
         $lagen = array_count_values(array_filter(array_map('strval', (array)($z['_klima'] ?? []))));
         arsort($lagen);

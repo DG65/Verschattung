@@ -45,7 +45,7 @@ function IPS_GetVariableList(): array { return array_keys(array_filter($GLOBALS[
 function GetValue($id) { return $GLOBALS['OBJ'][(int)$id]['value']; }
 function SetValue($id, $v): bool { $GLOBALS['OBJ'][(int)$id]['value'] = $v; return true; }
 function HasAction($id): bool { return (bool)($GLOBALS['OBJ'][(int)$id]['action'] ?? false); }
-function RequestAction($id, $v): bool { $GLOBALS['OBJ'][(int)$id]['value'] = $v; $GLOBALS['BEFEHLE'][] = [(int)$id, $v]; return true; }
+function RequestAction($id, $v): bool { if ((int)$id !== (int)($GLOBALS['STECKT'] ?? -1)) { $GLOBALS['OBJ'][(int)$id]['value'] = $v; } $GLOBALS['BEFEHLE'][] = [(int)$id, $v]; return true; }
 function IPS_GetObject(int $id): array { $o = $GLOBALS['OBJ'][$id]; return ['ObjectIdent' => $o['ident'], 'ObjectName' => $o['name'], 'ParentID' => $o['parent'], 'ObjectInfo' => $o['info'] ?? '']; }
 function IPS_SetInfo(int $id, string $info): bool { $GLOBALS['OBJ'][$id]['info'] = $info; return true; }
 function IPS_GetLinkList(): array { return array_keys(array_filter($GLOBALS['OBJ'], fn($o) => $o['kind'] === 6)); }

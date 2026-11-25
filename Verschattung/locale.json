@@ -402,7 +402,12 @@
             "Expected today: sun on %s": "Heute voraussichtlich Sonne auf %s",
             "No strong sun expected today any more": "Heute keine kräftige Sonne mehr erwartet",
             "if the sky is clear": "bei klarem Himmel",
-            "expected": "erwartet"
+            "expected": "erwartet",
+            "Device monitor": "Gerätewächter",
+            "%s does not reach its target (%d %% closed, stands at %d %%)": "%s erreicht sein Ziel nicht (%d %% zu, steht bei %d %%)",
+            "moves today": "Fahrten heute",
+            "One device does not reach its target": "Ein Behang erreicht sein Ziel nicht",
+            "%d devices do not reach their target": "%d Behänge erreichen ihr Ziel nicht"
         }
     }
 }

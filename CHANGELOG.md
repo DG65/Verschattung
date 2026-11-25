@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0 (in Entwicklung)
+
+- **Gerätewächter (Idee 4):** prüft nach jedem Fahrbefehl, ob der Behang sein Ziel erreicht (Toleranz 5 %). Nach der einen Wiederholung (5 min) und weiteren 5 min ohne Erfolg → Störung: neue Variable „Gerätewächter“ (Text, leer = in Ordnung), Warnung im Meldungsfenster (einmal), Hinweis und rote Zeile auf der Kachel, `fault` in `VSCH_GetState`. Handbedienung seit dem Befehl löst nichts aus; am Ziel angekommen → Störung weg.
+- **Fahrtenzähler** je Behang (heute auf der Kachel, heute/insgesamt in `VSCH_GetState`: `movesToday`, `movesTotal`).
+
+
 ## 0.14.0 (in Entwicklung)
 
 - **Vorschau auf der Kachel (Idee 3):** „Heute voraussichtlich beschattet: Süd 11:20–15:40“ – im Winter „Heute voraussichtlich Sonne auf Süd … – die Behänge bleiben oben, die Sonne heizt mit“. Gerechnet ab jetzt im 10-min-Raster: Sonnenzeit der Fassade (Horizont, Nachbarn) × erwartete Einstrahlung ≥ „Beschatten ab“; Wolken aus der PV-Prognose (wie beim Vertrag shading), ohne sie „bei klarem Himmel“. Im Tagesverlauf gestrichelt unter der Sonnenzeit.

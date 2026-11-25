@@ -186,7 +186,9 @@ trait VSCHKachel
                 'schalter' => 'Aktiv' . $g['Position'], 'aktiv' => $this->geraetAktiv($g),
                 'raumTemp' => $rt === null ? null : round($rt, 1), 'raumLux' => $rl === null ? null : (int)round($rl), 'zielLux' => $ziel > 0 ? (int)$ziel : null,
                 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
-                'weg' => $wege[$g['Name']] ?? [], 'waerme' => $w === null ? null : (int)round((float)($w['je'][$g['key']] ?? 0))];
+                'weg' => $wege[$g['Name']] ?? [], 'waerme' => $w === null ? null : (int)round((float)($w['je'][$g['key']] ?? 0)),
+                'stoerung' => isset($z[$g['key']]['stoerung']['text']) ? (string)$z[$g['key']]['stoerung']['text'] : null,
+                'fahrten' => ($z[$g['key']]['fahrten']['tag'] ?? '') === date('Y-m-d', $now) ? (int)$z[$g['key']]['fahrten']['heute'] : 0];
         }
         $daten['waerme'] = $this->kachelWaerme($w, $wm2 !== null, $bahn);
         $daten['vorschau'] = $this->kachelVorschau($bahn, $daten['fassaden'], $now);
@@ -274,6 +276,9 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'One device does not reach its target' => $this->t('One device does not reach its target'),
+            '%d devices do not reach their target' => $this->t('%d devices do not reach their target'),
+            'moves today' => $this->t('moves today'),
             'Expected today: shading %s' => $this->t('Expected today: shading %s'),
             'Expected today: sun on %s – the devices stay up, the sun heats with us' => $this->t('Expected today: sun on %s – the devices stay up, the sun heats with us'),
             'Expected today: sun on %s' => $this->t('Expected today: sun on %s'),

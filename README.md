@@ -68,6 +68,7 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 - **Schalter je Behang:** „Automatik <Name>“ (Variable und Kachel). Aus → nur noch Notfall und Wetterschutz.
 - **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür. Meldet ein Griff „gekippt“ oder ist die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ gestellt, fährt er höchstens bis zur Lüftungsposition.
 - **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch, auch nachts und bei ausgeschalteter Automatik.
+- **Gerätewächter:** Nach jedem Fahrbefehl prüft das Modul, ob der Behang sein Ziel erreicht. Kommt er nicht an, wiederholt es den Befehl einmal nach 5 Minuten; steht er 5 Minuten danach noch daneben, meldet es eine Störung – in der Variable „Gerätewächter“ (leer = alles in Ordnung, z. B. für eine Benachrichtigung), im Meldungsfenster und rot auf der Kachel. Von Hand bewegt gilt nicht als Störung. Die Kachel zählt außerdem die Fahrten je Behang (heute), `VSCH_GetState` liefert heute und insgesamt.
 - **„❓ Warum?“** zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten, ohne dass etwas fährt.
 - **Ziel-Helligkeit im Raum (optional):** Ist weder Heizen noch Kühlen nötig, regelt der Behang auf die eingestellte Helligkeit (z. B. 200 lx) – zu hell: weiter zu (Raffstores: Lamellen), zu dunkel: weiter auf, ein Schritt alle 2 Minuten.
 

@@ -241,6 +241,25 @@ final class VSCHLogik
     }
 
     /**
+     * Gerätewächter (Idee 4): Hat der Behang das Ziel des letzten Befehls erreicht?
+     * Rückgabe 'ok' (am Ziel oder kein Befehl), 'warten' (fährt noch / Wiederholung läuft), 'hand' (seitdem von Hand bewegt – kein Alarm),
+     * 'stoerung' (auch nach der einen Wiederholung und weiteren $warte s nicht am Ziel).
+     */
+    public static function waechter(array $befehl, float $soll, float $ist, float $toleranz, int $handTs, int $now, int $warte): string
+    {
+        if ($befehl === []) {
+            return 'ok';
+        }
+        if ($handTs >= (int)($befehl['ts'] ?? 0)) {
+            return 'hand';
+        }
+        if (abs($ist - $soll) <= $toleranz) {
+            return 'ok';
+        }
+        return (int)($befehl['wdh'] ?? 0) >= 1 && $now - (int)($befehl['ts'] ?? 0) > $warte ? 'stoerung' : 'warten';
+    }
+
+    /**
      * Nachtfunktion (Idee 2). $g['nachts']: 0 aus, 1 Winter nachts zu, 2 zusätzlich Sommer nachts auf. $u['nacht']: dunkel (Modul, mit Hysterese).
      * Merkt in $z: nacht ('daemmen'|'lueften'), nachtAb (Beginn dieser Nacht), handTs (letzte Handbedienung, vom Modul).
      * Wurde der Behang in dieser Nacht von Hand bewegt, ruht die Nachtfunktion bis morgen. Morgens fährt nur hoch, was nachts das Modul geschlossen hat.
