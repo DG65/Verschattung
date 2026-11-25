@@ -69,6 +69,7 @@ Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendi
 - **Fenster-/Türkontakt:** Ist er offen, fährt der Behang nicht herunter (Aussperrschutz) – jeder offene Kontakt gilt als Tür. Meldet ein Griff „gekippt“ oder ist die Spalte „Kontakt offen“ auf „Lüftungsposition (Fenster)“ gestellt, fährt er höchstens bis zur Lüftungsposition.
 - **Notfall:** Meldet ein Rauch- oder Brandmelder Alarm, fahren alle Behänge sofort hoch, auch nachts und bei ausgeschalteter Automatik.
 - **Abwesenheit / Urlaub:** Ist niemand zu Hause, beschatten die Behänge im behaglichen Bereich voll statt nur Blendschutz oder Ziel-Helligkeit – das Tageslicht braucht dann niemand, es zählt nur die Wärme. Im Winter heizt die Sonne weiter mit. Quelle: eine eigene Anwesenheitsvariable (Feinheiten, wahlweise „wahr = jemand zu Hause“ oder „wahr = niemand zu Hause“), sonst automatisch „Simulation aktiv“ der Anwesenheitssimulation (DG65-Toolkit).
+- **Szenen (Kachel und Skript):** „Alle auf“, „Alle zu“, „Lüften“ (Lüftungsposition) und „Automatik“. Eine Szene wirkt wie eine Handbedienung: Die Automatik lässt die Behänge in Ruhe, bis sich die Sonnenlage ändert; „Automatik“ gibt sie sofort zurück. Offene Türen werden nicht zugefahren, Markisen nur eingefahren, Notfall und Wetterschutz gehen vor. Im Skript: `VSCH_Szene($id, 'zu')`.
 - **Gerätewächter:** Nach jedem Fahrbefehl prüft das Modul, ob der Behang sein Ziel erreicht. Kommt er nicht an, wiederholt es den Befehl einmal nach 5 Minuten; steht er 5 Minuten danach noch daneben, meldet es eine Störung – in der Variable „Gerätewächter“ (leer = alles in Ordnung, z. B. für eine Benachrichtigung), im Meldungsfenster und rot auf der Kachel. Von Hand bewegt gilt nicht als Störung. Die Kachel zählt außerdem die Fahrten je Behang (heute), `VSCH_GetState` liefert heute und insgesamt.
 - **„❓ Warum?“** zeigt je Behang den ganzen Entscheidungsweg mit den Messwerten, ohne dass etwas fährt.
 - **Ziel-Helligkeit im Raum (optional):** Ist weder Heizen noch Kühlen nötig, regelt der Behang auf die eingestellte Helligkeit (z. B. 200 lx) – zu hell: weiter zu (Raffstores: Lamellen), zu dunkel: weiter auf, ein Schritt alle 2 Minuten.
@@ -96,6 +97,8 @@ Markisen und Raffstores fahren bei Wind und Unwetter ein – das geht allem vor,
 **Ohne jede Wetterquelle fährt eine Markise nie automatisch aus**, außer „Markisen ohne Wetterquelle ausfahren“ ist bewusst angehakt.
 
 ## Für Skripte
+
+`VSCH_Szene(int $InstanzID, string $Szene): string` – `auf`, `zu`, `lueften` oder `automatik` für alle Behänge (siehe oben), Rückgabe Klartext.
 
 `VSCH_GetState(int $InstanzID): string` – JSON, Vertrag `shading` 1.1 (nur lesend, additiv):
 

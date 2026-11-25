@@ -193,7 +193,73 @@ class Verschattung extends IPSModule
             $this->Tick();
             return;
         }
+        if ($Ident === 'Szene') {
+            $this->Szene((string)$Value); // Szenen-Tasten der Kachel
+            return;
+        }
         throw new Exception('Invalid Ident');
+    }
+
+    /**
+     * Szene (Idee 6) für alle Behänge: 'auf', 'zu', 'lueften' oder 'automatik'. Wirkt wie eine Handbedienung – die Automatik
+     * lässt die Behänge in Ruhe, bis sich die Sonnenlage ändert; 'automatik' gibt sie sofort zurück. Offene Türen werden nicht
+     * zugefahren (Aussperrschutz), Markisen nur eingefahren. Notfall und Wetterschutz gehen weiter vor. Rückgabe: Klartext.
+     */
+    public function Szene(string $szene): string
+    {
+        if (!in_array($szene, ['auf', 'zu', 'lueften', 'automatik'], true)) {
+            return $this->t('Unknown scene: %s', $szene);
+        }
+        $z = $this->zustand();
+        $now = $this->now();
+        $n = 0;
+        $aus = [];
+        foreach ($this->geraete() as $g) {
+            if ($g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
+                continue;
+            }
+            $k = $g['key'];
+            $z[$k] = (array)($z[$k] ?? []);
+            if ($szene === 'automatik') {
+                unset($z[$k]['hand'], $z[$k]['szene']);
+                $z[$k]['handTs'] = 0;
+                $n++;
+                continue;
+            }
+            $markise = $g['Typ'] === 'markise';
+            if ($markise && $szene !== 'auf') {
+                continue; // Markisen fahren mit „Alle zu“/„Lüften“ nicht aus
+            }
+            $anteil = $szene === 'auf' ? 0.0 : ($szene === 'zu' ? 1.0 : $this->ReadPropertyFloat('Lueftung') / 100);
+            if ($anteil > 0 && $this->fensterLage($g)[0] === 'sperre') {
+                $aus[] = $g['Name'];
+                continue;
+            }
+            if ($this->schalten($g['Position'], $this->positionWert($g, $anteil))) {
+                $n++;
+                if ($g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
+                    $lam = $szene === 'zu' ? 90.0 : 0.0;
+                    $max = $this->maxWert($g['Lamelle']);
+                    $this->schalten($g['Lamelle'], $g['LamelleUmgekehrt'] ? $max * (1 - $lam / 90) : $max * $lam / 90);
+                }
+                $z[$k]['hand'] = (bool)($z[$k]['soll'] ?? false); // wie Handbedienung: Ruhe bis zum nächsten Sonnenwechsel
+                $z[$k]['handTs'] = $now;
+                $z[$k]['wir'] = false;
+                // Gerätewächter prüft mit (ts eine Sekunde nach handTs: erst eine spätere Handbedienung gilt als „von Hand bewegt“)
+                $z[$k]['befehl'] = ['ziel' => 'szene', 'ts' => $now + 1, 'wdh' => 1, 'anteil' => round($anteil, 3)];
+                $z[$k]['szene'] = $szene;
+            }
+        }
+        $this->WriteAttributeString('Zustand', json_encode($z));
+        $name = ['auf' => $this->t('All up'), 'zu' => $this->t('All closed'), 'lueften' => $this->t('Ventilate'), 'automatik' => $this->t('Back to automatic')][$szene];
+        $text = $this->t('%s: %d devices', $name, $n) . ($aus !== [] ? ' · ' . $this->t('left out (door open): %s', implode(', ', $aus)) : '');
+        $this->LogMessage($text, KL_MESSAGE);
+        if ($szene === 'automatik') {
+            $this->Tick();
+        } else {
+            $this->kachelAktualisieren([]);
+        }
+        return $text;
     }
 
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data)

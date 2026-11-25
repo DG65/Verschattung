@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0 (in Entwicklung)
+
+- **Szenen-Tasten (Idee 6):** auf der Kachel „Alle auf“, „Alle zu“, „Lüften“, „Automatik“, im Skript `VSCH_Szene($id, 'auf'|'zu'|'lueften'|'automatik')`. Eine Szene wirkt wie eine Handbedienung (Ruhe bis zum nächsten Sonnenwechsel, Nachtfunktion ruht bis morgen), „Automatik“ gibt die Behänge sofort zurück. Offene Türen werden nicht zugefahren (Aussperrschutz), Markisen fahren nur ein, Notfall und Wetterschutz gehen vor; der Gerätewächter prüft auch Szenen-Fahrten.
+
+
 ## 0.16.0 (in Entwicklung)
 
 - **Abwesenheit / Urlaub (Idee 5):** Niemand zu Hause → im behaglichen Bereich voll beschatten statt Blendschutz oder Helligkeitsregelung (Grund „Niemand zu Hause: voll beschatten …“); Heizbetrieb bleibt unverändert. Quelle: neue Einstellungen „Anwesenheit (optional)“ und „Die Variable bedeutet“ in den Feinheiten; ohne Variable automatisch „Simulation aktiv“ der Anwesenheitssimulation (DG65-Toolkit). Kachel zeigt „🏖 Niemand zu Hause“, `VSCH_GetState` liefert `absent`.

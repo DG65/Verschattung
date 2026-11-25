@@ -39,6 +39,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .waerme .balken i{display:block;height:100%}
 .waerme .klein{font-size:11px;color:var(--fg2);line-height:1.4}
 .zeile.vorschau .wert{font-weight:400;color:var(--fg2)}
+.szenen{display:flex;gap:8px;flex-wrap:wrap}
+.szenen button{flex:1;min-width:90px;background:var(--karte2);border:0;border-radius:10px;padding:8px 6px;font-size:12px;font-weight:500}
+.szenen button:active{opacity:.6}
 .lage .haupt{font-size:24px;font-weight:600;line-height:1.15}
 .lage .haupt.kuehlen{color:var(--kuehl)} .lage .haupt.heizen{color:var(--heiz)}
 .lage .unter{font-size:13px;color:var(--fg2);margin-top:3px}
@@ -254,7 +257,9 @@ function zeichnen() {
   var t = daten.tag || {};
   o += '<div class="zeile">☀︎ <span class="wert">' + (t.auf ? uhr(t.auf) : '–') + '</span> – <span class="wert">' + (t.unter ? uhr(t.unter) : '–') + '</span>'
     + (fa ? '<span style="margin-left:auto">' + esc(fa.name) + ': <span class="wert">' + esc((fa.zeiten || []).map(function (z) { return uhr(z[0]) + '–' + uhr(z[1]); }).join(', ') || T('none')) + '</span></span>' : '') + '</div>'
-    + vorschauZeile() + '</div>';
+    + vorschauZeile()
+    + (daten.bedienbar ? '<div class="szenen">' + [['auf', '⬆ ' + T('All up')], ['zu', '⬇ ' + T('All closed')], ['lueften', '≋ ' + T('Ventilate')], ['automatik', '↺ ' + T('Automatic')]]
+      .map(function (s) { return '<button data-szene="' + s[0] + '">' + esc(s[1]) + '</button>'; }).join('') + '</div>' : '') + '</div>';
   o += waermeKarte() + '</div>';
   o += '<div class="karte diagramm"><div class="titel" style="align-self:stretch">' + esc(T('Sun path today')) + '<span class="rechts">'
     + ((fa && (fa.gebaeude || []).length) ? '<button class="chip" id="nachbarn">' + esc(nachbarnAn ? T('Neighbours on') : T('Neighbours off')) + '</button>' : '') + '</span></div>'
@@ -282,6 +287,7 @@ function zeichnen() {
   k.innerHTML = o;
   var b = document.getElementById('auto'); if (b) { b.onclick = function () { aktion('Automatik', !daten.automatik); }; }
   var nb = document.getElementById('nachbarn'); if (nb) { nb.onclick = function () { nachbarnAn = !nachbarnAn; try { localStorage.setItem('vsch-nachbarn', nachbarnAn ? '1' : '0'); } catch (e) { } zeichnen(); }; }
+  Array.prototype.forEach.call(k.querySelectorAll('[data-szene]'), function (e) { e.onclick = function () { aktion('Szene', e.getAttribute('data-szene')); }; });
   var ib = document.getElementById('info'); if (ib) { ib.onclick = function () { infoOffen = !infoOffen; zeichnen(); }; }
   Array.prototype.forEach.call(k.querySelectorAll('.geraet'), function (e) { e.onclick = function () { var i = +e.getAttribute('data-i'); gewaehlt = gewaehlt === i ? null : i; var g = daten.geraete[i]; if (g) { fassadeWahl = g.fassade; } zeichnen(); }; });
   Array.prototype.forEach.call(k.querySelectorAll('[data-s]'), function (e) { e.onclick = function (ev) { ev.stopPropagation(); var g = daten.geraete[+e.getAttribute('data-s')]; if (g) { aktion(g.schalter, !g.aktiv); } }; });

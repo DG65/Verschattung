@@ -277,6 +277,9 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'All up' => $this->t('All up'),
+            'All closed' => $this->t('All closed'),
+            'Ventilate' => $this->t('Ventilate'),
             'Nobody at home' => $this->t('Nobody at home'),
             'One device does not reach its target' => $this->t('One device does not reach its target'),
             '%d devices do not reach their target' => $this->t('%d devices do not reach their target'),

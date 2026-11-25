@@ -797,6 +797,17 @@ SetValue(997, false);
 $wegDa = implode("\n", (array)($w->invoke($m, true)['Raffstore Büro'] ?? []));
 [$m->props['Geraete'], $m->props['TemperaturID']] = [$gA, $tA];
 check('G76 Raum behaglich (22 °C): niemand zu Hause → voll beschatten mit Grund, jemand da → behaglich', str_contains($wegAb, 'Niemand zu Hause') && !str_contains($wegDa, 'Niemand zu Hause'), $wegAb);
+// Szenen (Idee 6): „Alle auf“ wirkt wie Handbedienung bis zum Sonnenwechsel, „Automatik“ gibt sofort zurück; Markise fährt bei „Alle zu“ nicht aus
+$sicherS = [$m->attrs['Zustand'], $GLOBALS['CLOCK'], GetValue(601), GetValue(701)];
+$m->attrs['Zustand'] = '{}'; $GLOBALS['CLOCK'] = ts('2026-07-01 13:30'); SetValue(601, 0); SetValue(701, 0);
+$m->Tick(); $s0 = GetValue(601);
+$tS = $m->Szene('auf'); $s1 = GetValue(601);
+$GLOBALS['CLOCK'] += 60; $m->Tick(); $s2 = GetValue(601);
+$m->Szene('automatik'); $s3 = GetValue(601);
+check('G77 Szene „Alle auf“: Behang hoch und bleibt oben (wie Handbedienung); „Automatik“ → sofort wieder beschattet', $s0 === 100 && $s1 === 0 && $s2 === 0 && $s3 === 100 && str_contains($tS, 'Alle auf'), json_encode([$s0, $s1, $s2, $s3, $tS]));
+SetValue(701, 0); $m->Szene('zu');
+check('G78 Szene „Alle zu“: Markise fährt nicht aus; über RequestAction von der Kachel erreichbar', GetValue(701) === 0 && (function () use ($m) { $m->RequestAction('Szene', 'auf'); return GetValue(601) === 0; })());
+[$m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherS, 0, 2); SetValue(601, $sicherS[2]); SetValue(701, $sicherS[3]);
 // Vorschau (Idee 3): kräftige Sonne heute noch auf welche Fassade
 $kv = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $vm) ? $vm[1] : 'null', true);
 $vz = $kv['vorschau']['zeiten'] ?? [];
