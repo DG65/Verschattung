@@ -422,7 +422,7 @@ class Verschattung extends IPSModule
         $je = [];
         foreach ($this->geraete() as $g) {
             $f = $fassaden[$g['Fassade']] ?? null;
-            if ($f === null || $g['Position'] <= 0 || !IPS_VariableExists($g['Position'])) {
+            if ($f === null || $g['Position'] <= 0 || !IPS_VariableExists($g['Position']) || !VSCHLogik::zaehltFlaeche($g['Typ'], $g['Flaeche'])) {
                 continue;
             }
             $faz = (float)($f['Azimut'] ?? 180);
@@ -1879,7 +1879,7 @@ class Verschattung extends IPSModule
             $felder[] = ['type' => 'Select', 'name' => 'GWert', 'caption' => $this->t('Glazing'), 'width' => '600px', 'options' => [
                 ['caption' => $this->t('double glazing (g 0.6)'), 'value' => 0.6], ['caption' => $this->t('triple glazing (g 0.5)'), 'value' => 0.5],
                 ['caption' => $this->t('solar control glass (g 0.35)'), 'value' => 0.35]]];
-            $felder[] = ['type' => 'Label', 'caption' => $this->t('The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column "Window area", empty = 2 m²) and the glazing.')];
+            $felder[] = ['type' => 'Label', 'caption' => $this->t('The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column "Window area", empty = 2 m²; awnings only with an area) and the glazing.')];
         }
         return $felder;
     }

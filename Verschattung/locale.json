@@ -386,7 +386,7 @@
             "double glazing (g 0.6)": "Zweifachverglasung (g 0,6)",
             "triple glazing (g 0.5)": "Dreifachverglasung (g 0,5)",
             "solar control glass (g 0.35)": "Sonnenschutzglas (g 0,35)",
-            "The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column \"Window area\", empty = 2 m²) and the glazing.": "Die Kachel zeigt, wie viel Wärme die Sonne heute ins Haus bringt und wie viel die Behänge abhalten. Geschätzt aus dem Einstrahlungssensor, dem Sonnenstand, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m²) und der Verglasung."
+            "The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column \"Window area\", empty = 2 m²; awnings only with an area) and the glazing.": "Die Kachel zeigt, wie viel Wärme die Sonne heute ins Haus bringt und wie viel die Behänge abhalten. Geschätzt aus dem Einstrahlungssensor, dem Sonnenstand, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m², Markisen nur mit eingetragener Fläche) und der Verglasung."
         }
     }
 }

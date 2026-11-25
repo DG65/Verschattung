@@ -487,6 +487,12 @@ final class VSCHLogik
      * Sonnenwärme durch ein Fenster (W): Fläche × Glasanteil × g-Wert × Einstrahlung auf die Fassade × Abminderung.
      * Rückgabe ['rein' => mit Behang wie er steht, 'offen' => ohne Behang]; 'offen' − 'rein' hat der Behang abgehalten.
      */
+    /** Zählt dieser Behang als eigenes Fenster? Eine Markise nur mit eingetragener Fläche – sie hängt meist vor einem Fenster mit eigenem Behang. */
+    public static function zaehltFlaeche(string $typ, float $flaeche): bool
+    {
+        return $typ !== 'markise' || $flaeche > 0;
+    }
+
     public static function sonnenwaerme(float $fassadeWm2, float $flaeche, float $g, float $fc): array
     {
         $offen = max(0.0, $fassadeWm2) * ($flaeche > 0 ? $flaeche : self::FLAECHE_VORGABE) * self::GLASANTEIL * $g;

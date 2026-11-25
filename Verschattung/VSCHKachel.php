@@ -209,7 +209,7 @@ trait VSCHKachel
         $gWert = $this->ReadPropertyFloat('GWert');
         foreach ($this->geraete() as $g) {
             $f = $fassaden[$g['Fassade']] ?? null;
-            if ($f === null || $g['Position'] <= 0) {
+            if ($f === null || $g['Position'] <= 0 || !VSCHLogik::zaehltFlaeche($g['Typ'], $g['Flaeche'])) {
                 continue;
             }
             $faz = (float)($f['Azimut'] ?? 180);
@@ -225,7 +225,7 @@ trait VSCHKachel
             }
         }
         return ['heute' => (float)($w['rein'] ?? 0), 'ab' => (float)($w['ab'] ?? 0), 'jetzt' => $w['jetzt'] ?? null, 'jetztAb' => $w['jetztAb'] ?? null,
-            'gestern' => $w['gestern'] ?? null, 'klar' => (int)round($klar), 'geschaetzt' => count(array_filter($this->geraete(), fn($g) => $g['Flaeche'] <= 0)) > 0];
+            'gestern' => $w['gestern'] ?? null, 'klar' => (int)round($klar), 'geschaetzt' => count(array_filter($this->geraete(), fn($g) => $g['Flaeche'] <= 0 && $g['Typ'] !== 'markise')) > 0];
     }
 
     /** Texte der Kachel (einzeln aufgeführt, damit der Prüfstand jede Übersetzung sieht). */

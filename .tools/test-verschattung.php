@@ -241,6 +241,7 @@ check('D66 Zu hohe Messung bei tiefer Sonne wird auf klaren Himmel begrenzt', VS
 check('D67 Abminderung: offen 1, Rollladen zu 0,05, Raffstore Lamellen waagrecht 0,5 / zu 0,05, Markise 0,3', VSCHLogik::abminderung('rollladen', 0.0, null) == 1.0
     && abs(VSCHLogik::abminderung('rollladen', 1.0, null) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('raffstore', 1.0, 0.0) - 0.5) < 1e-9
     && abs(VSCHLogik::abminderung('raffstore', 1.0, 90.0) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('markise', 1.0, null) - 0.3) < 1e-9);
+check('D69 Markise zählt nur mit eingetragener Fläche (hängt vor einem Fenster mit eigenem Behang)', !VSCHLogik::zaehltFlaeche('markise', 0) && VSCHLogik::zaehltFlaeche('markise', 3.5) && VSCHLogik::zaehltFlaeche('raffstore', 0));
 $sw = VSCHLogik::sonnenwaerme(500, 0, 0.5, 0.05);
 check('D68 Sonnenwärme: 500 W/m², Fläche leer = 2 m², Glasanteil 0,7, g 0,5 → 350 W offen, 17,5 W durch den geschlossenen Behang', abs($sw['offen'] - 350) < 0.01 && abs($sw['rein'] - 17.5) < 0.01, json_encode($sw));
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
@@ -663,6 +664,7 @@ $m->props['HelligkeitID'] = 987; // 412 W/m²
 $m->Tick(); $GLOBALS['CLOCK'] += 120; $m->Tick();
 $wz = json_decode($m->attrs['Zustand'], true)['_waerme'] ?? [];
 $kw = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $wm) ? $wm[1] : 'null', true);
+check('G65 Markise ohne Fläche zählt nicht mit', !isset($wz['je']['g701']) && isset($wz['je']['g601']), json_encode($wz['je'] ?? null));
 check('G63 Sonnenwärme mit Sensor: Leistung jetzt und Wh zählen, Kachel mit klarem Himmel', ($wz['jetzt'] ?? 0) > 0 && ($wz['rein'] ?? 0) + ($wz['ab'] ?? 0) > 0
     && ($kw['waerme']['klar'] ?? 0) > 0 && abs((float)GetValue(IPS_GetObjectIDByIdent('WaermeHeute', 12345)) - round($wz['rein'] / 1000, 2)) < 0.011, json_encode([$wz, $kw['waerme'] ?? null]));
 $GLOBALS['CLOCK'] = strtotime('tomorrow 08:00', $GLOBALS['CLOCK']); $m->Tick();

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1 (in Entwicklung)
+
+- **Sonnenwärme: Markise zählt nur mit eingetragener Fensterfläche** (Live-Test 25.11.): Sie hängt meist vor einer Tür oder einem Fenster mit eigenem Behang – sonst wäre dieselbe Glasfläche doppelt gerechnet.
+
+
 ## 0.10.0 (in Entwicklung)
 
 - **Sonnenwärme in kWh** (Idee 1, Dietmar 24.11.: „Der Behang ist die günstigste Raum-Heiz- und Kühlmethode“ – jetzt sieht man, wie viel):
