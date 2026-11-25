@@ -50,6 +50,14 @@ trait VSCHAssistent
         $art = $hatLocation && !$this->eigenerStandort() ? 0 : 1;
         $standortJson = $hatLocation ? json_encode($this->ReadPropertyString('Standort')) : $standortJson;
         $vorschlag = $fassaden !== [] ? $fassaden : $this->fassadenAusHaus();
+        $erkennung = '';
+        if ($vorschlag === [] && $offen && $this->koordinaten() !== null) {
+            // Live-Befund 25.11.: Der Assistent öffnet sich von selbst, bevor der Hintergrund fertig ist – dann jetzt erkennen,
+            // ohne Straßen (die holt der Hintergrund nach), damit die Seite nicht leer mit „wird erkannt“ stehen bleibt
+            $r = $this->hausErkennen(false);
+            $vorschlag = $r['werte'];
+            $erkennung = $r['ok'] ? '' : '⛔ ' . $r['text'];
+        }
         $seiten = [
             [
                 'name' => 'haus', 'caption' => $this->t('Step 1 of 6 · House'),
@@ -58,7 +66,7 @@ trait VSCHAssistent
                     ['type' => 'SelectLocation', 'name' => 'WStandort', 'caption' => $this->t('House'), 'value' => $this->ReadPropertyString('Standort'), 'visible' => !$hatLocation],
                     ['type' => 'Button', 'caption' => $this->t('🏠 Detect house'), 'visible' => !$hatLocation,
                         'onClick' => 'VSCH_UIAssistentHaus($id, ' . $art . ', ' . $standortJson . ');'],
-                    ['type' => 'Label', 'name' => 'WHausStatus', 'caption' => $vorschlag === [] ? ($hatLocation ? $this->t('The house is being detected …') : $this->t('No Location instance: choose the house on the map and click "Detect house".')) : '🔗 ' . $this->geoStatus()],
+                    ['type' => 'Label', 'name' => 'WHausStatus', 'caption' => $erkennung !== '' ? $erkennung : ($vorschlag === [] ? ($hatLocation ? $this->t('The house is detected when you click "Next".') : $this->t('No Location instance: choose the house on the map and click "Detect house".')) : '🔗 ' . $this->geoStatus())],
                     ['type' => 'Image', 'name' => 'WGrundriss', 'image' => $this->grundrissBild($vorschlag, -1, 'heute', self::PLAN_ASSISTENT), 'center' => true, 'width' => '900px'],
                     ['type' => 'List', 'name' => 'WFassaden', 'rowCount' => max(6, count($vorschlag)), 'add' => true, 'delete' => true, 'values' => $vorschlag, 'columns' => [
                         ['caption' => $this->t('Letter'), 'name' => 'Kennung', 'width' => '70px', 'add' => '?', 'edit' => ['type' => 'ValidationTextBox']],

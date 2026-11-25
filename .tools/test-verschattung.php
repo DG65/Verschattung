@@ -472,6 +472,8 @@ require $root . '/Verschattung/module.php';
 class VerschattungTest extends Verschattung
 {
     protected function now(): int { return $GLOBALS['CLOCK']; }
+    public array $abrufe = [];
+    protected function abruf(string $url, array $kopf = [], ?string $post = null): array { $this->abrufe[] = $url; return $GLOBALS['ABRUF'] ?? [0, '']; }
 }
 $GLOBALS['CLOCK'] = ts('2026-07-01 13:30');
 mkinst(500, 'Standort', 0, '{45E97A63-F870-408A-B259-2933F7EABF74}');
@@ -1092,6 +1094,12 @@ $tAn = $m->timers['Erkennen'] ?? 0;
 $m->props['Fassaden'] = $fassAlt;
 $m->ApplyChanges();
 check('J33 Ohne Fassaden startet das Modul die Hauserkennung im Hintergrund, mit Fassaden nicht', $tAn > 0 && ($m->timers['Erkennen'] ?? 0) === 0, json_encode([$tAn, $m->timers['Erkennen'] ?? null]));
+// Assistent öffnet sich von selbst ohne Fassaden: Haus wird beim Formularaufbau erkannt (ohne Straßen), Hintergrund holt Straßen nach
+$geraeteAlt = $m->props['Geraete']; $m->props['Geraete'] = '[]'; $fassAlt2 = $m->props['Fassaden']; $m->props['Fassaden'] = '[]';
+$m->attrs['Haus'] = '{}'; $m->abrufe = [];
+json_decode($m->GetConfigurationForm(), true);
+check('J34 Assistent ohne Fassaden: erkennt das Haus beim Öffnen (Kartendienst abgefragt), ohne auf Straßen zu warten', $m->abrufe !== [] && count(array_filter($m->abrufe, fn($u) => str_contains($u, 'highway'))) === 0, json_encode($m->abrufe));
+[$m->props['Geraete'], $m->props['Fassaden']] = [$geraeteAlt, $fassAlt2];
 $m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
 $m->fieldUpdates = [];

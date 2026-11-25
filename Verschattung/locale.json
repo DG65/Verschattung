@@ -393,10 +393,10 @@
             "Step 5 of 6 · When to shade": "Schritt 5 von 6 · Wann beschatten",
             "Step 6 of 6 · Done": "Schritt 6 von 6 · Fertig",
             "The house is detected automatically from official map data. Please check the facades – correct or add them in the list if needed.": "Das Haus wird automatisch aus amtlichen Kartendaten erkannt. Bitte die Fassaden prüfen – bei Bedarf in der Liste korrigieren oder ergänzen.",
-            "The house is being detected …": "Das Haus wird gerade erkannt …",
             "No Location instance: choose the house on the map and click \"Detect house\".": "Keine Standort-Instanz: Haus auf der Karte wählen und „Haus erkennen“ klicken.",
             "House detected: please check the facades, then click \"Next\" again.": "Haus erkannt: Bitte die Fassaden prüfen und dann noch einmal „Weiter“ klicken.",
-            "Please choose the house on the map and click \"Detect house\", or enter at least one facade.": "Bitte das Haus auf der Karte wählen und „Haus erkennen“ klicken oder mindestens eine Fassade eintragen."
+            "Please choose the house on the map and click \"Detect house\", or enter at least one facade.": "Bitte das Haus auf der Karte wählen und „Haus erkennen“ klicken oder mindestens eine Fassade eintragen.",
+            "The house is detected when you click \"Next\".": "Das Haus wird mit „Weiter“ erkannt."
         }
     }
 }

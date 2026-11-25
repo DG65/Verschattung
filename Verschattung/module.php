@@ -165,8 +165,7 @@ class Verschattung extends IPSModule
         }
         $this->registriereHook(); // dieselbe Kachel als Seite für IPSView
         // Haus einmal von selbst erkennen, sobald ein Standort da ist (Dietmar 25.11.: der Assistent soll nicht erst auf einen Knopf warten)
-        $erkennen = $this->koordinaten() !== null && $this->listeWerte($this->ReadPropertyString('Fassaden')) === []
-            && $this->fassadenAusHaus() === [] && $this->now() - $this->ReadAttributeInteger('ErkennenVersucht') > 6 * 3600;
+        $erkennen = $this->koordinaten() !== null && $this->erkennenOffen() && $this->now() - $this->ReadAttributeInteger('ErkennenVersucht') > 6 * 3600;
         $this->SetTimerInterval('Erkennen', $erkennen ? 2000 : 0);
         $ok = $this->koordinaten() !== null && $this->geraete() !== [];
         $this->SetTimerInterval('Tick', $ok ? 60 * 1000 : 0);
@@ -1107,7 +1106,28 @@ class Verschattung extends IPSModule
     {
         $this->SetTimerInterval('Erkennen', 0);
         $this->WriteAttributeInteger('ErkennenVersucht', $this->now());
-        $this->hausErkennen();
+        if ($this->fassadenAusHaus() === []) {
+            $this->hausErkennen();
+            return;
+        }
+        // Haus schon da (schnell beim Öffnen des Assistenten erkannt): nur die Straßen für den Lageplan nachholen
+        $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
+        $pos = $this->koordinaten();
+        if ($pos !== null && !array_key_exists('strassen', $haus)) {
+            $haus['strassen'] = VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
+                return $this->abruf($url, $kopf, $post);
+            });
+            $this->WriteAttributeString('Haus', json_encode($haus));
+        }
+    }
+
+    /** Noch etwas zu erkennen? Kein Haus (und keine Fassaden eingetragen) oder Straßen fehlen noch. */
+    private function erkennenOffen(): bool
+    {
+        if ($this->fassadenAusHaus() === []) {
+            return $this->listeWerte($this->ReadPropertyString('Fassaden')) === [];
+        }
+        return !array_key_exists('strassen', json_decode($this->ReadAttributeString('Haus'), true) ?: []);
     }
 
     /** Fassaden aus dem zuletzt erkannten Haus (Attribut), in der Form der Fassadenliste. */
@@ -1121,7 +1141,8 @@ class Verschattung extends IPSModule
         return $werte;
     }
 
-    private function hausErkennen(): array
+    /** $mitStrassen = false: schneller (der Assistent wartet), die Straßen holt danach der Hintergrund nach. */
+    private function hausErkennen(bool $mitStrassen = true): array
     {
         $pos = $this->koordinaten();
         if ($pos === null) {
@@ -1140,14 +1161,17 @@ class Verschattung extends IPSModule
             return ['ok' => false, 'werte' => [], 'text' => $this->t('No house found: %s', $haus['meldung']) . ' ' . $this->t('You can enter the facades by hand in the list.')];
         }
         // Straßen für den Lageplan (OpenStreetMap); fehlt der Dienst, bleibt der Plan ohne Straßen
-        $strassen = VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
+        $strassen = $mitStrassen ? VSCHGeo::strassen($pos[0], $pos[1], function (string $url, array $kopf = [], ?string $post = null) {
             return $this->abruf($url, $kopf, $post);
-        });
-        $this->WriteAttributeString('Haus', json_encode([
+        }) : null;
+        $this->WriteAttributeString('Haus', json_encode(array_filter([
             'eigen' => $haus['eigen'], 'nachbarn' => $haus['nachbarn'], 'nachbarInfo' => $haus['nachbarInfo'] ?? [], 'strassen' => $strassen,
             'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
             'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1],
-        ]));
+        ], fn($v) => $v !== null)));
+        if (!$mitStrassen) {
+            $this->SetTimerInterval('Erkennen', 2000);
+        }
         $werte = $this->fassadenAusHaus();
         return ['ok' => true, 'werte' => $werte, 'text' => $this->t('%d facades found. Please check them in the list and confirm with "Apply changes".', count($werte))];
     }
@@ -2266,7 +2290,7 @@ class Verschattung extends IPSModule
 
 
     /** HTTP-Abruf mit generischem User-Agent (keine Kontaktdaten des Nutzers). */
-    private function abruf(string $url, array $kopf = [], ?string $post = null): array
+    protected function abruf(string $url, array $kopf = [], ?string $post = null): array
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [

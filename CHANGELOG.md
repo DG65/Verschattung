@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.1 (in Entwicklung)
+
+- **Assistent zeigt das Haus sofort** (Live-Befund 25.11.: neue Instanz, Assistent öffnete sich mit „Das Haus wird gerade erkannt …“ und blieb leer). Ursache: Die Erkennung brauchte 75 s, fast alles für die Straßen des Lageplans (OpenStreetMap/Overpass 27–75 s; Hausumriss und Horizont je 0,3 s). Jetzt erkennt der Assistent beim Öffnen das Haus ohne Straßen (unter 1 s), die Straßen holt der Hintergrund nach.
+
+
 ## 0.13.0 (in Entwicklung)
 
 - **Assistent kürzer und logischer** (Dietmar 25.11.): Haus zuerst, ohne Knopf – das Modul erkennt das Haus im Hintergrund, sobald ein Standort da ist (einmaliger Timer nach dem Anlegen); fehlt es noch, holt der Assistent es beim Öffnen bzw. bei „Weiter“ nach. Der Standort-Schritt entfällt (immer die Standort-Instanz; nur ohne sie Kartenwahl auf der Haus-Seite). Der Ausrichtungs-Schritt mit Nord/Ost/Süd/West entfällt: Im Geräte-Schritt wählt man direkt eine der erkannten Fassaden. Sechs statt acht Schritte.
