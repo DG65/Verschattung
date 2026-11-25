@@ -503,16 +503,18 @@ final class VSCHLogik
     }
 
     /**
-     * Abminderung durch den Behang (Fc, 1 = offen): Rollladen zu ≈ 0,05, Raffstore zu ≈ 0,05 (Lamellen waagrecht ≈ 0,5), Markise ≈ 0,3.
-     * $zu 0..1, $lamelle 0..90° (90 = zu) oder null.
+     * Abminderung durch den Behang (Fc, 1 = offen), angelehnt an DIN 4108-2 und ÖNORM B 8110-6-1 (gtot ≈ 0,05 bei g ≈ 0,5):
+     * Rollladen zu ≈ 0,1; Raffstore Lamellen waagrecht ≈ 0,5, 45° ≈ 0,25 (DIN), zu ≈ 0,1; Markise ≈ 0,5 (DIN, Tuch nicht parallel zum Glas).
+     * $zu 0..1, $lamelle 0..90° (90 = zu) oder null (dann 45°).
      */
     public static function abminderung(string $typ, ?float $zu, ?float $lamelle): float
     {
         $zu = max(0.0, min(1.0, (float)$zu));
+        $l = $lamelle === null ? 45.0 : max(0.0, min(90.0, $lamelle));
         $voll = match ($typ) {
-            'markise' => 0.3,
-            'raffstore' => $lamelle === null ? 0.1 : 0.5 - 0.45 * max(0.0, min(90.0, $lamelle)) / 90,
-            default => 0.05,
+            'markise' => 0.5,
+            'raffstore' => $l <= 45 ? 0.5 - 0.25 * $l / 45 : 0.25 - 0.15 * ($l - 45) / 45,
+            default => 0.1,
         };
         return 1 - $zu * (1 - $voll);
     }

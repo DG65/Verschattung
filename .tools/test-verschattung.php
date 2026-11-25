@@ -247,9 +247,10 @@ check('D64 Wintersonne 15° auf Südfassade: senkrecht mehr als waagrecht gemess
 $nord = VSCHLogik::fassadeEinstrahlung(400, 15, 0, 180, false);
 check('D65 Sonne verdeckt/hinter der Fassade: nur diffus, deutlich weniger', $nord > 0 && $nord < 0.3 * $sued, (string)round($nord));
 check('D66 Zu hohe Messung bei tiefer Sonne wird auf klaren Himmel begrenzt', VSCHLogik::fassadeEinstrahlung(2000, 15, 180, 180, true) < 1000 && VSCHLogik::fassadeEinstrahlung(0, 30, 180, 180, true) == 0.0);
-check('D67 Abminderung: offen 1, Rollladen zu 0,05, Raffstore Lamellen waagrecht 0,5 / zu 0,05, Markise 0,3', VSCHLogik::abminderung('rollladen', 0.0, null) == 1.0
-    && abs(VSCHLogik::abminderung('rollladen', 1.0, null) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('raffstore', 1.0, 0.0) - 0.5) < 1e-9
-    && abs(VSCHLogik::abminderung('raffstore', 1.0, 90.0) - 0.05) < 1e-9 && abs(VSCHLogik::abminderung('markise', 1.0, null) - 0.3) < 1e-9);
+check('D67 Abminderung nach Norm: offen 1, Rollladen zu 0,1, Raffstore waagrecht 0,5 / 45° 0,25 / zu 0,1, Markise 0,5', VSCHLogik::abminderung('rollladen', 0.0, null) == 1.0
+    && abs(VSCHLogik::abminderung('rollladen', 1.0, null) - 0.1) < 1e-9 && abs(VSCHLogik::abminderung('raffstore', 1.0, 0.0) - 0.5) < 1e-9
+    && abs(VSCHLogik::abminderung('raffstore', 1.0, 45.0) - 0.25) < 1e-9 && abs(VSCHLogik::abminderung('raffstore', 1.0, null) - 0.25) < 1e-9
+    && abs(VSCHLogik::abminderung('raffstore', 1.0, 90.0) - 0.1) < 1e-9 && abs(VSCHLogik::abminderung('markise', 1.0, null) - 0.5) < 1e-9);
 check('D69 Markise zählt nur mit eingetragener Fläche (hängt vor einem Fenster mit eigenem Behang)', !VSCHLogik::zaehltFlaeche('markise', 0) && VSCHLogik::zaehltFlaeche('markise', 3.5) && VSCHLogik::zaehltFlaeche('raffstore', 0));
 $sw = VSCHLogik::sonnenwaerme(500, 0, 0.5, 0.05);
 check('D68 Sonnenwärme: 500 W/m², Fläche leer = 2 m², Glasanteil 0,7, g 0,5 → 350 W offen, 17,5 W durch den geschlossenen Behang', abs($sw['offen'] - 350) < 0.01 && abs($sw['rein'] - 17.5) < 0.01, json_encode($sw));

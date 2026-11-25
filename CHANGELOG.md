@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1 (in Entwicklung)
+
+- **Sonnenwärme: Durchlass der Behänge nach Norm** (Recherche 25.11.): Markise 0,5 statt 0,3 (DIN 4108-2, Tuch nicht parallel zum Glas), Rollladen zu 0,1 statt 0,05 (ÖNORM B 8110-6-1: gtot ≈ 0,05 bei g ≈ 0,5), Raffstore waagrecht 0,5 / 45° 0,25 (DIN) / zu 0,1; ohne Lamellenstellung gilt 45°. Wirkt nur auf die kWh-Schätzung und den Vertrag, nicht auf die Steuerung.
+
+
 ## 0.11.0 (in Entwicklung)
 
 - **Vertrag `shading` 1.1 (`VSCH_GetState`, nur lesend, additiv)** für die Raumführung der HeishaMon-Heizungsautomatik (Dietmar 25.11.: „Ja, nur bei basis forecast“): `mode` (heat/cool/neutral), Sonnenwärme jetzt/heute/abgehalten, `basis` (forecast/clearSky) und **`gainNextHoursWh`** – die erwartete Sonnenwärme der nächsten 6 Stunden je Stunde. Die Wolken kommen aus der PV-Prognose des Verbunds (PVF_GetForecast ÷ PV bei klarem Himmel aus PVF_GetGenerators); veraltet (> 6 h) oder mit Schnee auf den Modulen → `clearSky`. Je Behang zusätzlich `gainNowW`, `gainTodayWh`.
