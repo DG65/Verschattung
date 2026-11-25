@@ -969,8 +969,8 @@ foreach ($form['actions'] as $a) {
     }
 }
 $seiten = $wiz['popup']['pages'] ?? [];
-check('J1 PopupAlert „Assistent“ mit 8 Seiten in fester Reihenfolge', $wiz !== null && $wiz['type'] === 'PopupAlert'
-    && array_column($seiten, 'name') === ['ausrichtung', 'standort', 'haus', 'geraete', 'probe', 'wetter', 'wann', 'fertig'], json_encode(array_column($seiten, 'name')));
+check('J1 PopupAlert „Assistent“ mit 6 Seiten in fester Reihenfolge (Haus zuerst, kein Standort-Schritt)', $wiz !== null && $wiz['type'] === 'PopupAlert'
+    && array_column($seiten, 'name') === ['haus', 'geraete', 'probe', 'wetter', 'wann', 'fertig'], json_encode(array_column($seiten, 'name')));
 check('J2 öffnet sich bei eingerichteter Instanz nicht von selbst', ($wiz['visible'] ?? true) === false);
 $m3 = new VerschattungTest(33333);
 $m3->Create();
@@ -1032,8 +1032,6 @@ check('J11 „nicht verschatten“ und gültige Fassade gehen durch', $m->UIAssi
 check('J12 Fassade, die es nicht gibt, blockiert', $m->UIAssistentPruefen('geraete', json_encode(['fassaden' => $fx, 'geraete' => [['Name' => 'Z', 'Fassade' => 'F']]])) !== '');
 check('J13 Haus-Seite ohne Fassade blockiert', $m->UIAssistentPruefen('haus', '[]') !== '' && $m->UIAssistentPruefen('haus', json_encode($fx)) === '');
 check('J14 Schritt 7: Sensoren sind freiwillig, nichts blockiert', $m->UIAssistentPruefen('wann', json_encode(['hell' => 0, 'temp' => 0])) === '');
-check('J15 Standort „woanders“ ohne Kartenpunkt blockiert', $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":0,"longitude":0}'])) !== ''
-    && $m->UIAssistentPruefen('standort', json_encode(['art' => 1, 'standort' => '{"latitude":48.1,"longitude":7.9}'])) === '');
 check('J16 nur Rollläden: Wetterschutz-Seite wird übersprungen', $m->UIAssistentWeiter(json_encode([['Typ' => 'rollladen', 'Fassade' => 'A']])) === 'wann'
     && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => 'A']])) === 'wetter'
     && $m->UIAssistentWeiter(json_encode([['Typ' => 'markise', 'Fassade' => '-']])) === 'wann');
@@ -1077,23 +1075,28 @@ $m->fieldUpdates = [];
 $m->UIAssistentAlle(json_encode([['Name' => 'X', 'Fassade' => ''], ['Name' => 'Y', 'Fassade' => 'A']]), 'B');
 $f = array_column($m->fieldUpdates, 2, 0);
 check('J30 „Für alle übernehmen“ setzt alle Geräte auf die Fassade', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade') === ['B', 'B']);
-// Schritt 1: Ausrichtung ankreuzen
-check('J32 Kreuze → Azimut: eine Richtung, Ecke, Unsinn', Verschattung::richtungAusKreuzen(['S']) === 180.0 && Verschattung::richtungAusKreuzen(['S', 'W']) === 225.0
-    && Verschattung::richtungAusKreuzen(['W', 'N']) === 315.0 && Verschattung::richtungAusKreuzen(['N', 'S']) === null && Verschattung::richtungAusKreuzen(['N', 'O', 'S']) === null);
-check('J33 Prüfung: gegenüberliegende Kreuze blockieren mit Gerätename', strpos($m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'Küche', 'RN' => true, 'RS' => true]])), 'Küche') !== false);
-check('J34 Prüfung: kein einziges Kreuz blockiert, ein Kreuz geht durch', $m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'A']])) !== ''
-    && $m->UIAssistentPruefen('ausrichtung', json_encode([['Name' => 'A', 'RS' => true], ['Name' => 'B']])) === '');
-$m->fieldUpdates = [];
-$m->UIAssistentAlleRichtung(json_encode([['Name' => 'A', 'RN' => true], ['Name' => 'B']]), 'S');
-$f = array_column($m->fieldUpdates, 2, 0);
-check('J35 „Alle ankreuzen“ setzt genau Süd bei allen', array_map(fn($z) => [$z['RN'], $z['RS']], json_decode($f['WAusrichtung'] ?? '[]', true)) === [[false, true], [false, true]]);
-// Kreuze → Fassade nach Hauserkennung, kein Kreuz = nicht verschatten
+// Schritt 1: Haus sofort erkannt (Dietmar 25.11.: kein Standort-Schritt, kein Knopf), Fassaden aus dem Attribut vorbelegt
+$hausAlt = $m->attrs['Haus'];
+$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 76.0], ['az' => 166.0], ['az' => 256.0], ['az' => 346.0]]]);
+$fassAlt = $m->props['Fassaden']; $m->props['Fassaden'] = '[]';
+$fw = json_decode($m->GetConfigurationForm(), true);
+$wf = null; array_walk_recursive($fw, function () {});
+$fwj = json_encode($fw);
+$sh = null; foreach ($fw['actions'] as $act) { if (($act['name'] ?? '') === 'Assistent') { $sh = $act['popup']['pages'][0]; } }
+$liste = array_values(array_filter($sh['items'] ?? [], fn($it) => ($it['name'] ?? '') === 'WFassaden'))[0] ?? null;
+check('J32 Seite 1 „Haus“: erkannte Fassaden stehen schon in der Liste, Standortwahl und Knopf nur ohne Standort-Instanz', ($sh['name'] ?? '') === 'haus' && count($liste['values'] ?? []) === 4
+    && ($liste['values'][1]['Kennung'] ?? '') === 'B' && count(array_filter($sh['items'], fn($it) => ($it['type'] ?? '') === 'Button' && ($it['visible'] ?? true))) === 0, json_encode($liste['values'] ?? null));
+$m->attrs['Haus'] = '{}';
+$m->ApplyChanges();
+$tAn = $m->timers['Erkennen'] ?? 0;
+$m->props['Fassaden'] = $fassAlt;
+$m->ApplyChanges();
+check('J33 Ohne Fassaden startet das Modul die Hauserkennung im Hintergrund, mit Fassaden nicht', $tAn > 0 && ($m->timers['Erkennen'] ?? 0) === 0, json_encode([$tAn, $m->timers['Erkennen'] ?? null]));
+$m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
-$m->UIAssistentMerken('ausrichtung', json_encode([['Name' => 'Süd1', 'Position' => 951, 'Typ' => 'raffstore', 'RS' => true], ['Name' => 'Ohne', 'Position' => 952, 'Typ' => 'rollladen']]));
 $m->fieldUpdates = [];
 $m->UIAssistentGeraete(json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 76], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 166]]), '[]', 0, '');
 $f = array_column($m->fieldUpdates, 2, 0);
-check('J36 Süd angekreuzt → Fassade B (166°), ohne Kreuz → nicht verschatten', array_column(json_decode($f['WGeraete'] ?? '[]', true), 'Fassade', 'Name') === ['Süd1' => 'B', 'Ohne' => '-'], $f['WGeraete'] ?? '');
 check('J40 Probefahrt wählt die Fassade mit den meisten Geräten vor', ($f['WProbeFassade'] ?? '') === 'B');
 check('J41 Probefahrt bietet nur Fassaden mit Geräten an, mit Namen', json_decode($f['WProbeFassade'] ?? 'null', true) !== null || (function () use ($m) {
     foreach ($m->fieldUpdates as $u) { if ($u[0] === 'WProbeFassade' && $u[1] === 'options') { return json_decode($u[2], true) === [['caption' => 'B · Süd', 'value' => 'B']]; } } return false; })());

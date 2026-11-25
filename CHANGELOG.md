@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0 (in Entwicklung)
+
+- **Assistent kürzer und logischer** (Dietmar 25.11.): Haus zuerst, ohne Knopf – das Modul erkennt das Haus im Hintergrund, sobald ein Standort da ist (einmaliger Timer nach dem Anlegen); fehlt es noch, holt der Assistent es beim Öffnen bzw. bei „Weiter“ nach. Der Standort-Schritt entfällt (immer die Standort-Instanz; nur ohne sie Kartenwahl auf der Haus-Seite). Der Ausrichtungs-Schritt mit Nord/Ost/Süd/West entfällt: Im Geräte-Schritt wählt man direkt eine der erkannten Fassaden. Sechs statt acht Schritte.
+- Lageplan im Geräte-Schritt in voller Breite (gleicher Maßstab, mehr Umgebung links und rechts).
+
+
 ## 0.12.0 (in Entwicklung)
 
 - **Nachts (Idee 2), neue Spalte je Behang, ab Werk aus:** „Winter: zu (hält die Wärme im Haus)“ – im Heizbetrieb schließt der Behang nach der Dämmerung ganz (Sonne unter −4°), morgens (Sonne über 2°) fährt hoch, was das Modul nachts geschlossen hat. „Winter zu, Sommer auf (kühlt aus)“ – zusätzlich nachts auf, wenn es draußen mindestens 2 K kühler ist als im Raum. Nachts von Hand bewegt → bis zum Morgen in Ruhe; offene Tür → nicht zu; schon vom Nutzer geschlossen → bleibt, wird morgens nicht hochgefahren; Markisen nie. Regel 9 in „So arbeitet die Automatik“.

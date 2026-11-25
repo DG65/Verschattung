@@ -12,16 +12,14 @@ Die Verschattung fährt Rollläden, Raffstores und Markisen, wenn die Sonne auf 
 
 ## Einrichtung mit dem Assistenten
 
-Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später jederzeit über „🧭 Einrichtungsassistent starten“. Er führt in acht Schritten durch alles:
+Beim ersten Öffnen startet der **Einrichtungsassistent** von selbst; später jederzeit über „🧭 Einrichtungsassistent starten“. Den Standort nimmt er aus der Standort-Instanz von Symcon; das Haus erkennt das Modul schon im Hintergrund, sobald die Instanz angelegt ist. Sechs Schritte:
 
-0. **Ausrichtung** – je Behang ankreuzen, wohin seine Fenster schauen (Nord/Ost/Süd/West, zwei Kreuze = Ecke, keins = nicht verschatten); „Für alle übernehmen“ setzt alle in einem Klick. Optional landet die Angabe auch im Info-Feld der Geräte („Ausrichtung: Süd“), damit andere Module sie lesen.
-1. **Standort** – aus der Standort-Instanz oder auf der Karte gewählt.
-2. **Haus** – „Haus erkennen“ holt die Fassaden aus amtlichen Kartendaten; korrigieren oder ergänzen geht in der Liste.
-3. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, bis zu vier Fensterkontakte). **Von Hand wird nur je Gerät die Fassade gewählt** (oder „nicht verschatten“) – mit „Für alle übernehmen“ in einem Klick. Steht die Richtung schon im Objektbaum (Ordner „Südseite“, Info-Feld „Ausrichtung: Süd“), ist sie vorbelegt.
-4. **Probefahrt** – je Fassade herunter und wieder hoch, noch bevor etwas gespeichert ist.
-5. **Wetterschutz** – nur bei Markisen/Raffstores: WarnHub, eigener Windsensor, Regensensor, Böenvorhersage.
-6. **Wann beschatten** – mit Messwerten und Schiebereglern: Einstrahlung (W/m², der Regler zeigt, was auf der eigenen Breite bei klarem Himmel möglich ist), Sommer ab Außentemperatur, Raum zu warm ab, Raumhelligkeit.
-7. **Fertig** – Zusammenfassung mit den Sonnenzeiten von heute. „OK“ füllt das Formular, danach mit **„Änderungen übernehmen“** bestätigen.
+1. **Haus** – die Fassaden aus amtlichen Kartendaten stehen schon da (mit Lageplan); korrigieren oder ergänzen geht in der Liste. War die Erkennung noch nicht fertig, holt „Weiter“ sie nach. Nur ohne Standort-Instanz wählt man das Haus auf der Karte und klickt „Haus erkennen“.
+2. **Geräte** – alle Rollläden, Raffstores und Markisen sind schon erkannt (Typ, Lamelle samt Richtung, bis zu vier Fensterkontakte). **Von Hand wird nur je Gerät eine der erkannten Fassaden gewählt** (oder „nicht verschatten“) – mit „Für alle übernehmen“ in einem Klick. Steht die Richtung schon im Objektbaum (Ordner „Südseite“, Info-Feld „Ausrichtung: Süd“), ist sie vorbelegt. Optional schreibt der Assistent die Ausrichtung ins Info-Feld der Geräte, damit andere Module sie lesen.
+3. **Probefahrt** – je Fassade herunter und wieder hoch, noch bevor etwas gespeichert ist.
+4. **Wetterschutz** – nur bei Markisen/Raffstores: WarnHub, eigener Windsensor, Regensensor, Böenvorhersage.
+5. **Wann beschatten** – mit Messwerten und Schiebereglern: Einstrahlung (W/m², der Regler zeigt, was auf der eigenen Breite bei klarem Himmel möglich ist), Sommer ab Außentemperatur, Raum zu warm ab, Raumhelligkeit, Heizung in den Räumen, Wärmepumpe.
+6. **Fertig** – Zusammenfassung mit den Sonnenzeiten von heute. „OK“ füllt das Formular, danach mit **„Änderungen übernehmen“** bestätigen.
 
 Der Assistent speichert nichts selbst – die Einstellungen gehören dem Nutzer. Für Feinarbeit bleibt das Formular darunter.
 

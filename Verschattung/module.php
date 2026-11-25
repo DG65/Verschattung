@@ -123,6 +123,8 @@ class Verschattung extends IPSModule
         $this->RegisterAttributeString('Verlauf', '[]'); // heute je 10 min: [Zeit, W/m², beschattete Behänge] für das Tagesband der Kachel
 
         $this->RegisterTimer('Tick', 0, 'VSCH_Tick($_IPS[\'TARGET\']);');
+        $this->RegisterTimer('Erkennen', 0, 'VSCH_HausImHintergrund($_IPS[\'TARGET\']);');
+        $this->RegisterAttributeInteger('ErkennenVersucht', 0);
     }
 
     public function ApplyChanges()
@@ -162,6 +164,10 @@ class Verschattung extends IPSModule
             }
         }
         $this->registriereHook(); // dieselbe Kachel als Seite für IPSView
+        // Haus einmal von selbst erkennen, sobald ein Standort da ist (Dietmar 25.11.: der Assistent soll nicht erst auf einen Knopf warten)
+        $erkennen = $this->koordinaten() !== null && $this->listeWerte($this->ReadPropertyString('Fassaden')) === []
+            && $this->fassadenAusHaus() === [] && $this->now() - $this->ReadAttributeInteger('ErkennenVersucht') > 6 * 3600;
+        $this->SetTimerInterval('Erkennen', $erkennen ? 2000 : 0);
         $ok = $this->koordinaten() !== null && $this->geraete() !== [];
         $this->SetTimerInterval('Tick', $ok ? 60 * 1000 : 0);
         $this->SetStatus($this->koordinaten() === null ? 201 : 102);
@@ -1096,6 +1102,25 @@ class Verschattung extends IPSModule
      * Umriss, Fassaden und Horizont am aktuellen Standort abrufen und die abgeleiteten Werte merken.
      * Rückgabe: ['ok' => bool, 'text' => Meldung, 'werte' => Zeilen für eine Fassadenliste]
      */
+    /** Hintergrund (Timer nach dem Anlegen): Haus erkennen und merken; der Assistent zeigt die Fassaden dann sofort. */
+    public function HausImHintergrund(): void
+    {
+        $this->SetTimerInterval('Erkennen', 0);
+        $this->WriteAttributeInteger('ErkennenVersucht', $this->now());
+        $this->hausErkennen();
+    }
+
+    /** Fassaden aus dem zuletzt erkannten Haus (Attribut), in der Form der Fassadenliste. */
+    private function fassadenAusHaus(): array
+    {
+        $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
+        $werte = [];
+        foreach ((array)($haus['fassaden'] ?? []) as $i => $f) {
+            $werte[] = ['Kennung' => VSCHGrafik::kennung($i), 'Name' => $this->richtungName((float)$f['az']), 'Azimut' => $f['az'], 'Aktiv' => true];
+        }
+        return $werte;
+    }
+
     private function hausErkennen(): array
     {
         $pos = $this->koordinaten();
@@ -1123,10 +1148,7 @@ class Verschattung extends IPSModule
             'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
             'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1],
         ]));
-        $werte = [];
-        foreach ($haus['fassaden'] as $i => $f) {
-            $werte[] = ['Kennung' => VSCHGrafik::kennung($i), 'Name' => $this->richtungName((float)$f['az']), 'Azimut' => $f['az'], 'Aktiv' => true];
-        }
+        $werte = $this->fassadenAusHaus();
         return ['ok' => true, 'werte' => $werte, 'text' => $this->t('%d facades found. Please check them in the list and confirm with "Apply changes".', count($werte))];
     }
 
@@ -1875,7 +1897,7 @@ class Verschattung extends IPSModule
                 $d = VSCHSonne::winkelAbstand((float)$e['az'], (float)$f['Azimut']);
                 if ($d < $best) {
                     $best = $d;
-                    $seg = (array)$e['seg'];
+                    $seg = (array)($e['seg'] ?? []);
                 }
             }
             $out[] = ['az' => (float)$f['Azimut'], 'seg' => $seg, 'aktiv' => (bool)($f['Aktiv'] ?? true)];
