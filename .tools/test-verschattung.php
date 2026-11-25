@@ -1211,6 +1211,24 @@ $m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]]
 $m->fieldUpdates = [];
 $pz = $m->UIAssistentPruefen('haus', '[]');
 check('J39 „Weiter“ ohne Fassaden, Hintergrund fertig: übernimmt dessen Fassaden', str_contains($pz, 'Haus erkannt') && count(json_decode(array_column($m->fieldUpdates, 2, 0)['WFassaden'] ?? '[]', true)) === 1, $pz);
+// Zurück im Assistenten: gemerkte Eingaben kommen wieder (Dietmar 25.11.)
+$m->UIAssistentOeffnen();
+$m->UIAssistentMerken('fassaden', json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 80, 'Aktiv' => true], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 170, 'Aktiv' => true]]));
+$m->UIAssistentMerken('geraete', json_encode([['Name' => 'Raffstore Büro', 'Position' => 601, 'Fassade' => 'B', 'Typ' => 'raffstore'], ['Name' => 'Markise', 'Position' => 701, 'Fassade' => '-', 'Typ' => 'markise']]));
+$m->UIAssistentWerte('wetter', json_encode(['WWarnHub' => false, 'WWind' => 800, 'WRegen' => 0, 'WNetzWetter' => true]));
+$m->UIAssistentWerte('wann', json_encode(['WSonneAn' => 320.0, 'WHeizGrenze' => 20.5, 'WNotfall' => false]));
+$m->fieldUpdates = [];
+foreach (['haus', 'geraete', 'wetter', 'wann'] as $sz) { $m->UIAssistentZurueck($sz); }
+$fz = []; foreach ($m->fieldUpdates as $u) { $fz[$u[0] . '.' . $u[1]] = $u[2]; }
+check('J40 Zurück: Fassaden, Geräte (mit gewählter Fassade), Wetter- und Schwellenwerte werden wieder eingesetzt; leere Variablenwahl bleibt unberührt',
+    count(json_decode($fz['WFassaden.values'] ?? '[]', true)) === 2 && (json_decode($fz['WGeraete.values'] ?? '[]', true)[0]['Fassade'] ?? '') === 'B'
+    && ($fz['WWind.value'] ?? null) === 800 && ($fz['WNetzWetter.value'] ?? null) === true && !isset($fz['WRegen.value'])
+    && ($fz['WSonneAn.value'] ?? null) == 320 && ($fz['WHeizGrenze.value'] ?? null) == 20.5 && ($fz['WNotfall.value'] ?? null) === false, json_encode(array_keys($fz)));
+$m->fieldUpdates = [];
+$m->UIAssistentGeraete(json_encode([['Kennung' => 'A', 'Name' => 'Ost', 'Azimut' => 80], ['Kennung' => 'B', 'Name' => 'Süd', 'Azimut' => 170]]), '[]', 0, '');
+$gz = json_decode(array_column($m->fieldUpdates, 2, 0)['WGeraete'] ?? '[]', true);
+check('J41 Zurück zu „Haus“ und wieder „Weiter“: die Fassadenwahl auf der Geräte-Seite bleibt erhalten', ($gz[0]['Fassade'] ?? '') === 'B' && ($gz[1]['Fassade'] ?? '') === '-', json_encode(array_column($gz, 'Fassade', 'Name')));
+$m->UIAssistentOeffnen();
 $m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
 $m->fieldUpdates = [];

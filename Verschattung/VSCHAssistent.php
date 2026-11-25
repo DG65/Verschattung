@@ -50,6 +50,9 @@ trait VSCHAssistent
         $art = $hatLocation && !$this->eigenerStandort() ? 0 : 1;
         $standortJson = $hatLocation ? json_encode($this->ReadPropertyString('Standort')) : $standortJson;
         $vorschlag = $fassaden !== [] ? $fassaden : $this->fassadenAusHaus();
+        if ($offen) {
+            $this->WriteAttributeString('AssistentEntwurf', '{}'); // öffnet sich von selbst: neuer Durchgang, kein alter Entwurf
+        }
         $erkennung = '';
         if ($vorschlag === [] && $offen && $this->koordinaten() !== null) {
             // Live-Befund 25.11.: Der Assistent öffnet sich von selbst, bevor der Hintergrund fertig ist – dann jetzt erkennen,
@@ -77,7 +80,8 @@ trait VSCHAssistent
                 ],
                 'validate' => $liste('WFassaden') . 'return VSCH_UIAssistentPruefen($id, "haus", json_encode($WFassadenA));',
                 'onConfirm' => $liste('WFassaden') . $liste('WGeraete') . 'VSCH_UIAssistentGeraete($id, json_encode($WFassadenA), json_encode($WGeraeteA), ' . $art . ', ' . $standortJson . ');',
-                'onUndo' => '// nichts rückgängig zu machen',
+                // Zurück auf diese Seite: Symcon baut sie aus der Formular-Vorlage neu – die gemerkten Eingaben wieder einsetzen
+                'onUndo' => 'VSCH_UIAssistentZurueck($id, "haus");',
             ],
             [
                 'name' => 'geraete', 'caption' => $this->t('Step 2 of 6 · Devices'),
@@ -122,8 +126,8 @@ trait VSCHAssistent
                 'validate' => $liste('WFassaden') . $liste('WGeraete') . 'return VSCH_UIAssistentPruefen($id, "geraete", json_encode(["fassaden" => $WFassadenA, "geraete" => $WGeraeteA]));',
                 // Live-Test 23.11.: Listenwerte, die im Bearbeiten-Dialog geändert wurden, kommen auf späteren Seiten nicht an –
                 // deshalb hier (aktuelle Seite) als Entwurf merken und später aus dem Entwurf lesen
-                'onConfirm' => $liste('WGeraete') . 'VSCH_UIAssistentMerken($id, "geraete", json_encode($WGeraeteA));',
-                'onUndo' => '// nichts rückgängig zu machen',
+                'onConfirm' => $liste('WGeraete') . 'VSCH_UIAssistentMerken($id, "geraete", json_encode($WGeraeteA)); VSCH_UIAssistentWerte($id, "geraeteFelder", json_encode(["WInfoSchreiben" => (bool)$WInfoSchreiben]));',
+                'onUndo' => 'VSCH_UIAssistentZurueck($id, "geraete");',
             ],
             [
                 'name' => 'probe', 'caption' => $this->t('Step 3 of 6 · Test run'),
@@ -156,6 +160,8 @@ trait VSCHAssistent
                     ['type' => 'CheckBox', 'name' => 'WNetzWetter', 'visible' => !$deckt, 'caption' => $this->t('Gust forecast from the internet'), 'value' => $this->ReadPropertyBoolean('NetzWetter')],
                     ['type' => 'CheckBox', 'name' => 'WMarkiseOhne', 'visible' => !$deckt, 'caption' => $this->t('Extend awnings without weather source'), 'value' => $this->ReadPropertyBoolean('MarkiseOhneWetter')],
                 ],
+                'onConfirm' => 'VSCH_UIAssistentWerte($id, "wetter", json_encode(["WWarnHub" => (bool)$WWarnHub, "WWind" => (int)$WWind, "WRegen" => (int)$WRegen, "WSperre" => (int)$WSperre, "WNetzWetter" => (bool)$WNetzWetter, "WMarkiseOhne" => (bool)$WMarkiseOhne]));',
+                'onUndo' => 'VSCH_UIAssistentZurueck($id, "wetter");',
             ],
             [
                 'name' => 'wann', 'caption' => $this->t('Step 5 of 6 · When to shade'),
@@ -164,8 +170,11 @@ trait VSCHAssistent
                     ['type' => 'CheckBox', 'name' => 'WNotfall', 'caption' => $this->t('Smoke detector alarm: all devices up'), 'value' => $this->notfallMelder() !== []],
                     ['type' => 'Label', 'name' => 'WNotfallInfo', 'caption' => $this->t('Keeps escape routes free – also at night and with the automatic switched off.')],
                 ]),
-                'onConfirm' => 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
-                'onUndo' => '// nichts rückgängig zu machen',
+                'onConfirm' => 'VSCH_UIAssistentWerte($id, "wann", json_encode(["WHell" => (int)$WHell, "WSonneAn" => (float)$WSonneAn, "WTemp" => (int)$WTemp, "WAussenSommer" => (float)$WAussenSommer, '
+                    . '"WInnenGrenze" => (float)$WInnenGrenze, "WHeizGrenze" => (float)$WHeizGrenze, "WWP" => (int)$WWP, "WHeizung" => (int)$WHeizung, "WRaumHellLux" => (float)$WRaumHellLux, '
+                    . '"WZielLux" => (float)$WZielLux, "WNotfall" => (bool)$WNotfall, "WHeisha" => (bool)$WHeisha])); '
+                    . 'VSCH_UIAssistentZusammenfassung($id, "", "", json_encode(["hell" => (int)$WHell, "temp" => (int)$WTemp, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
+                'onUndo' => 'VSCH_UIAssistentZurueck($id, "wann");',
             ],
             [
                 'name' => 'fertig', 'caption' => $this->t('Step 6 of 6 · Done'),
@@ -202,6 +211,37 @@ trait VSCHAssistent
         $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
         $e[$teil] = $this->listeWerte($json);
         $this->WriteAttributeString('AssistentEntwurf', json_encode($e));
+    }
+
+    /** Einzelwerte einer Seite merken (Feldname => Wert), damit „Zurück“ sie wieder einsetzen kann. */
+    public function UIAssistentWerte(string $teil, string $json): void
+    {
+        $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
+        $e['_' . $teil] = json_decode($json, true) ?: [];
+        $this->WriteAttributeString('AssistentEntwurf', json_encode($e));
+    }
+
+    /**
+     * „Zurück“ auf eine Seite (onUndo): Symcon stellt die Seite aus der Formular-Vorlage wieder her – die beim „Weiter“
+     * gemerkten Eingaben (Listen und Einzelwerte) hier wieder einsetzen (Dietmar 25.11.: nichts darf verloren gehen).
+     */
+    public function UIAssistentZurueck(string $seite): void
+    {
+        $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
+        if ($seite === 'haus' && is_array($e['fassaden'] ?? null)) {
+            $this->assistentHausFuellen(['ok' => true, 'werte' => $e['fassaden']]);
+        }
+        if ($seite === 'geraete' && is_array($e['geraete'] ?? null)) {
+            $this->UpdateFormField('WGeraete', 'values', json_encode($e['geraete']));
+        }
+        $felder = (array)($e['_' . ($seite === 'geraete' ? 'geraeteFelder' : $seite)] ?? []);
+        foreach ($felder as $name => $wert) {
+            // Variablenauswahl: 0 nicht setzen (Symcon zeigt sonst „muss eine Variable sein“)
+            if (is_int($wert) && $wert === 0 && in_array($name, ['WWind', 'WRegen', 'WSperre', 'WHell', 'WTemp', 'WWP'], true)) {
+                continue;
+            }
+            $this->UpdateFormField($name, 'value', $wert);
+        }
     }
 
     /** Entwurfsteil, sonst die übergebene Liste. */
@@ -288,6 +328,17 @@ trait VSCHAssistent
         $inst = $this->momentaufnahme();
         $e = json_decode($this->ReadAttributeString('AssistentEntwurf'), true) ?: [];
         $geraete = $this->listeWerte($geraeteJson);
+        if (is_array($e['geraete'] ?? null) && $e['geraete'] !== []) {
+            // schon einmal auf der Geräte-Seite gewesen (Zurück → Weiter): die dortigen Eingaben behalten
+            $geraete = $e['geraete'];
+            $kennungen = array_map(fn($f) => (string)($f['Kennung'] ?? ''), $fassaden);
+            foreach ($geraete as &$g) {
+                if (!in_array((string)($g['Fassade'] ?? ''), array_merge($kennungen, ['-']), true)) {
+                    $g['Fassade'] = ''; // Fassade gibt es nach einer Änderung auf Seite 1 nicht mehr → neu zuordnen
+                }
+            }
+            unset($g);
+        }
         $neu = VSCHErkennung::geraete($inst, array_map(fn($g) => (int)($g['Position'] ?? 0), $geraete));
         $alle = array_merge($geraete, $neu);
         foreach ($alle as &$g) {

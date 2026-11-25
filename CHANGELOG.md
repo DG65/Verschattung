@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.5 (in Entwicklung)
+
+- **Assistent: Eingaben bleiben beim Zurückblättern erhalten** (Dietmar 25.11.). Jede Seite merkt beim „Weiter“ ihre Eingaben (Fassaden, Geräte samt Fassadenwahl und Info-Feld-Haken, Wetterschutz, Schwellen und Sensoren); beim „Zurück“ setzt sie die Seite wieder ein (onUndo). Wer nach „Zurück“ erneut „Weiter“ klickt, behält auf der Geräte-Seite seine Fassadenwahl; nur Geräte an einer inzwischen gelöschten Fassade werden neu zugeordnet. Öffnet sich der Assistent von selbst, beginnt ein neuer Entwurf.
+
+
 ## 0.17.4 (in Entwicklung)
 
 - **Assistent hängt nicht mehr bei langsamen Kartendiensten** (Österreich, Bayern, Niedersachsen, Bremen und alle Länder ohne amtliche Daten nutzen OpenStreetMap, Live-Probe Österreich 46 s): Die Hauserkennung beim Öffnen hat ein Zeitbudget von 10 s. Reicht es nicht, erkennt das Modul das Haus im Hintergrund („⏳ Der Kartendienst ist langsam …“), und „Weiter“ übernimmt dessen Fassaden.
