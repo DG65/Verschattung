@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.6 (in Entwicklung)
+
+- **Forum-Thread verlinkt** (veröffentlicht 25.11., Thread 145044): Knopf „💬 Forum-Thread: Fragen, Wünsche, Fehler“ im Formular, Link in der README.
+- README: Voraussetzungen ausführlich (wie im Forumsbeitrag), Stand aktualisiert.
+
+
 ## 0.17.5 (in Entwicklung)
 
 - **Assistent: Eingaben bleiben beim Zurückblättern erhalten** (Dietmar 25.11.). Jede Seite merkt beim „Weiter“ ihre Eingaben (Fassaden, Geräte samt Fassadenwahl und Info-Feld-Haken, Wetterschutz, Schwellen und Sensoren); beim „Zurück“ setzt sie die Seite wieder ein (onUndo). Wer nach „Zurück“ erneut „Weiter“ klickt, behält auf der Geräte-Seite seine Fassadenwahl; nur Geräte an einer inzwischen gelöschten Fassade werden neu zugeordnet. Öffnet sich der Assistent von selbst, beginnt ein neuer Entwurf.

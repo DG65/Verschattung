@@ -65,6 +65,7 @@ class Verschattung extends IPSModule
     private const WARNHUB_GUID = '{97621F9C-C61B-4A7F-9B03-C34BC58B04A6}';
     private const DOC_URL = 'https://github.com/DG65/Verschattung/blob/beta/README.md';
     private const LICENSE_URL = 'https://github.com/DG65/Verschattung/blob/beta/LICENSE';
+    private const FORUM_URL = 'https://community.symcon.de/t/beta-modul-nrg-stack-verschattung-der-rollladen-als-guenstigste-heizung-und-kuehlung-im-haus/145044';
     /** So lange (s) gilt eine Wertänderung nach einem eigenen Befehl als dessen Echo (Rollläden fahren bis ~2 min). */
     private const ECHO_S = 240;
     /** Lamellen erst nachführen, wenn sich der Winkel um so viel geändert hat (Grad). */
@@ -2100,6 +2101,7 @@ class Verschattung extends IPSModule
             ['type' => 'Label', 'caption' => $this->t('IPSView or browser: create a WebView element and enter http://<Symcon-IP>:3777%s as the address (optionally ?bg=1c1c1e for a background colour). The page refreshes itself every minute and only shows, it does not operate anything.', $this->hookPfad())],
         ]];
 
+        $elements[] = ['type' => 'Button', 'caption' => '💬 Forum thread: questions, wishes, bugs', 'onClick' => "echo '" . self::FORUM_URL . "';", 'link' => true];
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '⚖️  License', 'items' => [
             ['type' => 'Label', 'caption' => 'NRG-Stack Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.'],
             ['type' => 'Button', 'caption' => 'Show license', 'onClick' => 'echo "' . self::LICENSE_URL . '";', 'link' => true],

@@ -432,7 +432,8 @@
             "%s reports no position since %s (last command: %s, %s)": "%s meldet keine Stellung seit %s (letzter Befehl: %s, %s)",
             "Position assumed – no report since %s": "Stellung vermutet – keine Rückmeldung seit %s",
             "assumed": "vermutet",
-            "The map service is slow – the house is being detected in the background. Click \"Next\" in a minute.": "Der Kartendienst ist langsam – das Haus wird im Hintergrund erkannt. Bitte in einer Minute auf „Weiter“ klicken."
+            "The map service is slow – the house is being detected in the background. Click \"Next\" in a minute.": "Der Kartendienst ist langsam – das Haus wird im Hintergrund erkannt. Bitte in einer Minute auf „Weiter“ klicken.",
+            "💬 Forum thread: questions, wishes, bugs": "💬 Forum-Thread: Fragen, Wünsche, Fehler"
         }
     }
 }

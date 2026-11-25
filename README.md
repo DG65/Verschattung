@@ -4,7 +4,7 @@ Rollläden, Raffstores und Markisen nach dem Sonnenstand – eingerichtet über 
 
 Teil des **NRG-Stack** — welche Modulstände zusammenpassen, listet [SUITE.md](https://github.com/DG65/EMS/blob/main/SUITE.md). Das Modul läuft auch allein, ohne andere NRG-Stack-Module; mit ihnen nutzt es den Betriebsmodus der Wärmepumpe (Vertrag `heatpump`) und die Schutzaktionen von WarnHub.
 
-> **Stand 0.10 (Beta):** im Test an einer echten Anlage.
+> **Stand 0.17 (Beta):** im Store-Beta, im Einsatz an einer echten Anlage. Fragen, Wünsche und Fehlerberichte gern im [Forum-Thread](https://community.symcon.de/t/beta-modul-nrg-stack-verschattung-der-rollladen-als-guenstigste-heizung-und-kuehlung-im-haus/145044).
 
 ## Wozu?
 
@@ -120,7 +120,19 @@ Die Wolken je Stunde: PV-Prognose ÷ PV-Leistung bei klarem Himmel für die Gene
 
 ## Voraussetzungen
 
-- Symcon 9.1 oder neuer
+**Zwingend:**
+- **Symcon 9.1 oder neuer** – der Einrichtungsassistent und mehrere Formularelemente gibt es erst ab 9.1.
+- **Motorisierte Behänge mit Positionsvariable**: Rollläden, Raffstores oder Markisen, die Symcon über eine schaltbare Variable in Prozent anfährt (z. B. `~Shutter`), gleich über welche Technik (KNX, Z-Wave, Shelly, Homematic …). Reine Taster ohne Positionsvariable gehen nicht. Lamellen als eigene Variable werden unterstützt.
+- **Standort** in der Standort-Instanz von Symcon.
+- **Internetzugang des Symcon-Servers** für die Hauserkennung (Kartendaten, Horizont, Straßen); die Steuerung selbst läuft lokal.
+
+**Dringend empfohlen:** Einstrahlungssensor (W/m² oder Lux; ohne ihn keine Sonnenwärme in kWh), Außentemperatur, Raumtemperaturen.
+
+**Optional:** Fensterkontakte, Raumhelligkeit, Wind- und Regensensor, WarnHub, Wärmepumpe im NRG-Stack, PV-Prognose (Wolken), Anwesenheit.
+
+## Fragen und Rückmeldungen
+
+Im Symcon-Forum: [NRG-Stack Verschattung – der Rollladen als günstigste Heizung und Kühlung im Haus](https://community.symcon.de/t/beta-modul-nrg-stack-verschattung-der-rollladen-als-guenstigste-heizung-und-kuehlung-im-haus/145044).
 
 ## Lizenz
 
