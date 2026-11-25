@@ -44,7 +44,7 @@ class Verschattung extends IPSModule
     private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
-    private const PLAN_FORM = 900;
+    private const PLAN_FORM = 1800; // volle Breite des Formulars bei gleichem Maßstab (Dietmar 25.11.)
     private const PLAN_ASSISTENT = 1050;
     private ?array $koordinatenAssistent = null;
     /** Hindernis-Horizont je Fassadenrichtung (Gelände + Nachbargebäude), nur für einen Aufruf gemerkt. */
@@ -1111,10 +1111,13 @@ class Verschattung extends IPSModule
         $this->SetTimerInterval('Erkennen', 0);
         $this->WriteAttributeInteger('ErkennenVersucht', $this->now());
         @set_time_limit(180); // Overpass braucht teils über eine Minute
+        $altUmkreis = (float)((json_decode($this->ReadAttributeString('Haus'), true) ?: [])['umkreis'] ?? 0) < VSCHGeo::UMKREIS_M;
         if ($this->fassadenAusHaus() === []) {
             if ($this->listeWerte($this->ReadPropertyString('Fassaden')) === []) {
                 $this->hausErkennen();
             }
+        } elseif ($altUmkreis) {
+            $this->hausErkennen(); // vor 0.13.3 erkannt (kleinerer Umkreis): Umgebung für den breiten Lageplan nachladen; die Fassadenliste bleibt
         } else {
             // Haus schon da (schnell beim Öffnen des Assistenten erkannt): nur die Straßen für den Lageplan nachholen
             $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
@@ -1143,7 +1146,8 @@ class Verschattung extends IPSModule
         if ($this->fassadenAusHaus() === []) {
             return $this->listeWerte($this->ReadPropertyString('Fassaden')) === [];
         }
-        return !array_key_exists('strassen', json_decode($this->ReadAttributeString('Haus'), true) ?: []);
+        $haus = json_decode($this->ReadAttributeString('Haus'), true) ?: [];
+        return !array_key_exists('strassen', $haus) || (float)($haus['umkreis'] ?? 0) < VSCHGeo::UMKREIS_M;
     }
 
     /** Fassaden aus dem zuletzt erkannten Haus (Attribut), in der Form der Fassadenliste. */
@@ -1183,7 +1187,7 @@ class Verschattung extends IPSModule
         $this->WriteAttributeString('Haus', json_encode(array_filter([
             'eigen' => $haus['eigen'], 'nachbarn' => $haus['nachbarn'], 'nachbarInfo' => $haus['nachbarInfo'] ?? [], 'strassen' => $strassen,
             'quelle' => $haus['quelle'], 'lizenz' => $haus['lizenz'],
-            'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1],
+            'land' => $haus['land'], 'ts' => $this->now(), 'fassaden' => $haus['fassaden'], 'lat' => $pos[0], 'lon' => $pos[1], 'umkreis' => VSCHGeo::UMKREIS_M,
         ], fn($v) => $v !== null)));
         if ($strassen === null) {
             // Straßen fehlen noch (gar nicht abgefragt oder Dienst ausgelastet): der Hintergrund holt sie nach
@@ -1714,7 +1718,7 @@ class Verschattung extends IPSModule
 
         // 2. Mein Haus
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '🏠  My house', 'expanded' => true, 'items' => [
-            ['type' => 'Image', 'name' => 'Grundriss', 'image' => $this->grundrissBild($fassaden, 0, 'heute', self::PLAN_FORM), 'center' => true, 'width' => self::PLAN_FORM . 'px'],
+            ['type' => 'Image', 'name' => 'Grundriss', 'image' => $this->grundrissBild($fassaden, 0, 'heute', self::PLAN_FORM), 'center' => true, 'width' => '100%'],
             ['type' => 'List', 'name' => 'Fassaden', 'caption' => 'Facades', 'rowCount' => max(6, count($fassaden)), 'add' => true, 'delete' => true,
                 'columns' => [
                     ['caption' => 'Letter', 'name' => 'Kennung', 'width' => '70px', 'add' => '?', 'edit' => ['type' => 'ValidationTextBox']],

@@ -1100,7 +1100,7 @@ $m->attrs['Haus'] = '{}'; $m->abrufe = [];
 json_decode($m->GetConfigurationForm(), true);
 check('J34 Assistent ohne Fassaden: erkennt das Haus beim Öffnen (Kartendienst abgefragt), ohne auf Straßen zu warten', $m->abrufe !== [] && count(array_filter($m->abrufe, fn($u) => str_contains($u, 'highway'))) === 0, json_encode($m->abrufe));
 [$m->props['Geraete'], $m->props['Fassaden']] = [$geraeteAlt, $fassAlt2];
-$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 166.0]]]); // schnell erkannt, ohne Straßen
+$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 166.0]], 'umkreis' => VSCHGeo::UMKREIS_M]); // schnell erkannt, ohne Straßen
 $m->attrs['ErkennenVersucht'] = 0;
 $m->ApplyChanges();
 $tJ = $m->timers['Erkennen'] ?? 0;
@@ -1113,6 +1113,11 @@ $GLOBALS['ABRUF'] = [200, '{"elements":[{"type":"way","tags":{"highway":"residen
 $m->HausImHintergrund(); unset($GLOBALS['ABRUF']);
 $hJ = json_decode($m->attrs['Haus'], true) ?: [];
 check('J37b Dienst antwortet: Straßen gespeichert, kein weiterer Versuch', count($hJ['strassen'] ?? []) === 1 && ($m->timers['Erkennen'] ?? 0) === 0, json_encode([$hJ['strassen'] ?? null, $m->timers['Erkennen'] ?? null]));
+$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 166.0]], 'strassen' => []]); // vor 0.13.3: ohne Umkreis
+$m->ApplyChanges(); $tU = $m->timers['Erkennen'] ?? 0; $m->abrufe = [];
+$m->HausImHintergrund();
+check('J37c Vor 0.13.3 erkannt (kleiner Umkreis): Hintergrund lädt die Umgebung neu', $tU > 0 && $m->abrufe !== [], json_encode([$tU, count($m->abrufe)]));
+$m->attrs['Haus'] = $hausAlt;
 $m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
 $m->fieldUpdates = [];

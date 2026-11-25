@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.3 (in Entwicklung)
+
+- **Lageplan im Formular in voller Breite** (Dietmar 25.11.): gleicher Maßstab, links und rechts mehr Umgebung. Dafür holt das Modul Nachbargebäude aus ALKIS jetzt ±150 m Ost-West und ±100 m Nord-Süd (bis 1000 Gebäude; vorher ±60 m, 200) und Straßen bis 160 m (vorher 120 m); die OSM-Gebäudeabfrage bleibt bei 100 m, weil Overpass oft ausgelastet ist. Live-Probe 14 Länder: ALKIS antwortet in 3–4 s. Bestehende Instanzen laden die weitere Umgebung nach dem Update einmal von selbst im Hintergrund nach (die Fassadenliste bleibt unverändert).
+
+
 ## 0.13.2 (in Entwicklung)
 
 - **Fix: Straßen im Lageplan kamen nicht** (Live-Befund 25.11.). Der Straßendienst (OpenStreetMap/Overpass) braucht bei Dietmar 39 s; der einmalige Hintergrundabruf ging verloren und wurde nie wiederholt, ein „Übernehmen“ brach ihn zudem ab. Jetzt: Antwortet kein Server, gilt das nicht als „keine Straßen“, sondern das Modul versucht es alle 15 Minuten erneut (höchstens einen Tag lang); „Übernehmen“ bricht das nicht mehr ab; der Abruf darf länger laufen.

@@ -24,7 +24,7 @@ final class VSCHGeo
 {
     public const USER_AGENT = 'NRG-Stack-Verschattung (+https://github.com/DG65/Verschattung)';
     /** Umkreis (m), in dem Nachbargebäude für Grundriss und Hindernisse behalten werden. */
-    public const UMKREIS_M = 80.0;
+    public const UMKREIS_M = 150.0; // Lageplan in voller Breite (Dietmar 25.11.): Nachbarn bis 150 m, Abfrage-BBox ±150 m Ost-West, ±100 m Nord-Süd
     /** Kanten kürzer als das zählen nicht als Fassade (Vorsprünge, Messrauschen). */
     public const MIN_KANTE_M = 1.5;
     /** Kanten, deren Richtung höchstens so weit auseinanderliegt, bilden eine Fassade. */
@@ -129,24 +129,24 @@ final class VSCHGeo
         return self::gmlPolygone($body, $q['epsg'] === 4326 ? 25832 : (int)$q['epsg'], false); // SL liefert GML in 25832
     }
 
-    /** Abfrage-URL je Land (BBox ±60 m). */
+    /** Abfrage-URL je Land (BBox ±150 m Ost-West, ±100 m Nord-Süd – der Lageplan ist breiter als hoch). */
     public static function alkisUrl(float $lat, float $lon, array $q): string
     {
-        $h = 60.0;
+        [$hx, $hy] = [self::UMKREIS_M, 100.0];
         $epsg = (int)$q['epsg'];
         if ($epsg === 4326) {
-            $dLat = $h / 111320.0;
-            $dLon = $h / (111320.0 * cos(deg2rad($lat)));
+            $dLat = $hy / 111320.0;
+            $dLon = $hx / (111320.0 * cos(deg2rad($lat)));
             $b = implode(',', array_map([self::class, 'zahl'], [$lat - $dLat, $lon - $dLon, $lat + $dLat, $lon + $dLon]));
         } else {
             [$e, $n] = self::nachUtm($lat, $lon, $epsg === 25833 ? 33 : 32);
-            $b = implode(',', [round($e - $h), round($n - $h), round($e + $h), round($n + $h)]);
+            $b = implode(',', [round($e - $hx), round($n - $hy), round($e + $hx), round($n + $hy)]);
         }
         if ($q['art'] === 'ogcapi') {
             $crs = 'http://www.opengis.net/def/crs/EPSG/0/' . $epsg;
-            return $q['url'] . '?f=json&limit=200&bbox=' . $b . '&bbox-crs=' . rawurlencode($crs) . '&crs=' . rawurlencode($crs);
+            return $q['url'] . '?f=json&limit=1000&bbox=' . $b . '&bbox-crs=' . rawurlencode($crs) . '&crs=' . rawurlencode($crs);
         }
-        return $q['url'] . '?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&COUNT=200&TYPENAMES=' . rawurlencode($q['typ'])
+        return $q['url'] . '?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&COUNT=1000&TYPENAMES=' . rawurlencode($q['typ'])
             . '&BBOX=' . $b . ',urn:ogc:def:crs:EPSG::' . $epsg . (isset($q['format']) ? '&OUTPUTFORMAT=' . rawurlencode($q['format']) : '');
     }
 
@@ -154,7 +154,8 @@ final class VSCHGeo
     public static function osm(float $lat, float $lon, callable $abruf, ?string &$fehler = ''): array
     {
         $fehler = '';
-        $q = '[out:json][timeout:60];way["building"](around:' . (int)self::UMKREIS_M . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
+        // Overpass ist oft ausgelastet: Gebäude dort nur bis 100 m (ALKIS liefert den breiteren Lageplan)
+        $q = '[out:json][timeout:60];way["building"](around:' . (int)min(self::UMKREIS_M, 100.0) . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
         $code = 0;
         $body = '';
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'] as $server) {
@@ -192,7 +193,7 @@ final class VSCHGeo
      * Straßen und Wege im Umkreis (OpenStreetMap, Overpass), nur für den Lageplan.
      * Rückgabe [['typ' => highway, 'name' => string, 'b' => Breite m, 'p' => [[x,y],…] lokal in m], …]; Fehler → [].
      */
-    public static function strassen(float $lat, float $lon, callable $abruf, float $umkreis = 120.0): ?array
+    public static function strassen(float $lat, float $lon, callable $abruf, float $umkreis = 160.0): ?array
     {
         // Rückgabe null = kein Server hat geantwortet (später erneut versuchen); [] = wirklich keine Straße im Umkreis
         $q = '[out:json][timeout:25];way["highway"](around:' . (int)$umkreis . ',' . self::zahl($lat) . ',' . self::zahl($lon) . ');out geom;';
