@@ -54,9 +54,9 @@ trait VSCHAssistent
         if ($vorschlag === [] && $offen && $this->koordinaten() !== null) {
             // Live-Befund 25.11.: Der Assistent öffnet sich von selbst, bevor der Hintergrund fertig ist – dann jetzt erkennen,
             // ohne Straßen (die holt der Hintergrund nach), damit die Seite nicht leer mit „wird erkannt“ stehen bleibt
-            $r = $this->hausErkennen(false);
+            $r = $this->hausErkennen(false, self::ERKENNEN_SOFORT_S);
             $vorschlag = $r['werte'];
-            $erkennung = $r['ok'] ? '' : '⛔ ' . $r['text'];
+            $erkennung = $r['ok'] ? '' : (($r['hintergrund'] ?? false) ? '⏳ ' : '⛔ ') . $r['text'];
         }
         $seiten = [
             [
@@ -217,7 +217,7 @@ trait VSCHAssistent
         $this->WriteAttributeString('AssistentEntwurf', '{}');
         // Haus noch nicht erkannt (Hintergrund lief nicht oder scheiterte): jetzt erkennen, ohne dass jemand einen Knopf drückt
         if ($this->listeWerte($this->ReadPropertyString('Fassaden')) === [] && $this->fassadenAusHaus() === [] && $this->koordinaten() !== null) {
-            $this->assistentHausFuellen($this->hausErkennen());
+            $this->assistentHausFuellen($this->hausErkennen(false, self::ERKENNEN_SOFORT_S));
         }
         $this->UpdateFormField('Assistent', 'popup.initialPage', 'haus');
         $this->UpdateFormField('Assistent', 'visible', true);
@@ -231,6 +231,11 @@ trait VSCHAssistent
             case 'haus':
                 if ($d !== []) {
                     return '';
+                }
+                // Hintergrund ist inzwischen fertig: dessen Fassaden übernehmen
+                if (($hinten = $this->fassadenAusHaus()) !== []) {
+                    $this->assistentHausFuellen(['ok' => true, 'werte' => $hinten]);
+                    return $this->t('House detected: please check the facades, then click "Next" again.');
                 }
                 // noch keine Fassaden: jetzt erkennen und die Seite füllen – der Nutzer prüft und klickt erneut „Weiter“
                 if ($this->koordinaten() !== null) {
@@ -267,7 +272,7 @@ trait VSCHAssistent
     private function assistentHausFuellen(array $r): void
     {
         if (!$r['ok']) {
-            $this->UpdateFormField('WHausStatus', 'caption', '⛔ ' . $r['text']);
+            $this->UpdateFormField('WHausStatus', 'caption', (($r['hintergrund'] ?? false) ? '⏳ ' : '⛔ ') . $r['text']);
             return;
         }
         $this->UpdateFormField('WFassaden', 'values', json_encode($r['werte']));

@@ -1202,6 +1202,15 @@ $m->ApplyChanges(); $tU = $m->timers['Erkennen'] ?? 0; $m->abrufe = [];
 $m->HausImHintergrund();
 check('J37c Vor 0.13.3 erkannt (kleiner Umkreis): Hintergrund lädt die Umgebung neu', $tU > 0 && $m->abrufe !== [], json_encode([$tU, count($m->abrufe)]));
 $m->attrs['Haus'] = $hausAlt;
+// Zeitbudget (Österreich/OSM ~45 s): reicht es nicht, übernimmt der Hintergrund, der Assistent hängt nicht
+$hz = new ReflectionMethod($m, 'hausErkennen'); $hz->setAccessible(true);
+$m->attrs['Haus'] = '{}'; $m->timers['Erkennen'] = 0;
+$rz = $hz->invoke($m, false, 0.0);
+check('J38 Hauserkennung über Zeitbudget: Hinweis „im Hintergrund“, Hintergrund startet', ($rz['hintergrund'] ?? false) === true && ($m->timers['Erkennen'] ?? 0) === 2000 && str_contains($rz['text'], 'Hintergrund'), json_encode($rz));
+$m->attrs['Haus'] = json_encode(['eigen' => [[-6, -4], [6, -4], [6, 4], [-6, 4]], 'fassaden' => [['az' => 166.0]], 'umkreis' => VSCHGeo::UMKREIS_M]);
+$m->fieldUpdates = [];
+$pz = $m->UIAssistentPruefen('haus', '[]');
+check('J39 „Weiter“ ohne Fassaden, Hintergrund fertig: übernimmt dessen Fassaden', str_contains($pz, 'Haus erkannt') && count(json_decode(array_column($m->fieldUpdates, 2, 0)['WFassaden'] ?? '[]', true)) === 1, $pz);
 $m->attrs['Haus'] = $hausAlt;
 $m->UIAssistentOeffnen();
 $m->fieldUpdates = [];

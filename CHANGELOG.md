@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.4 (in Entwicklung)
+
+- **Assistent hängt nicht mehr bei langsamen Kartendiensten** (Österreich, Bayern, Niedersachsen, Bremen und alle Länder ohne amtliche Daten nutzen OpenStreetMap, Live-Probe Österreich 46 s): Die Hauserkennung beim Öffnen hat ein Zeitbudget von 10 s. Reicht es nicht, erkennt das Modul das Haus im Hintergrund („⏳ Der Kartendienst ist langsam …“), und „Weiter“ übernimmt dessen Fassaden.
+- README: Abschnitt „Woher die Kartendaten kommen“ an den heutigen Ablauf angepasst (automatischer Abruf nach dem Anlegen, Umkreis 150 m, Straßen).
+
+
 ## 0.17.3 (in Entwicklung)
 
 - **Stellung vermutet, wenn ein Gerät nichts meldet** (Live-Befund 25.11.: Automat hatte die Jalousien geöffnet, die Z-Wave-Aktoren meldeten nichts, die Kachel zeigte „100 % geschlossen“). Ist der letzte Befehl – eigener oder von Automat (`lastCommand` aus `AUTOMAT_GetShutters`, shutters 1.1) – jünger als die letzte Meldung des Geräts und älter als 3 Minuten, gilt der Befehlswert als vermutete Stellung (für Anzeige und Entscheidungen). Kachel: „(vermutet)“ und „Stellung vermutet – keine Rückmeldung seit …“; Variable „Gerätewächter“: „… meldet keine Stellung seit …“.

@@ -48,6 +48,10 @@ class Verschattung extends IPSModule
     /** Ohne Rückmeldung so lange nach einem Befehl gilt die Stellung als unsicher (s). */
     private const STILL_S = 180;
     private ?array $automatCache = null;
+    /** Ende des Zeitbudgets für Kartenabrufe (microtime), null = ohne Budget. */
+    private ?float $abrufBis = null;
+    /** So lange darf die Hauserkennung beim Öffnen des Assistenten dauern (s); OpenStreetMap braucht oft 30–60 s. */
+    private const ERKENNEN_SOFORT_S = 10;
     private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
@@ -1410,9 +1414,28 @@ class Verschattung extends IPSModule
         return $werte;
     }
 
-    /** $mitStrassen = false: schneller (der Assistent wartet), die Straßen holt danach der Hintergrund nach. */
-    private function hausErkennen(bool $mitStrassen = true): array
+    /**
+     * $mitStrassen = false: schneller (der Assistent wartet), die Straßen holt danach der Hintergrund nach.
+     * $budget (s): Zeitbudget für alle Abrufe; reicht es nicht (OpenStreetMap ist oft langsam), übernimmt der Hintergrund
+     * – Rückgabe dann 'hintergrund' => true.
+     */
+    private function hausErkennen(bool $mitStrassen = true, ?float $budget = null): array
     {
+        if ($budget !== null) {
+            $this->abrufBis = microtime(true) + $budget;
+            try {
+                $r = $this->hausErkennen($mitStrassen);
+            } finally {
+                $zuKnapp = microtime(true) >= $this->abrufBis - 1;
+                $this->abrufBis = null;
+            }
+            if (!$r['ok'] && $zuKnapp) {
+                $this->SetTimerInterval('Erkennen', 2000);
+                return ['ok' => false, 'werte' => [], 'hintergrund' => true,
+                    'text' => $this->t('The map service is slow – the house is being detected in the background. Click "Next" in a minute.')];
+            }
+            return $r;
+        }
         $pos = $this->koordinaten();
         if ($pos === null) {
             return ['ok' => false, 'werte' => [], 'text' => $this->t('No location: please set the location in the Location instance or choose one here.')];
@@ -2580,9 +2603,18 @@ class Verschattung extends IPSModule
     /** HTTP-Abruf mit generischem User-Agent (keine Kontaktdaten des Nutzers). */
     protected function abruf(string $url, array $kopf = [], ?string $post = null): array
     {
+        $timeout = strpos($url, 'overpass') !== false ? 75 : 25;
+        if ($this->abrufBis !== null) {
+            // Zeitbudget (Assistent wartet): was nicht mehr hineinpasst, holt der Hintergrund nach
+            $rest = $this->abrufBis - microtime(true);
+            if ($rest < 1) {
+                return [0, ''];
+            }
+            $timeout = min($timeout, (int)ceil($rest));
+        }
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => strpos($url, 'overpass') !== false ? 75 : 25, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => min(8, $timeout), CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_USERAGENT => VSCHGeo::USER_AGENT, CURLOPT_HTTPHEADER => $kopf, CURLOPT_ENCODING => '',
         ]);
         if ($post !== null) {

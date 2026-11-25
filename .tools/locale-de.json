@@ -429,5 +429,6 @@
     "\"At night\" has no effect for %s: Automat already opens and closes them in the morning and evening.": "„Nachts“ wirkt nicht bei %s: Automat öffnet und schließt diese Behänge schon morgens und abends.",
     "%s reports no position since %s (last command: %s, %s)": "%s meldet keine Stellung seit %s (letzter Befehl: %s, %s)",
     "Position assumed – no report since %s": "Stellung vermutet – keine Rückmeldung seit %s",
-    "assumed": "vermutet"
+    "assumed": "vermutet",
+    "The map service is slow – the house is being detected in the background. Click \"Next\" in a minute.": "Der Kartendienst ist langsam – das Haus wird im Hintergrund erkannt. Bitte in einer Minute auf „Weiter“ klicken."
 }

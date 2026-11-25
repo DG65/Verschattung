@@ -45,11 +45,13 @@ Der Assistent speichert nichts selbst – die Einstellungen gehören dem Nutzer.
 | Gebiet | Quelle | Lizenz |
 |---|---|---|
 | Deutschland ohne Bayern | ALKIS-Gebäude des jeweiligen Landes (WFS bzw. OGC API) | je Land: dl-de/zero, dl-de/by-2-0 oder CC BY 4.0 |
-| Bayern, Österreich, übrige Länder | OpenStreetMap (Overpass) | ODbL |
+| Bayern, Niedersachsen, Bremen, Österreich, übrige Länder | OpenStreetMap (Overpass) | ODbL |
 | Schweiz | geo.admin.ch, BFE „Sonnenfassade“ (fertige Fassaden) | swisstopo / BFE |
 | Horizont überall | PVGIS (EU-JRC) | © Europäische Union |
 
-Abgerufen wird **nur auf Knopfdruck**. Dabei geht die Koordinate an den Kartendienst des Landes, an OpenStreetMap (Nominatim zur Landbestimmung) und an PVGIS. Gespeichert werden nur abgeleitete Werte: Fassadenrichtungen, Nachbargebäude im Umkreis von 80 m und die Horizontlinie. Die Quellenvermerke stehen im Formular.
+Abgerufen wird **einmal nach dem Anlegen der Instanz** (sobald ein Standort da ist, im Hintergrund), beim Öffnen des Assistenten, falls noch nichts erkannt ist, und auf Knopfdruck „Haus erkennen“ – immer vom eigenen Symcon-Server aus. Dabei geht die Koordinate an den Kartendienst des Landes, an OpenStreetMap (Nominatim zur Landbestimmung, Overpass für Gebäude und Straßen) und an PVGIS. Gespeichert werden nur abgeleitete Werte: Fassadenrichtungen, Nachbargebäude im Umkreis von etwa 150 m, Straßen und die Horizontlinie. Die Quellenvermerke stehen im Formular.
+
+Amtliche Daten antworten in wenigen Sekunden, OpenStreetMap ist oft langsam (30–60 s). Der Assistent wartet beim Öffnen höchstens 10 Sekunden; dauert es länger, erkennt das Modul das Haus im Hintergrund, und „Weiter“ übernimmt das Ergebnis.
 
 ## Wie entschieden wird
 
