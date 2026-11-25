@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0 (in Entwicklung)
+
+- **Nachts (Idee 2), neue Spalte je Behang, ab Werk aus:** „Winter: zu (hält die Wärme im Haus)“ – im Heizbetrieb schließt der Behang nach der Dämmerung ganz (Sonne unter −4°), morgens (Sonne über 2°) fährt hoch, was das Modul nachts geschlossen hat. „Winter zu, Sommer auf (kühlt aus)“ – zusätzlich nachts auf, wenn es draußen mindestens 2 K kühler ist als im Raum. Nachts von Hand bewegt → bis zum Morgen in Ruhe; offene Tür → nicht zu; schon vom Nutzer geschlossen → bleibt, wird morgens nicht hochgefahren; Markisen nie. Regel 9 in „So arbeitet die Automatik“.
+- **HeishaMon-Abfrage** (Dietmars Idee 25.11., Schnittstelle mit HeishaMon 1.46.0 abgestimmt): Assistent und Feinheiten bieten „In HeishaMon einschalten“ an, wenn dort die Sonnenwärme verfügbar, aber aus ist. Geschaltet wird nur nach Klick und nur über HeishaMons Schaltvariable `RoomShift_SolarAssist` (RequestAction), nie über dessen Eigenschaften; gelesen über `HEISHA_GetSolarAssist`.
+
+
 ## 0.11.1 (in Entwicklung)
 
 - **Sonnenwärme: Durchlass der Behänge nach Norm** (Recherche 25.11.): Markise 0,5 statt 0,3 (DIN 4108-2, Tuch nicht parallel zum Glas), Rollladen zu 0,1 statt 0,05 (ÖNORM B 8110-6-1: gtot ≈ 0,05 bei g ≈ 0,5), Raffstore waagrecht 0,5 / 45° 0,25 (DIN) / zu 0,1; ohne Lamellenstellung gilt 45°. Wirkt nur auf die kWh-Schätzung und den Vertrag, nicht auf die Steuerung.

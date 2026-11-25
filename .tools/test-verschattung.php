@@ -38,6 +38,7 @@ function PVF_GetForecast(int $id, int $off): array
     return ['contractType' => 'forecast', 'contractVersion' => '1.5', 'kind' => 'pv', 'date' => date('Y-m-d', $tag), 'resolution' => '60min', 'slots' => 24, 'unit' => 'W',
         'mean' => $mean, 'generated' => $jetzt - $p['alter'], 'moduleCover' => ['applied' => $p['schnee']]];
 }
+function HEISHA_GetSolarAssist(int $id): array { return ['contractVersion' => '1.0', 'available' => true, 'enabled' => (bool)GetValue(995), 'switchIdent' => 'RoomShift_SolarAssist', 'switchID' => 995]; }
 function check(string $what, bool $ok, string $detail = ''): void
 {
     global $fails, $checks;
@@ -257,6 +258,31 @@ check('D68 Sonnenwärme: 500 W/m², Fläche leer = 2 m², Glasanteil 0,7, g 0,5 
 check('D70 Waagrechte Fläche bekommt die Globalstrahlung; PV-Klarheit: Prognose ÷ Klarhimmel, gedeckelt; tiefe Sonne nur ja/nein', abs(VSCHLogik::ebeneEinstrahlung(600, 50, 180, 180, 0) - 600) < 1
     && VSCHLogik::klarheit(500, 1000) == 0.5 && VSCHLogik::klarheit(2000, 1000) == 1.15 && VSCHLogik::klarheit(10, 20) == 1.0 && VSCHLogik::klarheit(0, 20) == 0.0
     && VSCHLogik::pvKlar([['kwp' => 10, 'tilt' => 30, 'azimuth' => 0, 'factor' => 1]], 0.85, 60, 180) > 7000);
+// Nachtfunktion (Idee 2, 0.12.0)
+$NG = ['typ' => 'rollladen', 'az' => 180, 'sonneAn' => false, 'lamellen' => false, 'profil' => 0, 'beschattung' => 0.75, 'nachts' => 1, 'ist' => ['zu' => 0.0, 'lamelle' => null]];
+$NU = ['nacht' => true, 'tag' => false, 'klima' => 'heizen', 'fenster' => 'zu'] + $U;
+$n1 = VSCHLogik::entscheide($NG, $NU, [], $T, ts('2026-12-10 18:00'));
+check('D71 Winternacht, Einstellung „Winter zu“: ganz zu (nicht nur Beschattungsposition), als eigen gemerkt', $n1['ziel'] === 'zu' && $n1['anteil'] == 1.0 && $n1['z']['wir'] === true && ($n1['z']['nacht'] ?? '') === 'daemmen', json_encode($n1));
+$n2 = VSCHLogik::entscheide($NG, ['nacht' => false, 'tag' => true] + $NU, $n1['z'], $T, ts('2026-12-11 08:30'));
+check('D72 Morgen: was das Modul nachts geschlossen hat, fährt wieder hoch', $n2['ziel'] === 'offen' && $n2['z']['wir'] === false && !isset($n2['z']['nacht']), json_encode($n2));
+$zh = $n1['z']; $zh['handTs'] = ts('2026-12-10 22:00');
+$n3 = VSCHLogik::entscheide($NG, $NU, $zh, $T, ts('2026-12-10 22:05'));
+$n4 = VSCHLogik::entscheide($NG, ['nacht' => false, 'tag' => true] + $NU, $n3['z'], $T, ts('2026-12-11 08:30'));
+check('D73 Nachts von Hand bewegt: Nachtfunktion ruht, morgens kein Hochfahren', $n3['ziel'] === null && $n4['ziel'] !== 'offen', json_encode([$n3['grund'], $n4['grund']]));
+$n5 = VSCHLogik::entscheide(['nachts' => 0] + $NG, $NU, [], $T, ts('2026-12-10 18:00'));
+$n6 = VSCHLogik::entscheide($NG, ['fenster' => 'sperre'] + $NU, [], $T, ts('2026-12-10 18:00'));
+$n7 = VSCHLogik::entscheide(['typ' => 'markise'] + $NG, $NU, [], $T, ts('2026-12-10 18:00'));
+check('D74 Ab Werk aus; offene Tür wird nicht zugefahren; Markise nie', $n5['ziel'] === null && $n6['ziel'] === null && $n7['ziel'] === null);
+$n8 = VSCHLogik::entscheide(['ist' => ['zu' => 1.0, 'lamelle' => null]] + $NG, $NU, [], $T, ts('2026-12-10 18:00'));
+$n9 = VSCHLogik::entscheide($NG, ['nacht' => false, 'tag' => true] + $NU, $n8['z'], $T, ts('2026-12-11 08:30'));
+check('D75 Vom Nutzer schon geschlossen: bleibt so, morgens nicht hochgefahren', $n8['ziel'] === null && $n9['ziel'] === null, json_encode([$n8['grund'], $n9['grund']]));
+$S = ['nacht' => true, 'tag' => false, 'klima' => 'kuehlen', 'aussen' => 16.0, 'innen' => 25.0] + $NU;
+$s1 = VSCHLogik::entscheide(['nachts' => 2, 'ist' => ['zu' => 1.0, 'lamelle' => null]] + $NG, $S, [], $T, ts('2026-07-10 23:00'));
+$s2 = VSCHLogik::entscheide(['nachts' => 1, 'ist' => ['zu' => 1.0, 'lamelle' => null]] + $NG, $S, [], $T, ts('2026-07-10 23:00'));
+$s3 = VSCHLogik::entscheide(['nachts' => 2, 'ist' => ['zu' => 1.0, 'lamelle' => null]] + $NG, ['aussen' => 24.0] + $S, [], $T, ts('2026-07-10 23:00'));
+check('D76 Sommernacht nur mit Einstellung 2 und nur wenn draußen ≥ 2 K kühler: auf', $s1['ziel'] === 'offen' && $s2['ziel'] === null && $s3['ziel'] === null, json_encode([$s1['grund'], $s2['grund'], $s3['grund']]));
+$r1 = VSCHLogik::entscheide(['typ' => 'raffstore', 'lamellen' => true] + $NG, $NU, [], $T, ts('2026-12-10 18:00'));
+check('D77 Raffstore nachts: Lamellen ganz zu (90°)', $r1['ziel'] === 'zu' && $r1['lamelle'] == 90.0);
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -710,6 +736,28 @@ $m->props['Heizung'] = 0;
 $fh = json_decode($m->GetConfigurationForm(), true);
 $hz = []; array_walk_recursive($fh, function ($v, $k) use (&$hz) { if ($k === 'name' && in_array($v, ['Heizung', 'WHeizung'], true)) { $hz[$v] = true; } });
 check('G69 Heizungsart: Abfrage in Feinheiten und Assistent, im Vertrag als heating (unknown/floor …)', $h0 === 'unknown' && $h2 === 'floor' && isset($hz['Heizung'], $hz['WHeizung']), json_encode([$h0, $h2, $hz]));
+// Nachtfunktion im Regeltakt: Winternacht schließt, Morgen öffnet wieder
+$sicherN = [$m->props['Geraete'], $m->props['TemperaturID'] ?? 0, $m->attrs['Zustand'], $GLOBALS['CLOCK'], GetValue(601), GetValue(602)];
+mkvar(990, VARIABLETYPE_FLOAT, 2.0, 'Außentemperatur', 0, false, '~Temperature');
+$gN = json_decode($m->props['Geraete'], true); $gN[0]['Nachts'] = 1; $m->props['Geraete'] = json_encode($gN);
+$m->props['TemperaturID'] = 990;
+SetValue(601, 0); SetValue(602, 0); $m->attrs['Zustand'] = '{}';
+$GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick();
+$zuN = GetValue(601); $lamN = GetValue(602);
+$GLOBALS['CLOCK'] = ts('2026-12-11 10:00'); $m->Tick();
+check('G70 Regeltakt: Winternacht → Raffstore ganz zu mit Lamellen zu; Morgen → wieder auf', $zuN === 100 && $lamN === 100 && GetValue(601) === 0, json_encode([$zuN, $lamN, GetValue(601)]));
+[$m->props['Geraete'], $m->props['TemperaturID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherN, 0, 4);
+SetValue(601, $sicherN[4]); SetValue(602, $sicherN[5]);
+// HeishaMon-Abfrage (1.46.0): Hinweis + Schalter nur, wenn dort verfügbar und aus; Einschalten nur über dessen Schaltvariable
+mkinst(994, 'Wärmepumpe', 0); mkvar(995, VARIABLETYPE_BOOLEAN, false, 'Sonnenwärme der Verschattung nutzen', 994, true, '~Switch', 'RoomShift_SolarAssist');
+$GLOBALS['MODULES']['{1919151A-3C0F-4C09-B906-291638EC1469}'] = [994];
+$fH = json_encode(json_decode($m->GetConfigurationForm(), true));
+$GLOBALS['BEFEHLE'] = [];
+$tH = $m->UIHeishaSonne();
+$fH2 = json_encode(json_decode($m->GetConfigurationForm(), true));
+check('G71 HeishaMon: Hinweis und Knopf, Klick schaltet dessen Variable (RequestAction), danach kein Hinweis mehr', str_contains($fH, 'VSCH_UIHeishaSonne') && in_array([995, true], $GLOBALS['BEFEHLE'], true)
+    && GetValue(995) === true && !str_contains($fH2, 'VSCH_UIHeishaSonne') && $m->UIHeishaSonne() !== $tH, $tH);
+unset($GLOBALS['MODULES']['{1919151A-3C0F-4C09-B906-291638EC1469}']);
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);

@@ -108,6 +108,13 @@ final class VSCHLogik
             return $fertig(null, null, VSCHText::t('Automatic switched off for this device'), $z);
         }
 
+        // 1b. Nacht (je Behang einstellbar, Spalte „Nachts“): Winter → zu als Wärmedämmung, morgens wieder auf;
+        //     Sommer (nur Einstellung 2) → auf zur Nachtauskühlung, wenn es draußen kühler ist als im Raum.
+        $n = self::nachtRegel($typ, $g, $u, $z, $now);
+        if ($n !== null) {
+            return $fertig($n[0], $n[1], $n[2], $z, $n[3]);
+        }
+
         // 2. Wunsch: Der Behang ist die günstigste Heizung und Kühlung des Raums.
         //    Heizbedarf → Sonne herein; Kühlbedarf → voll beschatten; neutral → nur Blendschutz (Tiefe), sonst offen.
         $wunsch = (bool)$g['sonneAn'];
@@ -231,6 +238,65 @@ final class VSCHLogik
             return $fertig('offen', null, $warum, ['wir' => false] + $z);
         }
         return $fertig(null, null, $warum, $z);
+    }
+
+    /**
+     * Nachtfunktion (Idee 2). $g['nachts']: 0 aus, 1 Winter nachts zu, 2 zusätzlich Sommer nachts auf. $u['nacht']: dunkel (Modul, mit Hysterese).
+     * Merkt in $z: nacht ('daemmen'|'lueften'), nachtAb (Beginn dieser Nacht), handTs (letzte Handbedienung, vom Modul).
+     * Wurde der Behang in dieser Nacht von Hand bewegt, ruht die Nachtfunktion bis morgen. Morgens fährt nur hoch, was nachts das Modul geschlossen hat.
+     * Rückgabe [ziel ('zu'|'offen'|null), lamelle, grund, anteil] oder null = Tageslogik entscheidet.
+     */
+    public static function nachtRegel(string $typ, array $g, array $u, array &$z, int $now): ?array
+    {
+        $modus = (int)($g['nachts'] ?? 0);
+        $hand = isset($z['nachtAb']) && (int)($z['handTs'] ?? 0) >= (int)$z['nachtAb'];
+        if (!($u['nacht'] ?? false)) {
+            if (!isset($z['nacht']) && !isset($z['nachtAb'])) {
+                return null;
+            }
+            $war = (string)($z['nacht'] ?? '');
+            unset($z['nacht'], $z['nachtAb']);
+            if ($war === 'daemmen' && $z['wir'] && !$hand && ($u['automatik'] ?? true)) {
+                $z['wir'] = false;
+                return ['offen', null, VSCHText::t('Morning: up again after the night'), null];
+            }
+            if ($war === 'daemmen' && $hand) {
+                $z['wir'] = false; // nachts von Hand bewegt: gehört jetzt dem Nutzer, auch die Tageslogik fährt ihn nicht hoch
+            }
+            return null;
+        }
+        if ($modus === 0 || $typ === 'markise' || !($u['automatik'] ?? true)) {
+            return null;
+        }
+        $z['nachtAb'] ??= $now;
+        if ($hand) {
+            return [null, null, VSCHText::t('Moved by hand tonight – the night function resumes tomorrow'), null];
+        }
+        $klima = $u['klima'] ?? null;
+        if ($klima === 'heizen') {
+            if ((string)($u['fenster'] ?? 'zu') !== 'zu') {
+                return [null, null, VSCHText::t('Window/door open — not lowering'), null];
+            }
+            $ist = (array)($g['ist'] ?? []);
+            if (($z['nacht'] ?? '') !== 'daemmen' && !$z['wir'] && ($ist['zu'] ?? null) !== null && (float)$ist['zu'] >= 0.97
+                && (($ist['lamelle'] ?? null) === null || (float)$ist['lamelle'] >= 85)) {
+                return [null, null, VSCHText::t('Already closed – stays as it is'), null];
+            }
+            $z['nacht'] = 'daemmen';
+            $z['wir'] = true;
+            return ['zu', ($typ === 'raffstore' && ($g['lamellen'] ?? false)) ? 90.0 : null, VSCHText::t('Night in winter: closed to keep the heat in'), 1.0];
+        }
+        if ($klima === 'kuehlen' && $modus === 2) {
+            $i = $u['innen'] ?? null;
+            $a = $u['aussen'] ?? null;
+            if ($i !== null && $a !== null && (float)$a < (float)$i - 2) {
+                $z['nacht'] = 'lueften';
+                $z['wir'] = false;
+                return ['offen', null, VSCHText::t('Night in summer: up, outside %s °C is cooler than the room %s °C',
+                    number_format((float)$a, 1, ',', ''), number_format((float)$i, 1, ',', '')), null];
+            }
+        }
+        return null;
     }
 
     /**

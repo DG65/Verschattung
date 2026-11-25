@@ -38,6 +38,8 @@ class Verschattung extends IPSModule
     public const VERTRAG = '1.1';
     /** Modul PVPrognose (NRG-Stack Prognose): Wolken für die Erwartung. */
     private const PVF_MODUL = '{257DD4E8-9705-462E-89FC-56D0A1038353}';
+    /** Modul HeishaMon (NRG-Stack): nutzt ab 1.46.0 die Sonnenwärme zum Absenken der Heizung (Schaltvariable RoomShift_SolarAssist). */
+    private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
     private const PLAN_FORM = 900;
@@ -207,6 +209,7 @@ class Verschattung extends IPSModule
                 $z = $this->zustand();
                 $k = $g['key'];
                 $z[$k]['hand'] = (bool)($z[$k]['soll'] ?? false);
+                $z[$k]['handTs'] = $this->now(); // Nachtfunktion ruht danach bis zum Morgen
                 $z[$k]['grund'] = $this->t('Operated by hand — automatic resumes when the sun situation changes');
                 $this->WriteAttributeString('Zustand', json_encode($z));
                 $this->SendDebug('Hand', $g['Name'] . ' → ' . json_encode($Data[0]), 0);
@@ -258,6 +261,11 @@ class Verschattung extends IPSModule
             $this->wetterMerken();
         }
         $hell = $this->hell($z);
+        // Nacht für die Nachtfunktion: unter −4° dunkel, morgens erst ab 2° wieder Tag (kein Flattern in der Dämmerung)
+        $nacht = $sonne['alt'] < -4 || ((bool)($z['_nacht'] ?? false) && $sonne['alt'] < 2);
+        if (!$probe) {
+            $z['_nacht'] = $nacht;
+        }
         $aussen = $this->messwert($this->ReadPropertyInteger('TemperaturID'));
         $wp = $this->wpModus();
         $notfall = $this->notfall();
@@ -328,6 +336,7 @@ class Verschattung extends IPSModule
                 'ohneWetterBestaetigt' => $this->ReadPropertyBoolean('MarkiseOhneWetter'),
                 'fenster' => $fenster[0], 'lueftung' => $this->ReadPropertyFloat('Lueftung') / 100,
                 'automatik' => (bool)$this->GetValue('Automatik'), 'tag' => $sonne['alt'] > 0,
+                'nacht' => $nacht, 'aussen' => $aussen, 'innen' => $this->messwert((int)$g['RaumTemp']),
                 'schutz' => $schutzAktionen === [] ? null : VSCHLogik::schutz($schutzAktionen, array_values(array_filter([$g['Position'], $g['Lamelle']])),
                     IPS_GetParent($g['Position']), $schutzMerk, $now, 60 * $this->ReadPropertyInteger('Haltezeit')),
             ];
@@ -335,7 +344,7 @@ class Verschattung extends IPSModule
             $istLux = $zielLux > 0 ? $this->lux((int)$g['RaumHell']) : null;
             [$istZu, $istLam] = $this->istStellung($g);
             $u['geraetAktiv'] = $this->geraetAktiv($g);
-            $ger = ['typ' => $g['Typ'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
+            $ger = ['typ' => $g['Typ'], 'nachts' => $g['Nachts'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
                 'beschattung' => $g['Beschattung'] / 100, 'ist' => ['zu' => $istZu, 'lamelle' => $istLam],
                 'regel' => $istLux !== null ? ['ziel' => $zielLux, 'ist' => $istLux] : null];
             $r = VSCHLogik::entscheide($ger, $u, (array)($z[$k] ?? []), $zeiten, $now);
@@ -372,7 +381,7 @@ class Verschattung extends IPSModule
     private function ausfuehren(array $g, string $ziel, ?float $lamelle, array &$z, int $now, ?float $teil = null): void
     {
         // $teil: Blendschutz-Tiefe oder Lüftungsposition begrenzen die Beschattungsposition des Geräts
-        $anteil = $ziel === 'beschatten' ? ($teil === null ? $g['Beschattung'] / 100 : min($g['Beschattung'] / 100, $teil)) : 0.0;
+        $anteil = $ziel === 'zu' ? 1.0 : ($ziel === 'beschatten' ? ($teil === null ? $g['Beschattung'] / 100 : min($g['Beschattung'] / 100, $teil)) : 0.0);
         $wert = $this->positionWert($g, $anteil);
         $letzt = (array)($z['befehl'] ?? []);
         // gleiches Ziel, aber Position um mehr als 5 % gewandert (Sonne steigt, Fenster geöffnet) → neu fahren
@@ -505,7 +514,8 @@ class Verschattung extends IPSModule
             $this->t('2. Room too warm, heat pump cooling or summer outside → shade fully. Heat pump heating, room cool or winter outside → the device stays up, the sun warms the house. In between: glare protection or the target brightness of the room, if set.'),
             $this->t('3. Already further down than shading needs (height and slats)? The device stays as it is and is not raised later either.'),
             $this->t('4. Moved by hand: the device is left alone until the sun situation changes.'),
-            $this->t('5. Only what the module lowered itself is raised again, and only by day. Closing in the evening is up to you.'),
+            $this->t('5. Only what the module lowered itself is raised again, and only by day. Closing in the evening is up to you – unless "At night" is set for the device.'),
+            $this->t('9. At night (column "At night", off by default): in winter the device closes after dusk to keep the heat in and opens again in the morning; in summer (second option) it opens at night when outside is at least 2 K cooler than the room. Moved by hand during the night → left alone until the morning. Doors that are open are not lowered.'),
             $this->t('6. Door open → not lowered. Window tilted → at most to the ventilation position.'),
             $this->t('7. Switch "Automatic" per device: off → the device is left alone. Only emergency and weather protection still move it.'),
             $this->t('8. Emergency (smoke detector) → all devices up. Wind, rain, storm → awnings and venetian blinds retract. Both always, also with the automatic off.'),
@@ -1524,6 +1534,40 @@ class Verschattung extends IPSModule
         return null;
     }
 
+    /**
+     * HeishaMon-Instanz, die die Sonnenwärme nutzen könnte, aber nicht nutzt (HEISHA_GetSolarAssist: available, nicht enabled, Schaltvariable da).
+     * Nur lesend; geschaltet wird erst nach Klick (UIHeishaSonne). Rückgabe ['id', 'switch', 'name'] oder null.
+     */
+    private function heishaSonne(): ?array
+    {
+        if (!function_exists('HEISHA_GetSolarAssist')) {
+            return null;
+        }
+        foreach (IPS_GetInstanceListByModuleID(self::HEISHA_MODUL) as $id) {
+            try {
+                $s = HEISHA_GetSolarAssist($id);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            $sw = (int)($s['switchID'] ?? 0);
+            if (($s['available'] ?? false) && !($s['enabled'] ?? false) && $sw > 0 && IPS_VariableExists($sw)) {
+                return ['id' => $id, 'switch' => $sw, 'name' => IPS_GetName($id)];
+            }
+        }
+        return null;
+    }
+
+    /** Nach Klick: Sonnenwärme in HeishaMon einschalten – über dessen Schaltvariable, nie über eine Eigenschaft. */
+    public function UIHeishaSonne(): string
+    {
+        $h = $this->heishaSonne();
+        if ($h === null) {
+            return $this->t('Nothing to switch on.');
+        }
+        RequestAction($h['switch'], true);
+        return $this->t('HeishaMon "%s" now uses the solar heat of the shading.', $h['name']);
+    }
+
     /** PV-Prognose (W) zum Zeitpunkt $t: Slot nach Wanduhr; fehlt der Tag, 0. */
     private function pvWert(array $pv, int $t): float
     {
@@ -1639,6 +1683,9 @@ class Verschattung extends IPSModule
                     ['caption' => 'Sun max. into room (cm)', 'name' => 'Tiefe', 'width' => '190px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1000]],
                     ['caption' => 'Window height (cm)', 'name' => 'FensterHoehe', 'width' => '170px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 600]],
                     ['caption' => 'Sill height (cm)', 'name' => 'Bruestung', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 300]],
+                    ['caption' => 'At night', 'name' => 'Nachts', 'width' => '230px', 'add' => 0, 'edit' => ['type' => 'Select', 'options' => [
+                        ['caption' => 'nothing', 'value' => 0], ['caption' => 'winter: closed (keeps heat in)', 'value' => 1],
+                        ['caption' => 'winter closed, summer open (cools)', 'value' => 2]]]],
                     ['caption' => 'Window area (m²)', 'name' => 'Flaeche', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 50, 'digits' => 1]],
                 ]],
             ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } $n = []; foreach (($Notfall ?? []) as $x) { $n[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID, (int)($WPModusID ?? 0), json_encode($n));'],
@@ -2000,6 +2047,16 @@ class Verschattung extends IPSModule
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' lx', 'name' => $p . 'ZielLux', 'caption' => $this->t('Keep the room at (lx, 0 = off)'), 'minimum' => 0, 'maximum' => 1000, 'stepSize' => 10, 'width' => '600px'] + $wert('ZielLux'),
             ['type' => 'Label', 'name' => $p . 'ZielLuxHint', 'caption' => $this->t('When neither heating nor cooling is needed, the device follows the brightness sensor of the room: brighter than the target → a bit further down (venetian blinds: slats closed further), darker → a bit further open, one step every 2 minutes. When cooling, it shades fully; when heating, it stays up. Per device the column "Target brightness" overrides this value. Lights switched on in the room count as brightness too.')],
         ]);
+        $heisha = $this->heishaSonne();
+        if ($heisha !== null) {
+            $felder[] = ['type' => 'Label', 'name' => $p . 'HeishaInfo', 'caption' => '♨️ ' . $this->t('HeishaMon "%s" can lower the heating while the sun heats the house. It is switched off there.', $heisha['name'])];
+            $felder[] = $a
+                ? ['type' => 'CheckBox', 'name' => 'WHeisha', 'caption' => $this->t('Switch it on in HeishaMon'), 'value' => false]
+                : ['type' => 'Button', 'caption' => $this->t('Switch it on in HeishaMon'), 'onClick' => 'echo VSCH_UIHeishaSonne($id);'];
+        }
+        if ($heisha === null && $a) {
+            $felder[] = ['type' => 'CheckBox', 'name' => 'WHeisha', 'caption' => '', 'value' => false, 'visible' => false]; // Feld immer da, onConfirm liest es
+        }
         if (!$a) {
             $felder[] = ['type' => 'Label', 'caption' => '🔆 ' . $this->t('Solar heat through the windows')];
             $felder[] = ['type' => 'Select', 'name' => 'GWert', 'caption' => $this->t('Glazing'), 'width' => '600px', 'options' => [
@@ -2098,7 +2155,7 @@ class Verschattung extends IPSModule
                 'Kontakt3' => (int)($g['Kontakt3'] ?? 0), 'Kontakt4' => (int)($g['Kontakt4'] ?? 0),
                 'RaumTemp' => (int)($g['RaumTemp'] ?? 0), 'RaumHell' => (int)($g['RaumHell'] ?? 0),
                 'BeiOffen' => (int)($g['BeiOffen'] ?? 0), 'Tiefe' => (int)($g['Tiefe'] ?? 0), 'ZielLux' => (int)($g['ZielLux'] ?? 0),
-                'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0), 'Flaeche' => (float)($g['Flaeche'] ?? 0),
+                'FensterHoehe' => (int)($g['FensterHoehe'] ?? 0), 'Bruestung' => (int)($g['Bruestung'] ?? 0), 'Flaeche' => (float)($g['Flaeche'] ?? 0), 'Nachts' => (int)($g['Nachts'] ?? 0),
                 'Beschattung' => $besch > 0 ? $besch : VSCHLogik::VORGABEN[$typ]['beschattung'],
                 'key' => 'g' . (int)($g['Position'] ?? 0),
             ];
