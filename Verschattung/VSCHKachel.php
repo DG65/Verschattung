@@ -166,6 +166,7 @@ trait VSCHKachel
             'neutral' => $this->t('Comfortable: glare protection only')][$lage] ?? '';
         $wp = $this->wpModus();
         $daten['wp'] = $wp === null ? '' : $this->wpText($wp);
+        $daten['abwesend'] = $this->abwesend() === true;
         $notfall = $this->notfall();
         $wetter = (array)($z['_w'] ?? []);
         $daten['sperre'] = $notfall !== '' ? $this->t('Emergency: %s – all devices up', $notfall)
@@ -276,6 +277,7 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'Nobody at home' => $this->t('Nobody at home'),
             'One device does not reach its target' => $this->t('One device does not reach its target'),
             '%d devices do not reach their target' => $this->t('%d devices do not reach their target'),
             'moves today' => $this->t('moves today'),

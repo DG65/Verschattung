@@ -247,7 +247,7 @@ function zeichnen() {
   o += '<div class="oben"><div class="links"><div class="karte lage"><div><div class="titel">' + esc(T('Shading')) + '<span class="rechts schalter">' + esc(T('Automatic'))
     + ' <button class="toggle' + (daten.automatik ? ' an' : '') + '" id="auto"' + (daten.bedienbar ? '' : ' disabled') + '></button></span></div>'
     + '<div class="haupt ' + esc(daten.lage || '') + '">' + esc(daten.lageText || T('Shading')) + '</div>'
-    + '<div class="unter">' + esc(anJetzt.length ? T('Sun on') + ' ' + anJetzt.join(', ') : T('No sun on the facades')) + (daten.wp ? ' · ' + esc(T('Heat pump') + ': ' + daten.wp) : '') + '</div></div>';
+    + '<div class="unter">' + esc(anJetzt.length ? T('Sun on') + ' ' + anJetzt.join(', ') : T('No sun on the facades')) + (daten.wp ? ' · ' + esc(T('Heat pump') + ': ' + daten.wp) : '') + (daten.abwesend ? ' · 🏖 ' + esc(T('Nobody at home')) : '') + '</div></div>';
   o += '<div class="kz"><div><b class="zahl">' + zahl(daten.einstrahlung) + '</b><span>W/m² · ' + esc(T((daten.himmel || {}).text || 'Irradiance')) + '</span></div>'
     + '<div><b class="zahl">' + zahl(daten.aussen, 1) + '°</b><span>' + esc(T('outside')) + '</span></div>'
     + '<div><b class="zahl">' + (daten.sonne && daten.sonne.alt > 0 ? zahl(daten.sonne.alt) + '°' : '–') + '</b><span>' + esc(T('sun height')) + '</span></div></div>';

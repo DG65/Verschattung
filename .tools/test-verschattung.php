@@ -779,6 +779,24 @@ check('G73 Gerätewächter: Raffstore kommt nicht an → Störung in Variable �
 SetValue(601, 100); $m->Tick();
 check('G74 … am Ziel angekommen → Störung weg', $m->GetValue('Geraetewaechter') === '', (string)$m->GetValue('Geraetewaechter'));
 [$m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherW, 0, 2); SetValue(601, $sicherW[2]);
+// Abwesenheit (Idee 5): Anwesenheitssimulation aktiv → niemand zu Hause; eigene Variable mit Art
+$a0 = array_key_exists('absent', $sA = json_decode($m->GetState(), true)) ? $sA['absent'] : 'x';
+mkinst(996, 'Anwesenheitssimulation', 0, '{00F44496-648D-4AE0-9AC8-A6002EFCEF54}'); mkvar(997, VARIABLETYPE_BOOLEAN, true, 'Simulation aktiv', 996, true, '~Switch', 'Active');
+$a1 = json_decode($m->GetState(), true)['absent'] ?? 'x';
+mkvar(998, VARIABLETYPE_BOOLEAN, true, 'Anwesend', 0, false, '~Presence');
+$m->props['AnwesenheitID'] = 998; $a2 = json_decode($m->GetState(), true)['absent'] ?? 'x';
+$m->props['AnwesenheitArt'] = 1; $a3 = json_decode($m->GetState(), true)['absent'] ?? 'x';
+$m->props['AnwesenheitID'] = 0; $m->props['AnwesenheitArt'] = 0;
+check('G75 Abwesenheit: ohne Quelle unbekannt; Simulation aktiv → niemand da; eigene Variable „wahr = anwesend“ → jemand da, „wahr = abwesend“ → niemand da', $a0 === null && $a1 === true && $a2 === false && $a3 === true, json_encode([$a0, $a1, $a2, $a3]));
+$gA = $m->props['Geraete']; $tA = $m->props['TemperaturID'] ?? 0;
+mkvar(999, VARIABLETYPE_FLOAT, 22.0, 'Raumtemperatur', 0, false, '~Temperature'); mkvar(1000, VARIABLETYPE_FLOAT, 15.0, 'Außen', 0, false, '~Temperature');
+$gx = json_decode($gA, true); $gx[0]['RaumTemp'] = 999; $m->props['Geraete'] = json_encode($gx); $m->props['TemperaturID'] = 1000;
+$w = new ReflectionMethod($m, 'regeln'); $w->setAccessible(true);
+$wegAb = implode("\n", (array)($w->invoke($m, true)['Raffstore Büro'] ?? []));
+SetValue(997, false);
+$wegDa = implode("\n", (array)($w->invoke($m, true)['Raffstore Büro'] ?? []));
+[$m->props['Geraete'], $m->props['TemperaturID']] = [$gA, $tA];
+check('G76 Raum behaglich (22 °C): niemand zu Hause → voll beschatten mit Grund, jemand da → behaglich', str_contains($wegAb, 'Niemand zu Hause') && !str_contains($wegDa, 'Niemand zu Hause'), $wegAb);
 // Vorschau (Idee 3): kräftige Sonne heute noch auf welche Fassade
 $kv = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $vm) ? $vm[1] : 'null', true);
 $vz = $kv['vorschau']['zeiten'] ?? [];

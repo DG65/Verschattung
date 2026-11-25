@@ -41,6 +41,8 @@ class Verschattung extends IPSModule
     /** Modul PVPrognose (NRG-Stack Prognose): Wolken für die Erwartung. */
     private const PVF_MODUL = '{257DD4E8-9705-462E-89FC-56D0A1038353}';
     /** Modul HeishaMon (NRG-Stack): nutzt ab 1.46.0 die Sonnenwärme zum Absenken der Heizung (Schaltvariable RoomShift_SolarAssist). */
+    /** Modul Anwesenheitssimulation (DG65-Toolkit): „Simulation aktiv“ heißt niemand zu Hause. */
+    private const ANWSIM_MODUL = '{00F44496-648D-4AE0-9AC8-A6002EFCEF54}';
     private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
@@ -97,7 +99,9 @@ class Verschattung extends IPSModule
         // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
         $this->RegisterPropertyFloat('HeizGrenze', 21);
         $this->RegisterPropertyInteger('Heizung', 0); // 0 unbekannt · 1 Heizkörper (schnell) · 2 Fußbodenheizung (träge) · 3 gemischt – für Abnehmer der Sonnenwärme (Vertrag shading)
-        $this->RegisterPropertyFloat('GWert', 0.5); // Gesamtenergiedurchlass der Verglasung: 2-fach 0,6 · 3-fach 0,5 · Sonnenschutzglas 0,35
+        $this->RegisterPropertyFloat('GWert', 0.5);
+        $this->RegisterPropertyInteger('AnwesenheitID', 0); // leer: „Simulation aktiv“ der Anwesenheitssimulation, falls installiert
+        $this->RegisterPropertyInteger('AnwesenheitArt', 0); // 0: true = jemand zu Hause · 1: true = niemand zu Hause // Gesamtenergiedurchlass der Verglasung: 2-fach 0,6 · 3-fach 0,5 · Sonnenschutzglas 0,35
         $this->RegisterPropertyInteger('WPModusID', 0);
         $this->RegisterPropertyFloat('Lueftung', 70);
         $this->RegisterPropertyString('Notfall', '[]'); // Raumsensoren messen hinter Glas wenig: Sonne im Raum ≈ 2–18 W/m², Wolken < 1 (Archiv 24.11.)
@@ -278,6 +282,7 @@ class Verschattung extends IPSModule
         }
         $aussen = $this->messwert($this->ReadPropertyInteger('TemperaturID'));
         $wp = $this->wpModus();
+        $abwesend = $this->abwesend();
         $notfall = $this->notfall();
         $z['_klima'] = (array)($z['_klima'] ?? []);
         $warnungen = $this->warnungen();
@@ -319,6 +324,10 @@ class Verschattung extends IPSModule
             $profil = VSCHSonne::profilwinkel($sonne['alt'], $sonne['az'], $faz);
             $wetter = VSCHLogik::wetter($g['Typ'], $this->wetterQuellen($g['Typ'], $warnungen), $now);
             $klima = $this->klima($g, $aussen, $wp, $z['_klima'][$k] ?? null);
+            if ($abwesend === true && $klima[0] === 'neutral') {
+                // Abwesenheit/Urlaub (Idee 5): niemand braucht das Tageslicht – statt Blendschutz oder Helligkeitsregelung voll beschatten
+                $klima = ['kuehlen', $this->t('Nobody at home: shading fully, nobody needs the daylight')];
+            }
             $z['_klima'][$k] = $klima[0];
             $raumHell = $this->raumHell($g);
             $fenster = $this->fensterLage($g);
@@ -407,6 +416,26 @@ class Verschattung extends IPSModule
         } elseif ($lage !== 'warten' && isset($z['stoerung'])) {
             unset($z['stoerung']);
         }
+    }
+
+    /**
+     * Ist jemand zu Hause? Eigene Variable (Eigenschaft AnwesenheitID, Art: true = anwesend bzw. abwesend), sonst „Simulation aktiv“
+     * der Anwesenheitssimulation (DG65-Toolkit), falls installiert. Rückgabe true = niemand zu Hause, false = jemand da, null = unbekannt.
+     */
+    private function abwesend(): ?bool
+    {
+        $id = $this->ReadPropertyInteger('AnwesenheitID');
+        if ($id > 0 && IPS_VariableExists($id)) {
+            $wert = (bool)GetValue($id);
+            return $this->ReadPropertyInteger('AnwesenheitArt') === 1 ? $wert : !$wert;
+        }
+        foreach (IPS_GetInstanceListByModuleID(self::ANWSIM_MODUL) as $sim) {
+            $v = @IPS_GetObjectIDByIdent('Active', $sim);
+            if ($v !== false && GetValue($v)) {
+                return true; // Simulation läuft: niemand zu Hause
+            }
+        }
+        return null;
     }
 
     /** Variable „Gerätewächter“: alle Störungen in einer Zeile, leer = alles in Ordnung. */
@@ -1558,6 +1587,7 @@ class Verschattung extends IPSModule
             'blockedTodayWh' => $heute ? (int)round((float)$w['ab']) : null,
             'basis' => $erw['basis'], 'gainNextHoursWh' => $erw['stunden'],
             'heating' => [1 => 'radiator', 2 => 'floor', 3 => 'mixed'][$this->ReadPropertyInteger('Heizung')] ?? 'unknown',
+            'absent' => $this->abwesend(),
             'devices' => $out,
         ]);
     }
@@ -2169,6 +2199,11 @@ class Verschattung extends IPSModule
             $felder[] = ['type' => 'CheckBox', 'name' => 'WHeisha', 'caption' => '', 'value' => false, 'visible' => false]; // Feld immer da, onConfirm liest es
         }
         if (!$a) {
+            $felder[] = ['type' => 'Label', 'caption' => '🏖 ' . $this->t('Away / holiday')];
+            $felder[] = ['type' => 'SelectVariable', 'name' => 'AnwesenheitID', 'caption' => $this->t('Presence (optional)'), 'width' => '600px'];
+            $felder[] = ['type' => 'Select', 'name' => 'AnwesenheitArt', 'caption' => $this->t('The variable means'), 'width' => '600px', 'options' => [
+                ['caption' => $this->t('true = somebody at home'), 'value' => 0], ['caption' => $this->t('true = nobody at home'), 'value' => 1]]];
+            $felder[] = ['type' => 'Label', 'caption' => $this->t('Nobody at home: instead of glare protection or target brightness the devices shade fully whenever the sun shines – nobody needs the daylight, only the heat counts. In winter the sun still heats the house. Without a variable the module uses "Simulation active" of the presence simulation (DG65-Toolkit), if installed.')];
             $felder[] = ['type' => 'Label', 'caption' => '🔆 ' . $this->t('Solar heat through the windows')];
             $felder[] = ['type' => 'Select', 'name' => 'GWert', 'caption' => $this->t('Glazing'), 'width' => '600px', 'options' => [
                 ['caption' => $this->t('double glazing (g 0.6)'), 'value' => 0.6], ['caption' => $this->t('triple glazing (g 0.5)'), 'value' => 0.5],

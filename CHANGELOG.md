@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0 (in Entwicklung)
+
+- **Abwesenheit / Urlaub (Idee 5):** Niemand zu Hause → im behaglichen Bereich voll beschatten statt Blendschutz oder Helligkeitsregelung (Grund „Niemand zu Hause: voll beschatten …“); Heizbetrieb bleibt unverändert. Quelle: neue Einstellungen „Anwesenheit (optional)“ und „Die Variable bedeutet“ in den Feinheiten; ohne Variable automatisch „Simulation aktiv“ der Anwesenheitssimulation (DG65-Toolkit). Kachel zeigt „🏖 Niemand zu Hause“, `VSCH_GetState` liefert `absent`.
+
+
 ## 0.15.0 (in Entwicklung)
 
 - **Gerätewächter (Idee 4):** prüft nach jedem Fahrbefehl, ob der Behang sein Ziel erreicht (Toleranz 5 %). Nach der einen Wiederholung (5 min) und weiteren 5 min ohne Erfolg → Störung: neue Variable „Gerätewächter“ (Text, leer = in Ordnung), Warnung im Meldungsfenster (einmal), Hinweis und rote Zeile auf der Kachel, `fault` in `VSCH_GetState`. Handbedienung seit dem Befehl löst nichts aus; am Ziel angekommen → Störung weg.

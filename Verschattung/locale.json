@@ -407,7 +407,15 @@
             "%s does not reach its target (%d %% closed, stands at %d %%)": "%s erreicht sein Ziel nicht (%d %% zu, steht bei %d %%)",
             "moves today": "Fahrten heute",
             "One device does not reach its target": "Ein Behang erreicht sein Ziel nicht",
-            "%d devices do not reach their target": "%d Behänge erreichen ihr Ziel nicht"
+            "%d devices do not reach their target": "%d Behänge erreichen ihr Ziel nicht",
+            "Nobody at home: shading fully, nobody needs the daylight": "Niemand zu Hause: voll beschatten, niemand braucht das Tageslicht",
+            "Away / holiday": "Abwesenheit / Urlaub",
+            "Presence (optional)": "Anwesenheit (optional)",
+            "The variable means": "Die Variable bedeutet",
+            "true = somebody at home": "wahr = jemand zu Hause",
+            "true = nobody at home": "wahr = niemand zu Hause",
+            "Nobody at home": "Niemand zu Hause",
+            "Nobody at home: instead of glare protection or target brightness the devices shade fully whenever the sun shines – nobody needs the daylight, only the heat counts. In winter the sun still heats the house. Without a variable the module uses \"Simulation active\" of the presence simulation (DG65-Toolkit), if installed.": "Niemand zu Hause: Statt Blendschutz oder Ziel-Helligkeit beschatten die Behänge voll, sobald die Sonne scheint – niemand braucht das Tageslicht, es zählt nur die Wärme. Im Winter heizt die Sonne weiter mit. Ohne Variable nimmt das Modul „Simulation aktiv“ der Anwesenheitssimulation (DG65-Toolkit), falls installiert."
         }
     }
 }
