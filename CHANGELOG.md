@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.2 (in Entwicklung)
+
+- **Abstimmung mit DG65-Toolkit Automat (Vertrag shutters 1.0):** Behänge, die ein aktiver Automat-Typ „Rollladen“ morgens und abends fährt (`AUTOMAT_GetShutters`, ab Automat 0.3.0), bekommen keine Nachtfunktion – keine zweite Automatik. Grund im Entscheidungsweg, Hinweis im Formular bei der Geräteliste. Ohne Automat ändert sich nichts.
+
+
 ## 0.17.1 (in Entwicklung)
 
 - **Nachtfunktion: „Morgens frühestens öffnen“** (Feinheiten, Vorgabe 07:00, wählbar „mit der Sonne“ oder 05:00–10:00): Was die Nachtfunktion geschlossen hat, öffnet morgens erst, wenn die Sonne da ist **und** die Uhrzeit erreicht ist – Schlafzimmer bleiben dunkel. Anlass: Abstimmung mit DG65-Toolkit Automat (Typ „Rollladen“ hat schon „frühestens“).

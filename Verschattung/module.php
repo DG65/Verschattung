@@ -43,6 +43,8 @@ class Verschattung extends IPSModule
     /** Modul HeishaMon (NRG-Stack): nutzt ab 1.46.0 die Sonnenwärme zum Absenken der Heizung (Schaltvariable RoomShift_SolarAssist). */
     /** Modul Anwesenheitssimulation (DG65-Toolkit): „Simulation aktiv“ heißt niemand zu Hause. */
     private const ANWSIM_MODUL = '{00F44496-648D-4AE0-9AC8-A6002EFCEF54}';
+    /** Modul Automat (DG65-Toolkit): fährt Rollläden morgens/abends (Vertrag shutters 1.0, AUTOMAT_GetShutters). */
+    private const AUTOMAT_MODUL = '{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}';
     private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
@@ -351,6 +353,7 @@ class Verschattung extends IPSModule
         $aussen = $this->messwert($this->ReadPropertyInteger('TemperaturID'));
         $wp = $this->wpModus();
         $abwesend = $this->abwesend();
+        $automatRl = $this->automatRolllaeden();
         $notfall = $this->notfall();
         $z['_klima'] = (array)($z['_klima'] ?? []);
         $warnungen = $this->warnungen();
@@ -431,7 +434,12 @@ class Verschattung extends IPSModule
             $istLux = $zielLux > 0 ? $this->lux((int)$g['RaumHell']) : null;
             [$istZu, $istLam] = $this->istStellung($g);
             $u['geraetAktiv'] = $this->geraetAktiv($g);
-            $ger = ['typ' => $g['Typ'], 'nachts' => $g['Nachts'], 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
+            $nachts = $g['Nachts'];
+            if ($nachts > 0 && isset($automatRl[$g['Position']])) {
+                $nachts = 0; // Automat fährt diesen Behang morgens/abends – keine zweite Automatik (Abstimmung 25.11.)
+                $u['weg'][] = $this->t('Night function off: moved by Automat ("%s")', $automatRl[$g['Position']]);
+            }
+            $ger = ['typ' => $g['Typ'], 'nachts' => $nachts, 'az' => $faz, 'sonneAn' => $an, 'lamellen' => $g['Lamelle'] > 0, 'profil' => $profil, 'tiefe' => $tiefe,
                 'beschattung' => $g['Beschattung'] / 100, 'ist' => ['zu' => $istZu, 'lamelle' => $istLam],
                 'regel' => $istLux !== null ? ['ziel' => $zielLux, 'ist' => $istLux] : null];
             $r = VSCHLogik::entscheide($ger, $u, (array)($z[$k] ?? []), $zeiten, $now);
@@ -504,6 +512,43 @@ class Verschattung extends IPSModule
             }
         }
         return null;
+    }
+
+    /**
+     * Behänge, die ein aktiver Rollladen-Automatismus von Automat morgens/abends fährt (Vertrag shutters 1.0).
+     * Rückgabe [positionID => 'Name des Automatismus']; leer ohne Automat. Für diese Behänge ruht die Nachtfunktion.
+     */
+    private function automatRolllaeden(): array
+    {
+        if (!function_exists('AUTOMAT_GetShutters')) {
+            return [];
+        }
+        $out = [];
+        foreach (IPS_GetInstanceListByModuleID(self::AUTOMAT_MODUL) as $id) {
+            try {
+                foreach ((array)AUTOMAT_GetShutters($id) as $e) {
+                    if (($e['enabled'] ?? false) && (int)($e['positionID'] ?? 0) > 0) {
+                        $out[(int)$e['positionID']] = (string)($e['name'] ?? '');
+                    }
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+        return $out;
+    }
+
+    /** Formularhinweis: Behänge mit „Nachts“, die schon Automat fährt (dort ruht die Nachtfunktion). */
+    private function automatKonflikte(): string
+    {
+        $rl = $this->automatRolllaeden();
+        $namen = [];
+        foreach ($this->geraete() as $g) {
+            if ($g['Nachts'] > 0 && isset($rl[$g['Position']])) {
+                $namen[] = $g['Name'];
+            }
+        }
+        return $namen === [] ? '' : '⚠️ ' . $this->t('"At night" has no effect for %s: Automat already opens and closes them in the morning and evening.', implode(', ', $namen));
     }
 
     /** Variable „Gerätewächter“: alle Störungen in einer Zeile, leer = alles in Ordnung. */
@@ -1901,6 +1946,7 @@ class Verschattung extends IPSModule
                     ['caption' => 'Window area (m²)', 'name' => 'Flaeche', 'width' => '160px', 'add' => 0, 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 50, 'digits' => 1]],
                 ]],
             ['type' => 'Button', 'caption' => '🔍 Detect devices and sensors', 'onClick' => '$g = []; foreach ($Geraete as $x) { $g[] = $x; } $n = []; foreach (($Notfall ?? []) as $x) { $n[] = $x; } echo VSCH_UIAutomatik($id, json_encode($g), (int)$WindID, (int)$RegenID, (int)$HelligkeitID, (int)$TemperaturID, (int)$SperreID, (int)($WPModusID ?? 0), json_encode($n));'],
+            ['type' => 'Label', 'name' => 'AutomatNachtsHint', 'visible' => ($konflikt = $this->automatKonflikte()) !== '', 'caption' => $konflikt],
             ['type' => 'Label', 'name' => 'AutomatikJeBehangHint', 'caption' => 'Take a single device out of the automatic: below in "Automatic per device", on the tile or with the variable "Automatic <name>".'],
             ['type' => 'Label', 'name' => 'KontaktHint', 'caption' => 'Up to four window/door contacts per device. Open: the device is not lowered (lockout protection) – every open contact counts as a door, because the name does not tell whether one can walk through. Handles that report "tilted" lower at most to the ventilation position. For real windows set the column "Contact open" to "ventilation position (window)".'],
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' %', 'name' => 'Lueftung', 'caption' => 'Ventilation position: lower at most to (%)', 'minimum' => 0, 'maximum' => 100, 'stepSize' => 5, 'width' => '600px'],

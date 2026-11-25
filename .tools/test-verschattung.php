@@ -39,6 +39,7 @@ function PVF_GetForecast(int $id, int $off): array
         'mean' => $mean, 'generated' => $jetzt - $p['alter'], 'moduleCover' => ['applied' => $p['schnee']]];
 }
 function HEISHA_GetSolarAssist(int $id): array { return ['contractVersion' => '1.0', 'available' => true, 'enabled' => (bool)GetValue(995), 'switchIdent' => 'RoomShift_SolarAssist', 'switchID' => 995]; }
+function AUTOMAT_GetShutters(int $id): array { return [['positionID' => 601, 'uid' => 'r1', 'name' => 'Rollläden Büro', 'enabled' => true, 'open' => 'Sonnenaufgang', 'close' => 'Sonnenuntergang']]; }
 function check(string $what, bool $ok, string $detail = ''): void
 {
     global $fails, $checks;
@@ -758,6 +759,12 @@ $GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick(); $m->props['NachtMorgen']
 $GLOBALS['CLOCK'] = ts('2026-12-11 10:00'); $m->Tick(); $frueh = GetValue(601);
 $GLOBALS['CLOCK'] = ts('2026-12-11 11:05'); $m->Tick(); $spaet = GetValue(601); $m->props['NachtMorgen'] = 420;
 check('G70b „Morgens frühestens 11:00“: um 10:00 noch zu, nach 11:00 auf', $frueh === 100 && $spaet === 0, json_encode([$frueh, $spaet]));
+$GLOBALS['MODULES']['{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}'] = [995001];
+SetValue(601, 0); $m->attrs['Zustand'] = '{}';
+$GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick(); $zuA = GetValue(601);
+$fA = json_encode(json_decode($m->GetConfigurationForm(), true), JSON_UNESCAPED_UNICODE);
+unset($GLOBALS['MODULES']['{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}']);
+check('G70c Automat fährt den Behang (shutters 1.0): Nachtfunktion ruht dort, Formular weist darauf hin', $zuA === 0 && str_contains($fA, 'Automat öffnet und schließt'), json_encode([$zuA]));
 [$m->props['Geraete'], $m->props['TemperaturID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherN, 0, 4);
 SetValue(601, $sicherN[4]); SetValue(602, $sicherN[5]);
 // HeishaMon-Abfrage (1.46.0): Hinweis + Schalter nur, wenn dort verfügbar und aus; Einschalten nur über dessen Schaltvariable

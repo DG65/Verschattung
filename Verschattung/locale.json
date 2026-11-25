@@ -426,7 +426,9 @@
             "At night (column \"At night\")": "Nachts (Spalte „Nachts“)",
             "Open in the morning at the earliest": "Morgens frühestens öffnen",
             "with the sun": "mit der Sonne",
-            "Devices closed by the night function open again in the morning when the sun is up and not before this time – so bedrooms stay dark.": "Was die Nachtfunktion geschlossen hat, öffnet morgens, wenn die Sonne da ist – aber nicht vor dieser Uhrzeit, damit Schlafzimmer dunkel bleiben."
+            "Devices closed by the night function open again in the morning when the sun is up and not before this time – so bedrooms stay dark.": "Was die Nachtfunktion geschlossen hat, öffnet morgens, wenn die Sonne da ist – aber nicht vor dieser Uhrzeit, damit Schlafzimmer dunkel bleiben.",
+            "Night function off: moved by Automat (\"%s\")": "Nachtfunktion aus: Automat fährt diesen Behang („%s“)",
+            "\"At night\" has no effect for %s: Automat already opens and closes them in the morning and evening.": "„Nachts“ wirkt nicht bei %s: Automat öffnet und schließt diese Behänge schon morgens und abends."
         }
     }
 }
