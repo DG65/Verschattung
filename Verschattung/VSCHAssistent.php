@@ -201,7 +201,7 @@ trait VSCHAssistent
                 'onConfirm' => 'echo VSCH_UIAssistentUebernehmen($id, json_encode(["art" => (int)$WStandortArt, "standort" => ' . $standortJson . ', '
                     . '"info" => (bool)$WInfoSchreiben, "warnhub" => (bool)$WWarnHub, "wind" => (int)$WWind, "regen" => (int)$WRegen, "sperre" => (int)$WSperre, "netz" => (bool)$WNetzWetter, "ohne" => (bool)$WMarkiseOhne, '
                     . '"hell" => (int)$WHell, "sonneAn" => (float)$WSonneAn, "temp" => (int)$WTemp, "aussenSommer" => (float)$WAussenSommer, '
-                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellLux" => (float)$WRaumHellLux, "zielLux" => (float)$WZielLux, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "notfall" => (bool)$WNotfall]));',
+                    . '"innenGrenze" => (float)$WInnenGrenze, "raumHellLux" => (float)$WRaumHellLux, "zielLux" => (float)$WZielLux, "heizGrenze" => (float)$WHeizGrenze, "wp" => (int)$WWP, "heizung" => (int)$WHeizung, "notfall" => (bool)$WNotfall]));',
             ],
         ];
         return [
@@ -586,6 +586,9 @@ trait VSCHAssistent
         $this->UpdateFormField('TemperaturID', 'value', (int)($d['temp'] ?? 0));
         if (isset($d['wp'])) {
             $this->UpdateFormField('WPModusID', 'value', (int)$d['wp']);
+        }
+        if (isset($d['heizung'])) {
+            $this->UpdateFormField('Heizung', 'value', (int)$d['heizung']);
         }
         if (isset($d['notfall'])) {
             $melder = $d['notfall'] ? VSCHErkennung::rauchmelder($this->momentaufnahme()) : [];

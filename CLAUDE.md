@@ -1,9 +1,9 @@
-# CLAUDE.md — Verschattung (DG65-Toolkit)
+# CLAUDE.md — Verschattung (NRG-Stack)
 
 Konventionen: `/Users/dietmar/Nextcloud/Claude/TOOLKIT.md` und `SUITE.md`. Geodaten-Recherche: `/Users/dietmar/Nextcloud/Claude/Verschattung-Geodaten-DACH.md`.
 Bedienskizze (von Dietmar abgenickt 21.11.2026): https://claude.ai/artifact/K89wSnHGZnveNWKh3yfiaL
 
-- Anzeigename „DG65-Toolkit Verschattung", Klasse `Verschattung`, Präfix `VSCH`, Repo `DG65/Verschattung` (Freigabe 21.11.2026).
+- Anzeigename „NRG-Stack Verschattung" (bis 0.10.1 „DG65-Toolkit Verschattung", Wechsel in den NRG-Stack auf Dietmars Wunsch 25.11.2026), Klasse `Verschattung`, Präfix `VSCH`, Repo `DG65/Verschattung` (Freigabe 21.11.2026).
 - Aufbau: Entscheidungen nur in `VSCHLogik` (ohne Symcon), Sonne `VSCHSonne`, Geodaten `VSCHGeo` (Ländertabelle `QUELLEN`, live geprüft 20./21.11.2026), Horizont `VSCHHorizont`, SVG `VSCHGrafik`, Texte `VSCHText` (Merkliste wie Automat).
 - Formular: Eingabefelder ohne Eigenschaft (Fassadenauswahl, Vorschau, Vorschläge) stehen in `actions`, nie in `elements` (Prüfstand H9).
   Listen kommen in onClick als Symcon-Listenobjekt: erst per foreach in ein Array kopieren (Muster Automat).

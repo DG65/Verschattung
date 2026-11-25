@@ -1,12 +1,12 @@
 {
   "id": "{AC9C6695-857A-40BE-B770-13C510985906}",
   "author": "DG65",
-  "name": "DG65-Toolkit Verschattung",
+  "name": "NRG-Stack Verschattung",
   "url": "https://github.com/DG65/Verschattung",
   "compatibility": {
     "version": "9.1"
   },
-  "version": "0.10.1",
-  "build": 27,
-  "date": 1795592555
+  "version": "0.11.0",
+  "build": 28,
+  "date": 1795594312
 }

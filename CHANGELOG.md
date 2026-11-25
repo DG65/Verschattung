@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0 (in Entwicklung)
+
+- **Vertrag `shading` 1.1 (`VSCH_GetState`, nur lesend, additiv)** für die Raumführung der HeishaMon-Heizungsautomatik (Dietmar 25.11.: „Ja, nur bei basis forecast“): `mode` (heat/cool/neutral), Sonnenwärme jetzt/heute/abgehalten, `basis` (forecast/clearSky) und **`gainNextHoursWh`** – die erwartete Sonnenwärme der nächsten 6 Stunden je Stunde. Die Wolken kommen aus der PV-Prognose des Verbunds (PVF_GetForecast ÷ PV bei klarem Himmel aus PVF_GetGenerators); veraltet (> 6 h) oder mit Schnee auf den Modulen → `clearSky`. Je Behang zusätzlich `gainNowW`, `gainTodayWh`.
+- **Abfrage „Heizung in den Räumen“** (Feinheiten und Assistent Schritt 7: keine Angabe / Heizkörper / Fußbodenheizung / beides; Dietmar 25.11.: nicht jeder Wärmepumpen-Haushalt hat eine träge Fußbodenheizung). Im Vertrag als `heating` (radiator/floor/mixed/unknown) – Abnehmer nehmen bei Heizkörpern den Momentwert, bei Fußbodenheizung die Erwartung.
+- `VSCHLogik::ebeneEinstrahlung()` für beliebig geneigte Flächen (die senkrechte Fassade ist der Sonderfall 90°).
+- **Jetzt Teil des NRG-Stack** (Dietmar 25.11.: der Behang als günstigste Heizung und Kühlung, Sonnenwärme in kWh, Wärmepumpe über den Vertrag `heatpump` – das ist Energiearbeit). Anzeigename „NRG-Stack Verschattung“ in Modulverwaltung, Typ-Spalte, README und Lizenz. GUID, Präfix `VSCH_`, Idents und Repo bleiben – bestehende Instanzen laufen ohne Eingriff weiter. Das Modul läuft weiter auch ganz allein.
+
+
 ## 0.10.1 (in Entwicklung)
 
 - **Sonnenwärme: Markise zählt nur mit eingetragener Fensterfläche** (Live-Test 25.11.): Sie hängt meist vor einer Tür oder einem Fenster mit eigenem Behang – sonst wäre dieselbe Glasfläche doppelt gerechnet.

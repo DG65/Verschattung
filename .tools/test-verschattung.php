@@ -29,6 +29,15 @@ const KL_MESSAGE = 10201; const KL_WARNING = 10204; const KL_ERROR = 10205;
 
 $fails = 0;
 $checks = 0;
+function PVF_GetGenerators(int $id): array { return ['contractVersion' => '1.0', 'pr' => 0.85, 'totalKwp' => 9.18, 'generators' => [['name' => 'Süd', 'kwp' => 9.18, 'tilt' => 30, 'azimuth' => 0, 'factor' => 1.0, 'area' => 0]]]; }
+function PVF_GetForecast(int $id, int $off): array
+{
+    $p = $GLOBALS['PVF']; $jetzt = $GLOBALS['CLOCK'];
+    $tag = strtotime('today', $jetzt) + $off * 86400; $mean = [];
+    for ($i = 0; $i < 24; $i++) { $s = VSCHSonne::stand(48.0, 8.0, $tag + $i * 3600 + 1800); $mean[] = $s['alt'] > 0 ? $p['faktor'] * VSCHLogik::pvKlar(PVF_GetGenerators($id)['generators'], 0.85, $s['alt'], $s['az']) : 0.0; }
+    return ['contractType' => 'forecast', 'contractVersion' => '1.5', 'kind' => 'pv', 'date' => date('Y-m-d', $tag), 'resolution' => '60min', 'slots' => 24, 'unit' => 'W',
+        'mean' => $mean, 'generated' => $jetzt - $p['alter'], 'moduleCover' => ['applied' => $p['schnee']]];
+}
 function check(string $what, bool $ok, string $detail = ''): void
 {
     global $fails, $checks;
@@ -244,6 +253,9 @@ check('D67 Abminderung: offen 1, Rollladen zu 0,05, Raffstore Lamellen waagrecht
 check('D69 Markise zählt nur mit eingetragener Fläche (hängt vor einem Fenster mit eigenem Behang)', !VSCHLogik::zaehltFlaeche('markise', 0) && VSCHLogik::zaehltFlaeche('markise', 3.5) && VSCHLogik::zaehltFlaeche('raffstore', 0));
 $sw = VSCHLogik::sonnenwaerme(500, 0, 0.5, 0.05);
 check('D68 Sonnenwärme: 500 W/m², Fläche leer = 2 m², Glasanteil 0,7, g 0,5 → 350 W offen, 17,5 W durch den geschlossenen Behang', abs($sw['offen'] - 350) < 0.01 && abs($sw['rein'] - 17.5) < 0.01, json_encode($sw));
+check('D70 Waagrechte Fläche bekommt die Globalstrahlung; PV-Klarheit: Prognose ÷ Klarhimmel, gedeckelt; tiefe Sonne nur ja/nein', abs(VSCHLogik::ebeneEinstrahlung(600, 50, 180, 180, 0) - 600) < 1
+    && VSCHLogik::klarheit(500, 1000) == 0.5 && VSCHLogik::klarheit(2000, 1000) == 1.15 && VSCHLogik::klarheit(10, 20) == 1.0 && VSCHLogik::klarheit(0, 20) == 0.0
+    && VSCHLogik::pvKlar([['kwp' => 10, 'tilt' => 30, 'azimuth' => 0, 'factor' => 1]], 0.85, 60, 180) > 7000);
 $ta = VSCHLogik::tiefeAnteil(45.0, 150, 150, 80);
 check('D46 Tiefe: 45° Sonne, 150 cm Fenster, 80 cm Brüstung, 150 cm erlaubt → 53 % verdecken; offen 230 cm; 50 cm erlaubt → ganz (Brüstung allein 80 cm)', abs($ta[0] - 0.5333) < 0.001 && abs($ta[1] - 230) < 0.5
     && VSCHLogik::tiefeAnteil(45.0, 50, 150, 80)[0] == 1.0, json_encode($ta));
@@ -671,6 +683,32 @@ $GLOBALS['CLOCK'] = strtotime('tomorrow 08:00', $GLOBALS['CLOCK']); $m->Tick();
 $wz2 = json_decode($m->attrs['Zustand'], true)['_waerme'] ?? [];
 check('G64 Mitternacht: gestern gemerkt, heute beginnt bei 0', ($wz2['gestern']['rein'] ?? -1) == $wz['rein'] && ($wz2['rein'] ?? -1) == 0 && $wz2['tag'] !== $wz['tag'], json_encode($wz2));
 [$m->props['HelligkeitID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = $sicher;
+// Vertrag shading 1.1: Erwartung der nächsten 6 Stunden (HeishaMon-Raumführung)
+$st = json_decode($m->GetState(), true);
+check('G66 GetState 1.1: Vertrag, Modus, Sonnenwärme, 6 Stundenwerte, ohne PV-Prognose basis clearSky', ($st['contractType'] ?? '') === 'shading' && ($st['contractVersion'] ?? '') === '1.1'
+    && in_array($st['mode'], ['heat', 'cool', 'neutral'], true) && count($st['gainNextHoursWh']) === 6 && $st['basis'] === 'clearSky' && array_sum($st['gainNextHoursWh']) > 0
+    && count($st['devices']) >= 1 && array_key_exists('gainTodayWh', $st['devices'][0]) && array_key_exists('ts', $st), json_encode($st));
+$GLOBALS['MODULES']['{257DD4E8-9705-462E-89FC-56D0A1038353}'] = [900];
+$GLOBALS['PVF'] = ['faktor' => 1.0, 'alter' => 600, 'schnee' => false];
+$klar = json_decode($m->GetState(), true);
+$GLOBALS['PVF']['faktor'] = 0.0;
+$trueb = json_decode($m->GetState(), true);
+check('G67 Mit PV-Prognose: basis forecast; klare Prognose ≈ Klarhimmel, bedeckte Prognose → keine Sonnenwärme', $klar['basis'] === 'forecast' && $trueb['basis'] === 'forecast'
+    && abs(array_sum($klar['gainNextHoursWh']) - array_sum($st['gainNextHoursWh'])) <= 0.05 * array_sum($st['gainNextHoursWh']) + 2 && array_sum($trueb['gainNextHoursWh']) === 0,
+    json_encode([$st['gainNextHoursWh'], $klar['gainNextHoursWh'], $trueb['gainNextHoursWh']]));
+$GLOBALS['PVF'] = ['faktor' => 1.0, 'alter' => 7 * 3600, 'schnee' => false];
+$alt = json_decode($m->GetState(), true);
+$GLOBALS['PVF'] = ['faktor' => 1.0, 'alter' => 600, 'schnee' => true];
+$sch = json_decode($m->GetState(), true);
+check('G68 Veraltete PV-Prognose (> 6 h) oder Schnee auf den Modulen → basis clearSky', $alt['basis'] === 'clearSky' && $sch['basis'] === 'clearSky');
+unset($GLOBALS['MODULES']['{257DD4E8-9705-462E-89FC-56D0A1038353}']);
+$h0 = json_decode($m->GetState(), true)['heating'] ?? null;
+$m->props['Heizung'] = 2;
+$h2 = json_decode($m->GetState(), true)['heating'] ?? null;
+$m->props['Heizung'] = 0;
+$fh = json_decode($m->GetConfigurationForm(), true);
+$hz = []; array_walk_recursive($fh, function ($v, $k) use (&$hz) { if ($k === 'name' && in_array($v, ['Heizung', 'WHeizung'], true)) { $hz[$v] = true; } });
+check('G69 Heizungsart: Abfrage in Feinheiten und Assistent, im Vertrag als heating (unknown/floor …)', $h0 === 'unknown' && $h2 === 'floor' && isset($hz['Heizung'], $hz['WHeizung']), json_encode([$h0, $h2, $hz]));
 // Status 201 ohne Standort
 $GLOBALS['CONF_PROP'][500]['Location'] = json_encode(['latitude' => 0, 'longitude' => 0]);
 $m2 = new VerschattungTest(22222);
@@ -1083,7 +1121,7 @@ $fehlt = array_values(array_filter(array_keys($texte), fn($t) => !isset($GLOBALS
 check('H4 jeder Text hat eine deutsche Übersetzung', $fehlt === [], count($fehlt) . ': ' . implode(' | ', array_slice($fehlt, 0, 60)));
 // Modulname aus module.json: Übersetzung für die Spalte „Typ“ der Konsole (SUITE.md, Verbund-Regel 24.11.)
 $texte[json_decode(file_get_contents($root . '/Verschattung/module.json'), true)['name']] = true;
-check('H6 Typ-Spalte: Modulname lesbar übersetzt', ($GLOBALS['DE']['Verschattung'] ?? '') === 'DG65-Toolkit Verschattung');
+check('H6 Typ-Spalte: Modulname lesbar übersetzt', ($GLOBALS['DE']['Verschattung'] ?? '') === 'NRG-Stack Verschattung');
 $unbenutzt = array_values(array_filter(array_keys($GLOBALS['DE']), fn($t) => !isset($texte[$t])));
 check('H5 keine unbenutzten Übersetzungen', $unbenutzt === [], implode(' | ', array_slice($unbenutzt, 0, 8)));
 foreach ($GLOBALS['DE'] as $en => $de) {

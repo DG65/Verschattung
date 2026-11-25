@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 final class VSCHGeo
 {
-    public const USER_AGENT = 'DG65-Toolkit-Verschattung (+https://github.com/DG65/Verschattung)';
+    public const USER_AGENT = 'NRG-Stack-Verschattung (+https://github.com/DG65/Verschattung)';
     /** Umkreis (m), in dem Nachbargebäude für Grundriss und Hindernisse behalten werden. */
     public const UMKREIS_M = 80.0;
     /** Kanten kürzer als das zählen nicht als Fassade (Vorsprünge, Messrauschen). */

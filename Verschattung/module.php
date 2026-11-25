@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // ===========================================================================
-// Verschattung (DG65-Toolkit) — Rollläden, Raffstores und Markisen nach dem
+// Verschattung (NRG-Stack) — Rollläden, Raffstores und Markisen nach dem
 // Sonnenstand, eingerichtet über eine Grafik statt über Winkelangaben.
 //
 //   1. Standort aus der Symcon-Standort-Instanz (oder eigene Kartenauswahl).
@@ -34,6 +34,11 @@ class Verschattung extends IPSModule
     use VSCHKachel;
 
     /** Standort, den der Assistent gerade prüft (überlagert Eigenschaft/Standort-Instanz). */
+    /** Vertrag „shading“ (GetState). */
+    public const VERTRAG = '1.1';
+    /** Modul PVPrognose (NRG-Stack Prognose): Wolken für die Erwartung. */
+    private const PVF_MODUL = '{257DD4E8-9705-462E-89FC-56D0A1038353}';
+
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
     private const PLAN_FORM = 900;
     private const PLAN_ASSISTENT = 1050;
@@ -87,6 +92,7 @@ class Verschattung extends IPSModule
         $this->RegisterPropertyFloat('ZielLux', 0);
         // ab 0.5.0: Heizbedarf, Wärmepumpe, Lüftungsposition, Notfall
         $this->RegisterPropertyFloat('HeizGrenze', 21);
+        $this->RegisterPropertyInteger('Heizung', 0); // 0 unbekannt · 1 Heizkörper (schnell) · 2 Fußbodenheizung (träge) · 3 gemischt – für Abnehmer der Sonnenwärme (Vertrag shading)
         $this->RegisterPropertyFloat('GWert', 0.5); // Gesamtenergiedurchlass der Verglasung: 2-fach 0,6 · 3-fach 0,5 · Sonnenschutzglas 0,35
         $this->RegisterPropertyInteger('WPModusID', 0);
         $this->RegisterPropertyFloat('Lueftung', 70);
@@ -457,9 +463,10 @@ class Verschattung extends IPSModule
                 $a['je'][$k] = round((float)($a['je'][$k] ?? 0) + $v[0] * $dt / 3600, 1);
             }
             $a['jetzt'] = (int)round($w['rein']);
+            $a['jeJetzt'] = array_map(fn($v) => (int)$v[0], $w['je']);
             $a['jetztAb'] = (int)round($w['offen'] - $w['rein']);
         } else {
-            unset($a['jetzt'], $a['jetztAb']);
+            unset($a['jetzt'], $a['jetztAb'], $a['jeJetzt']);
         }
         $a['rein'] = round((float)$a['rein'], 1);
         $a['ab'] = round((float)$a['ab'], 1);
@@ -1400,16 +1407,132 @@ class Verschattung extends IPSModule
     }
 
     /** Zustand aller Geräte als JSON (für Skripte, Kachel, Fehlersuche). */
+    /**
+     * Lesender Vertrag „shading“ (1.1, additiv zu 1.0 = nur devices): Lage, Sonnenwärme jetzt/heute und die Erwartung
+     * der nächsten 6 Stunden. Konsument HeishaMon (Raumführung): reagiert nur bei mode = heat und basis = forecast,
+     * ts älter als ~30 min gilt als veraltet. Nie schreibend.
+     */
     public function GetState(): string
     {
         $z = $this->zustand();
+        $w = (array)($z['_waerme'] ?? []);
+        $heute = ($w['tag'] ?? '') === date('Y-m-d', $this->now());
         $out = [];
         foreach ($this->geraete() as $g) {
             $s = (array)($z[$g['key']] ?? []);
             $out[] = ['name' => $g['Name'], 'facade' => $g['Fassade'], 'type' => $g['Typ'], 'positionID' => $g['Position'],
-                'shading' => (bool)($s['soll'] ?? false), 'manual' => ($s['hand'] ?? null) !== null, 'reason' => (string)($s['grund'] ?? '')];
+                'shading' => (bool)($s['soll'] ?? false), 'manual' => ($s['hand'] ?? null) !== null, 'reason' => (string)($s['grund'] ?? ''),
+                'gainNowW' => $heute && isset($w['jetzt']) ? (int)round((float)($w['jeJetzt'][$g['key']] ?? 0)) : null,
+                'gainTodayWh' => $heute ? (int)round((float)($w['je'][$g['key']] ?? 0)) : null];
         }
-        return json_encode(['version' => '1.0', 'devices' => $out]);
+        $lagen = array_count_values(array_filter(array_map('strval', (array)($z['_klima'] ?? []))));
+        arsort($lagen);
+        $mode = ['heizen' => 'heat', 'kuehlen' => 'cool', 'neutral' => 'neutral'][(string)(array_key_first($lagen) ?? '')] ?? 'neutral';
+        $erw = $this->erwartung($this->now());
+        return json_encode([
+            'contractType' => 'shading', 'contractVersion' => self::VERTRAG, 'version' => self::VERTRAG,
+            'ts' => (int)($w['ts'] ?? 0), 'mode' => $mode,
+            'gainNowW' => $heute && isset($w['jetzt']) ? (int)$w['jetzt'] : null,
+            'gainTodayWh' => $heute ? (int)round((float)$w['rein']) : null,
+            'blockedTodayWh' => $heute ? (int)round((float)$w['ab']) : null,
+            'basis' => $erw['basis'], 'gainNextHoursWh' => $erw['stunden'],
+            'heating' => [1 => 'radiator', 2 => 'floor', 3 => 'mixed'][$this->ReadPropertyInteger('Heizung')] ?? 'unknown',
+            'devices' => $out,
+        ]);
+    }
+
+    /**
+     * Erwartete Sonnenwärme der nächsten 6 Stunden (Wh je Stunde ab jetzt), mit den Behängen, wie sie gerade stehen.
+     * basis „forecast“: Wolken aus der PV-Prognose (PVF_GetForecast ÷ PV bei klarem Himmel aus PVF_GetGenerators);
+     * sonst „clearSky“: nur Sonnenstand. Viertelstündlich gerechnet.
+     */
+    private function erwartung(int $now): array
+    {
+        $pos = $this->koordinaten();
+        if ($pos === null) {
+            return ['basis' => 'clearSky', 'stunden' => array_fill(0, 6, 0)];
+        }
+        $pv = $this->pvPrognose($now);
+        $fassaden = $this->fassadenMap();
+        $horizont = $this->horizontPunkte();
+        $gWert = $this->ReadPropertyFloat('GWert');
+        $behaenge = [];
+        foreach ($this->geraete() as $g) {
+            $f = $fassaden[$g['Fassade']] ?? null;
+            if ($f === null || $g['Position'] <= 0 || !IPS_VariableExists($g['Position']) || !VSCHLogik::zaehltFlaeche($g['Typ'], $g['Flaeche'])) {
+                continue;
+            }
+            [$zu, $lam] = $this->istStellung($g);
+            $faz = (float)($f['Azimut'] ?? 180);
+            $behaenge[] = ['az' => $faz, 'hind' => $this->hindernisPunkte($faz), 'flaeche' => $g['Flaeche'], 'fc' => VSCHLogik::abminderung($g['Typ'], $zu, $lam)];
+        }
+        $stunden = [];
+        for ($h = 0; $h < 6; $h++) {
+            $wh = 0.0;
+            for ($q = 0; $q < 4; $q++) {
+                $t = $now + $h * 3600 + $q * 900 + 450;
+                $sonne = VSCHSonne::stand($pos[0], $pos[1], $t);
+                if ($sonne['alt'] <= 0 || $behaenge === []) {
+                    continue;
+                }
+                $k = $pv === null ? 1.0 : VSCHLogik::klarheit($this->pvWert($pv, $t), VSCHLogik::pvKlar($pv['gen'], $pv['pr'], $sonne['alt'], $sonne['az']));
+                $ghi = $k * VSCHLogik::klarHimmel($sonne['alt']);
+                $gel = VSCHHorizont::hoehe($horizont, $sonne['az']);
+                foreach ($behaenge as $b) {
+                    $an = VSCHLogik::sonneAufFassade($sonne['az'], $sonne['alt'], $b['az'], max($gel, VSCHHorizont::hoehe($b['hind'], $sonne['az'])), false);
+                    $i = VSCHLogik::fassadeEinstrahlung($ghi, $sonne['alt'], $sonne['az'], $b['az'], $an);
+                    $wh += VSCHLogik::sonnenwaerme($i, $b['flaeche'], $gWert, $b['fc'])['rein'] * 0.25;
+                }
+            }
+            $stunden[] = (int)round($wh);
+        }
+        return ['basis' => $pv !== null ? 'forecast' : 'clearSky', 'stunden' => $stunden];
+    }
+
+    /**
+     * PV-Prognose des Verbunds (Modul PVPrognose), falls vorhanden, frisch (≤ 6 h) und ohne eingerechnete Modulbedeckung (Schnee
+     * sähe aus wie Wolken). Rückgabe ['gen', 'pr', 'tage' => ['Y-m-d' => [Raster-min, mean[]]]] oder null.
+     */
+    private function pvPrognose(int $now): ?array
+    {
+        if (!function_exists('PVF_GetForecast') || !function_exists('PVF_GetGenerators')) {
+            return null;
+        }
+        foreach (IPS_GetInstanceListByModuleID(self::PVF_MODUL) as $id) {
+            try {
+                $gen = PVF_GetGenerators($id);
+                if ((float)($gen['totalKwp'] ?? 0) <= 0) {
+                    continue;
+                }
+                $tage = [];
+                foreach ([0, 1] as $off) {
+                    $fc = PVF_GetForecast($id, $off);
+                    if (!is_array($fc) || ($fc['contractType'] ?? 'forecast') !== 'forecast' || (int)($fc['slots'] ?? 0) <= 0
+                        || $now - (int)($fc['generated'] ?? 0) > 6 * 3600 || (bool)($fc['moduleCover']['applied'] ?? false)) {
+                        if ($off === 0) {
+                            continue 2;
+                        }
+                        break;
+                    }
+                    $tage[(string)$fc['date']] = [intdiv(1440, (int)$fc['slots']), array_values((array)($fc['mean'] ?? $fc['p50'] ?? []))];
+                }
+                return ['gen' => (array)($gen['generators'] ?? []), 'pr' => (float)($gen['pr'] ?? 0.85), 'tage' => $tage];
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+        return null;
+    }
+
+    /** PV-Prognose (W) zum Zeitpunkt $t: Slot nach Wanduhr; fehlt der Tag, 0. */
+    private function pvWert(array $pv, int $t): float
+    {
+        $tag = $pv['tage'][date('Y-m-d', $t)] ?? null;
+        if ($tag === null) {
+            return 0.0;
+        }
+        $slot = intdiv((int)date('G', $t) * 60 + (int)date('i', $t), max(1, $tag[0]));
+        return (float)($tag[1][$slot] ?? 0);
     }
 
     // =====================================================================
@@ -1584,7 +1707,7 @@ class Verschattung extends IPSModule
         ]];
 
         $elements[] = ['type' => 'ExpansionPanel', 'caption' => '⚖️  License', 'items' => [
-            ['type' => 'Label', 'caption' => 'DG65-Toolkit Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.'],
+            ['type' => 'Label', 'caption' => 'NRG-Stack Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.'],
             ['type' => 'Button', 'caption' => 'Show license', 'onClick' => 'echo "' . self::LICENSE_URL . '";', 'link' => true],
         ]];
 
@@ -1865,6 +1988,9 @@ class Verschattung extends IPSModule
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' °C', 'name' => $p . 'InnenGrenze', 'caption' => $this->t('Room too warm from (°C)'), 'minimum' => 18, 'maximum' => 30, 'stepSize' => 0.5, 'width' => '600px'] + $wert('InnenGrenze'),
             ['type' => 'HorizontalSlider', 'displayValue' => true, 'suffix' => ' °C', 'name' => $p . 'HeizGrenze', 'caption' => $this->t('Room needs heat below (°C)'), 'minimum' => 15, 'maximum' => 25, 'stepSize' => 0.5, 'width' => '600px'] + $wert('HeizGrenze'),
             ['type' => 'SelectVariable', 'name' => $p . ($a ? 'WP' : 'WPModusID'), 'caption' => $this->t('Heat pump: operating mode (optional)')] + $sel('WPModusID'),
+            ['type' => 'Select', 'name' => $p . 'Heizung', 'caption' => $this->t('Heating in the rooms'), 'width' => '600px', 'options' => [
+                ['caption' => $this->t('not specified'), 'value' => 0], ['caption' => $this->t('radiators (react quickly)'), 'value' => 1],
+                ['caption' => $this->t('underfloor heating (slow)'), 'value' => 2], ['caption' => $this->t('both'), 'value' => 3]]] + ($a ? ['value' => $this->ReadPropertyInteger('Heizung')] : []),
             ['type' => 'Label', 'name' => $p . 'WPHint', 'caption' => $this->t('Found automatically from NRG-Stack heat pump modules. Heating → the sun may warm the house; cooling → shade.')],
             ['type' => 'Label', 'name' => $p . 'TempHint', 'caption' => $this->t('The device is the cheapest heating and cooling of the room: room too warm, heat pump cooling or summer outside → shade. Room below the heating limit, heat pump heating or cool outside → the sun warms the house. In between only glare protection (if set up). The room temperature comes from the device list (column "Room temperature"). Without temperatures the module shades whenever the sun shines.')],
             ['type' => 'Label', 'caption' => '💡 ' . $this->t('Room brightness: only for lowering')],

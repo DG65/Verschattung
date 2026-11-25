@@ -445,9 +445,18 @@ final class VSCHLogik
 
     /**
      * Einstrahlung auf eine senkrechte Fassade (W/m²) aus der gemessenen Globalstrahlung (horizontal).
-     * Aufteilung direkt/diffus nach Erbs über den Klarheitsindex; direkt nur, wenn die Sonne die Fassade trifft (Horizont/Nachbarn frei).
+     * Direkt nur, wenn die Sonne die Fassade trifft (Horizont/Nachbarn frei).
      */
     public static function fassadeEinstrahlung(float $ghi, float $alt, float $sonneAz, float $fassadeAz, bool $sonneAn): float
+    {
+        return self::ebeneEinstrahlung($ghi, $alt, $sonneAz, $fassadeAz, 90.0, $sonneAn);
+    }
+
+    /**
+     * Einstrahlung auf eine geneigte Fläche (W/m²; Neigung 0 = waagrecht, 90 = senkrecht; Azimut als Kompassrichtung).
+     * Globalstrahlung nach Erbs über den Klarheitsindex in direkt/diffus geteilt; Messung bei tiefer Sonne auf 115 % des klaren Himmels begrenzt.
+     */
+    public static function ebeneEinstrahlung(float $ghi, float $alt, float $sonneAz, float $flaecheAz, float $neigung, bool $direktFrei = true): float
     {
         if ($ghi <= 0 || $alt <= 0) {
             return 0.0;
@@ -458,14 +467,39 @@ final class VSCHLogik
         $df = $kt <= 0.22 ? 1 - 0.09 * $kt
             : ($kt <= 0.8 ? 0.9511 - 0.1604 * $kt + 4.388 * $kt ** 2 - 16.638 * $kt ** 3 + 12.336 * $kt ** 4 : 0.165);
         $diffus = $df * $ghi;
+        $b = deg2rad($neigung);
         $direkt = 0.0;
-        if ($sonneAn && $alt >= 2) {
+        if ($direktFrei && $alt >= 2) {
             $normal = min(1000.0, ($ghi - $diffus) / $s);
-            $cos = cos(deg2rad($alt)) * cos(deg2rad(VSCHSonne::winkelAbstand($sonneAz, $fassadeAz)));
+            $cos = $s * cos($b) + cos(deg2rad($alt)) * sin($b) * cos(deg2rad(VSCHSonne::winkelAbstand($sonneAz, $flaecheAz)));
             $direkt = max(0.0, $normal * $cos);
         }
-        // diffuser Himmel halb sichtbar, Bodenreflexion 20 %
-        return $direkt + 0.5 * $diffus + 0.5 * 0.2 * $ghi;
+        // isotroper Himmel, Bodenreflexion 20 %
+        return $direkt + $diffus * (1 + cos($b)) / 2 + 0.2 * $ghi * (1 - cos($b)) / 2;
+    }
+
+    /**
+     * PV-Leistung bei klarem Himmel (W) für die Generatoren der PV-Prognose (PVF_GetGenerators: kWp, Neigung, Azimut 0 = Süd).
+     * Dient als Bezug: PV-Prognose ÷ dieser Wert ≈ wie klar der Himmel in dieser Stunde erwartet wird.
+     */
+    public static function pvKlar(array $generatoren, float $pr, float $alt, float $sonneAz): float
+    {
+        $w = 0.0;
+        foreach ($generatoren as $g) {
+            $kwp = (float)($g['kwp'] ?? 0) * ((float)($g['factor'] ?? 1) ?: 1.0);
+            $i = self::ebeneEinstrahlung(self::klarHimmel($alt), $alt, $sonneAz, fmod(180 + (float)($g['azimuth'] ?? 0) + 360, 360), (float)($g['tilt'] ?? 30));
+            $w += $kwp * $i * ($pr > 0 ? $pr : 0.85);
+        }
+        return $w;
+    }
+
+    /** Wie klar wird der Himmel? 0..1,15 aus PV-Prognose und PV bei klarem Himmel; bei tiefer Sonne (Bezug < 50 W) nur „Sonne ja/nein“. */
+    public static function klarheit(float $pvPrognoseW, float $pvKlarW): float
+    {
+        if ($pvKlarW < 50) {
+            return $pvPrognoseW > 0 ? 1.0 : 0.0;
+        }
+        return max(0.0, min(1.15, $pvPrognoseW / $pvKlarW));
     }
 
     /**

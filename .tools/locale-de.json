@@ -115,7 +115,7 @@
     "Delay before ending": "Verzögerung bis Ende",
     "Prevents moving back and forth with passing clouds.": "Verhindert Hin- und Herfahren bei durchziehenden Wolken.",
     "⚖️  License": "⚖️  Lizenz",
-    "DG65-Toolkit Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.": "DG65-Toolkit Verschattung – PolyForm Noncommercial 1.0.0. Für den privaten Gebrauch kostenlos.",
+    "NRG-Stack Verschattung — PolyForm Noncommercial 1.0.0. Free for private use.": "NRG-Stack Verschattung – PolyForm Noncommercial 1.0.0. Für den privaten Gebrauch kostenlos.",
     "Show license": "Lizenz anzeigen",
     "No location: set it in the Location instance or here": "Kein Standort: in der Standort-Instanz oder hier setzen",
     "🔧  Assign devices & test run": "🔧  Geräte zuordnen & Probefahrt",
@@ -301,7 +301,7 @@
     "Smoke detector alarm: all devices up.": "Rauchmelder-Alarm: alle Behänge hoch.",
     "neighbouring building": "Nachbargebäude",
     "Neighbouring buildings": "Nachbargebäude",
-    "Verschattung": "DG65-Toolkit Verschattung",
+    "Verschattung": "NRG-Stack Verschattung",
     "Sun on the facade, but it does not reach the room (%d lx)": "Sonne auf der Fassade, erreicht den Raum aber nicht (%d lx)",
     "Sun reaches the room from (lx)": "Sonne erreicht den Raum ab (lx)",
     "If the brightness sensor of the room (column \"Room brightness\") stays below, the sun does not reach that room and the device stays up. Raising never depends on it: with the device down the room is dark anyway. Indoor sensors measure much less than outside: sun in the room is about 200–2000 lx, clouds below 100 lx.": "Bleibt der Helligkeitssensor des Raums (Spalte „Raumhelligkeit“) darunter, erreicht die Sonne diesen Raum nicht und der Behang bleibt oben. Das Hochfahren hängt nie davon ab: Mit heruntergefahrenem Behang ist der Raum ohnehin dunkel. Raumsensoren messen deutlich weniger als draußen: Sonne im Raum etwa 200–2000 lx, Wolken unter 100 lx.",
@@ -384,5 +384,10 @@
     "double glazing (g 0.6)": "Zweifachverglasung (g 0,6)",
     "triple glazing (g 0.5)": "Dreifachverglasung (g 0,5)",
     "solar control glass (g 0.35)": "Sonnenschutzglas (g 0,35)",
-    "The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column \"Window area\", empty = 2 m²; awnings only with an area) and the glazing.": "Die Kachel zeigt, wie viel Wärme die Sonne heute ins Haus bringt und wie viel die Behänge abhalten. Geschätzt aus dem Einstrahlungssensor, dem Sonnenstand, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m², Markisen nur mit eingetragener Fläche) und der Verglasung."
+    "The tile shows how much heat the sun brings into the house today and how much the devices keep out. Estimated from the irradiance sensor, the position of the sun, the window area (column \"Window area\", empty = 2 m²; awnings only with an area) and the glazing.": "Die Kachel zeigt, wie viel Wärme die Sonne heute ins Haus bringt und wie viel die Behänge abhalten. Geschätzt aus dem Einstrahlungssensor, dem Sonnenstand, der Fensterfläche (Spalte „Fensterfläche“, leer = 2 m², Markisen nur mit eingetragener Fläche) und der Verglasung.",
+    "Heating in the rooms": "Heizung in den Räumen",
+    "not specified": "keine Angabe",
+    "radiators (react quickly)": "Heizkörper (reagieren schnell)",
+    "underfloor heating (slow)": "Fußbodenheizung (träge)",
+    "both": "beides"
 }

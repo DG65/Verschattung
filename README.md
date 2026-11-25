@@ -1,8 +1,10 @@
-# DG65-Toolkit Verschattung
+# NRG-Stack Verschattung
 
 Rollläden, Raffstores und Markisen nach dem Sonnenstand – eingerichtet über eine Grafik statt über Winkelangaben.
 
-> **Stand 0.1.1 (in Entwicklung):** am Prüfstand getestet, noch an keiner echten Anlage gelaufen.
+Teil des **NRG-Stack** — welche Modulstände zusammenpassen, listet [SUITE.md](https://github.com/DG65/EMS/blob/main/SUITE.md). Das Modul läuft auch allein, ohne andere NRG-Stack-Module; mit ihnen nutzt es den Betriebsmodus der Wärmepumpe (Vertrag `heatpump`) und die Schutzaktionen von WarnHub.
+
+> **Stand 0.10 (Beta):** im Test an einer echten Anlage.
 
 ## Wozu?
 
@@ -92,7 +94,20 @@ Markisen und Raffstores fahren bei Wind und Unwetter ein – das geht allem vor,
 
 ## Für Skripte
 
-`VSCH_GetState(int $InstanzID): string` – JSON mit allen Geräten: Fassade, Typ, ob beschattet wird, ob von Hand bedient, Grund.
+`VSCH_GetState(int $InstanzID): string` – JSON, Vertrag `shading` 1.1 (nur lesend, additiv):
+
+| Feld | Bedeutung |
+|---|---|
+| `contractType`, `contractVersion` | `shading`, `1.1` (`version` wie bisher, gleicher Wert) |
+| `ts` | Unix-Zeit des letzten Regeltakts (läuft jede Minute; älter als etwa 30 Minuten = Modul steht) |
+| `mode` | `heat` (die Sonne soll mitheizen), `cool` (Hitze abhalten), `neutral` |
+| `gainNowW`, `gainTodayWh`, `blockedTodayWh` | Sonnenwärme jetzt (W), heute ins Haus (Wh), heute abgehalten (Wh); `null` ohne Einstrahlungssensor |
+| `basis` | `forecast`: Wolken aus der PV-Prognose des NRG-Stack (Modul PV-Prognose, frisch, ohne Schnee auf den Modulen); `clearSky`: nur Sonnenstand bei klarem Himmel |
+| `gainNextHoursWh` | 6 Werte: erwartete Sonnenwärme (Wh) in den nächsten 6 Stunden ab jetzt, je Stunde, mit den Behängen, wie sie gerade stehen |
+| `heating` | Heizung in den Räumen laut Einstellung: `radiator` (Heizkörper, reagieren schnell), `floor` (Fußbodenheizung, träge), `mixed`, `unknown`. Ein Abnehmer wählt damit zwischen Momentwert (schnell) und Erwartung (träge). |
+| `devices` | je Behang: Name, Fassade, Typ, Positionsvariable, ob beschattet wird, ob von Hand bedient, Grund, `gainNowW`, `gainTodayWh` |
+
+Die Wolken je Stunde: PV-Prognose ÷ PV-Leistung bei klarem Himmel für die Generatoren aus `PVF_GetGenerators` (Neigung, Richtung, kWp). Ohne PV-Prognose oder bei veralteter Prognose gilt `clearSky` – ein Abnehmer, der Wetter braucht, verhält sich dann neutral.
 
 ## Voraussetzungen
 
