@@ -84,6 +84,7 @@ trait VSCHKachel
      */
     private function kachelDaten(bool $mitTexten, bool $bedienbar, array $wege = [], string $bg = ''): array
     {
+        $this->automatCache = null;
         $pos = $this->koordinaten();
         $now = $this->now();
         $daten = ['automatik' => (bool)@$this->GetValue('Automatik'), 'bedienbar' => $bedienbar, 'geraete' => [], 'fassaden' => [], 'jetzt' => $now];
@@ -189,6 +190,7 @@ trait VSCHKachel
                 'grund' => $this->kachelGrund((string)($z[$g['key']]['grund'] ?? ''), (array)($wege[$g['Name']] ?? [])),
                 'weg' => $wege[$g['Name']] ?? [], 'waerme' => $w === null ? null : (int)round((float)($w['je'][$g['key']] ?? 0)),
                 'stoerung' => isset($z[$g['key']]['stoerung']['text']) ? (string)$z[$g['key']]['stoerung']['text'] : null,
+                'unsicher' => ($un = $this->stellungUnsicher($g)) === null ? null : $this->t('Position assumed – no report since %s', date('d.m. H:i', $un['seit'])),
                 'fahrten' => ($z[$g['key']]['fahrten']['tag'] ?? '') === date('Y-m-d', $now) ? (int)$z[$g['key']]['fahrten']['heute'] : 0];
         }
         $daten['waerme'] = $this->kachelWaerme($w, $wm2 !== null, $bahn);
@@ -277,6 +279,7 @@ trait VSCHKachel
     {
         return [
             'Automatic' => $this->t('Automatic'),
+            'assumed' => $this->t('assumed'),
             'All up' => $this->t('All up'),
             'All closed' => $this->t('All closed'),
             'Ventilate' => $this->t('Ventilate'),

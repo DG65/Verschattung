@@ -39,7 +39,7 @@ function PVF_GetForecast(int $id, int $off): array
         'mean' => $mean, 'generated' => $jetzt - $p['alter'], 'moduleCover' => ['applied' => $p['schnee']]];
 }
 function HEISHA_GetSolarAssist(int $id): array { return ['contractVersion' => '1.0', 'available' => true, 'enabled' => (bool)GetValue(995), 'switchIdent' => 'RoomShift_SolarAssist', 'switchID' => 995]; }
-function AUTOMAT_GetShutters(int $id): array { return [['positionID' => 601, 'uid' => 'r1', 'name' => 'Rollläden Büro', 'enabled' => true, 'open' => 'Sonnenaufgang', 'close' => 'Sonnenuntergang']]; }
+function AUTOMAT_GetShutters(int $id): array { return [['positionID' => 601, 'uid' => 'r1', 'name' => 'Rollläden Büro', 'enabled' => true, 'open' => 'Sonnenaufgang', 'close' => 'Sonnenuntergang'] + (isset($GLOBALS['AUTOMAT_CMD']) ? ['lastCommand' => $GLOBALS['AUTOMAT_CMD']] : [])]; }
 function check(string $what, bool $ok, string $detail = ''): void
 {
     global $fails, $checks;
@@ -765,6 +765,22 @@ $GLOBALS['CLOCK'] = ts('2026-12-10 20:00'); $m->Tick(); $zuA = GetValue(601);
 $fA = json_encode(json_decode($m->GetConfigurationForm(), true), JSON_UNESCAPED_UNICODE);
 unset($GLOBALS['MODULES']['{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}']);
 check('G70c Automat fährt den Behang (shutters 1.0): Nachtfunktion ruht dort, Formular weist darauf hin', $zuA === 0 && str_contains($fA, 'Automat öffnet und schließt'), json_encode([$zuA]));
+// Stellung unsicher (Live-Befund 25.11.): Automat hat geöffnet, das Gerät meldet nichts – Variable steht noch auf „zu“
+$GLOBALS['MODULES']['{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}'] = [995001];
+$GLOBALS['CLOCK'] = ts('2026-12-11 10:00'); SetValue(601, 100); $GLOBALS['OBJ'][601]['updated'] = ts('2026-12-10 17:00');
+$GLOBALS['AUTOMAT_CMD'] = ['value' => 0, 'ts' => ts('2026-12-11 08:00')];
+$sw = $m->attrs['Gesendet']; $m->attrs['Gesendet'] = '{}';
+$kU = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $um) ? $um[1] : 'null', true);
+$gU = array_values(array_filter($kU['geraete'], fn($g) => $g['schalter'] === 'Aktiv601'))[0] ?? [];
+$m->Tick();
+check('G70d Automat-Befehl „auf“ (08:00) jünger als letzte Meldung (gestern 17:00): Stellung vermutet offen, Hinweis auf Kachel und im Gerätewächter', ($gU['zu'] ?? 1) == 0 && str_contains((string)($gU['unsicher'] ?? ''), 'keine Rückmeldung seit 10.12. 17:00')
+    && str_contains((string)$m->GetValue('Geraetewaechter'), 'meldet keine Stellung'), json_encode([$gU['zu'] ?? null, $gU['unsicher'] ?? null, $m->GetValue('Geraetewaechter')]));
+$GLOBALS['OBJ'][601]['updated'] = ts('2026-12-11 08:01');
+$m->attrs['Gesendet'] = '{}';
+$kU2 = json_decode(preg_match('/handleMessage\((\{.*\})\);<\/script>$/s', $m->GetVisualizationTile(), $um) ? $um[1] : 'null', true);
+$gU2 = array_values(array_filter($kU2['geraete'], fn($g) => $g['schalter'] === 'Aktiv601'))[0] ?? [];
+check('G70e Gerät hat sich nach dem Befehl gemeldet → keine Vermutung, gemeldeter Wert gilt', array_key_exists('unsicher', $gU2) && $gU2['unsicher'] === null && $gU2['zu'] == 1, json_encode($gU2));
+unset($GLOBALS['AUTOMAT_CMD'], $GLOBALS['MODULES']['{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}']); $GLOBALS['OBJ'][601]['updated'] = 0; $m->attrs['Gesendet'] = $sw;
 [$m->props['Geraete'], $m->props['TemperaturID'], $m->attrs['Zustand'], $GLOBALS['CLOCK']] = array_slice($sicherN, 0, 4);
 SetValue(601, $sicherN[4]); SetValue(602, $sicherN[5]);
 // HeishaMon-Abfrage (1.46.0): Hinweis + Schalter nur, wenn dort verfügbar und aus; Einschalten nur über dessen Schaltvariable

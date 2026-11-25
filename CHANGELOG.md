@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.3 (in Entwicklung)
+
+- **Stellung vermutet, wenn ein Gerät nichts meldet** (Live-Befund 25.11.: Automat hatte die Jalousien geöffnet, die Z-Wave-Aktoren meldeten nichts, die Kachel zeigte „100 % geschlossen“). Ist der letzte Befehl – eigener oder von Automat (`lastCommand` aus `AUTOMAT_GetShutters`, shutters 1.1) – jünger als die letzte Meldung des Geräts und älter als 3 Minuten, gilt der Befehlswert als vermutete Stellung (für Anzeige und Entscheidungen). Kachel: „(vermutet)“ und „Stellung vermutet – keine Rückmeldung seit …“; Variable „Gerätewächter“: „… meldet keine Stellung seit …“.
+
+
 ## 0.17.2 (in Entwicklung)
 
 - **Abstimmung mit DG65-Toolkit Automat (Vertrag shutters 1.0):** Behänge, die ein aktiver Automat-Typ „Rollladen“ morgens und abends fährt (`AUTOMAT_GetShutters`, ab Automat 0.3.0), bekommen keine Nachtfunktion – keine zweite Automatik. Grund im Entscheidungsweg, Hinweis im Formular bei der Geräteliste. Ohne Automat ändert sich nichts.

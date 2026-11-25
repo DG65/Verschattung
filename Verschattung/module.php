@@ -45,6 +45,9 @@ class Verschattung extends IPSModule
     private const ANWSIM_MODUL = '{00F44496-648D-4AE0-9AC8-A6002EFCEF54}';
     /** Modul Automat (DG65-Toolkit): fährt Rollläden morgens/abends (Vertrag shutters 1.0, AUTOMAT_GetShutters). */
     private const AUTOMAT_MODUL = '{A92CA7FD-B746-45C4-902B-3CBAE1F3FA27}';
+    /** Ohne Rückmeldung so lange nach einem Befehl gilt die Stellung als unsicher (s). */
+    private const STILL_S = 180;
+    private ?array $automatCache = null;
     private const HEISHA_MODUL = '{1919151A-3C0F-4C09-B906-291638EC1469}';
 
     /** Lageplan: Breite in Einheiten bei gleichem Maßstab (Höhe 420); Formular 1:1, Assistent 900 px ≙ 1050. */
@@ -330,6 +333,7 @@ class Verschattung extends IPSModule
      */
     private function regeln(bool $probe): array
     {
+        $this->automatCache = null;
         $pos = $this->koordinaten();
         if ($pos === null) {
             return [];
@@ -520,22 +524,77 @@ class Verschattung extends IPSModule
      */
     private function automatRolllaeden(): array
     {
-        if (!function_exists('AUTOMAT_GetShutters')) {
-            return [];
-        }
         $out = [];
-        foreach (IPS_GetInstanceListByModuleID(self::AUTOMAT_MODUL) as $id) {
-            try {
-                foreach ((array)AUTOMAT_GetShutters($id) as $e) {
-                    if (($e['enabled'] ?? false) && (int)($e['positionID'] ?? 0) > 0) {
-                        $out[(int)$e['positionID']] = (string)($e['name'] ?? '');
-                    }
-                }
-            } catch (\Throwable $e) {
-                continue;
+        foreach ($this->automatInfo() as $pid => $e) {
+            if ($e['enabled']) {
+                $out[$pid] = $e['name'];
             }
         }
         return $out;
+    }
+
+    /** Alle Einträge aus AUTOMAT_GetShutters: [positionID => ['name', 'enabled', 'befehl' => ?['value', 'ts']]] (ab shutters 1.1 mit lastCommand). */
+    private function automatInfo(): array
+    {
+        // nur innerhalb eines Regeltakts bzw. Kachelaufbaus zwischenspeichern (dort viele Behänge); die Einstiege leeren ihn
+        if ($this->automatCache !== null) {
+            return $this->automatCache;
+        }
+        $out = [];
+        if (function_exists('AUTOMAT_GetShutters')) {
+            foreach (IPS_GetInstanceListByModuleID(self::AUTOMAT_MODUL) as $id) {
+                try {
+                    foreach ((array)AUTOMAT_GetShutters($id) as $e) {
+                        $pid = (int)($e['positionID'] ?? 0);
+                        if ($pid <= 0) {
+                            continue;
+                        }
+                        $b = is_array($e['lastCommand'] ?? null) && isset($e['lastCommand']['ts']) ? ['value' => (float)$e['lastCommand']['value'], 'ts' => (int)$e['lastCommand']['ts']] : null;
+                        $alt = $out[$pid]['befehl'] ?? null;
+                        $out[$pid] = ['name' => (string)($e['name'] ?? ''), 'enabled' => (bool)($e['enabled'] ?? false) || ($out[$pid]['enabled'] ?? false),
+                            'befehl' => $b !== null && ($alt === null || $b['ts'] > $alt['ts']) ? $b : $alt];
+                    }
+                } catch (\Throwable $e) {
+                    continue;
+                }
+            }
+        }
+        return $this->automatCache = $out;
+    }
+
+    /**
+     * Stellung unsicher? Ein Befehl (eigener oder von Automat) ist jünger als die letzte Meldung des Geräts und schon {@see STILL_S} s alt:
+     * Das Gerät hat seine neue Stellung nicht gemeldet (Live-Befund 25.11.: Z-Wave-Jalousien offen, Variable seit gestern „zu“).
+     * Rückgabe ['wert' (vermutete Stellung = Befehlswert), 'seit' (letzte Meldung), 'quelle', 'ts' (Befehl)] oder null.
+     */
+    private function stellungUnsicher(array $g): ?array
+    {
+        $pid = $g['Position'];
+        if ($pid <= 0 || !IPS_VariableExists($pid)) {
+            return null;
+        }
+        $meldung = (int)IPS_GetVariable($pid)['VariableUpdated'];
+        $kand = [];
+        $ges = (json_decode($this->ReadAttributeString('Gesendet'), true) ?: [])[$pid] ?? null;
+        if (is_array($ges)) {
+            $kand[] = ['wert' => (float)$ges[0], 'ts' => (int)$ges[1], 'quelle' => 'Verschattung'];
+        }
+        $am = $this->automatInfo()[$pid]['befehl'] ?? null;
+        if ($am !== null) {
+            $kand[] = ['wert' => $am['value'], 'ts' => $am['ts'], 'quelle' => 'Automat'];
+        }
+        usort($kand, fn($a, $b) => $b['ts'] <=> $a['ts']);
+        $b = $kand[0] ?? null;
+        if ($b === null || $b['ts'] <= $meldung || $this->now() - $b['ts'] < self::STILL_S
+            || abs((float)GetValue($pid) - $b['wert']) <= max(2.0, 0.05 * $this->maxWert($pid))) {
+            return null;
+        }
+        return $b + ['seit' => $meldung];
+    }
+
+    private function stellungUnsicherText(string $name, array $u): string
+    {
+        return $this->t('%s reports no position since %s (last command: %s, %s)', $name, date('d.m. H:i', $u['seit']), $u['quelle'], date('H:i', $u['ts']));
     }
 
     /** Formularhinweis: Behänge mit „Nachts“, die schon Automat fährt (dort ruht die Nachtfunktion). */
@@ -558,6 +617,8 @@ class Verschattung extends IPSModule
         foreach ($this->geraete() as $g) {
             if (isset($z[$g['key']]['stoerung']['text'])) {
                 $texte[] = (string)$z[$g['key']]['stoerung']['text'];
+            } elseif (($u = $this->stellungUnsicher($g)) !== null) {
+                $texte[] = $this->stellungUnsicherText($g['Name'], $u);
             }
         }
         $text = implode(' · ', $texte);
@@ -755,6 +816,10 @@ class Verschattung extends IPSModule
     {
         $max = $this->maxWert($g['Position']);
         $v = (float)GetValue($g['Position']);
+        $u = $this->stellungUnsicher($g);
+        if ($u !== null) {
+            $v = $u['wert']; // Gerät meldet nicht: die zuletzt befohlene Stellung ist die bessere Vermutung
+        }
         $zu = $max > 0 ? max(0.0, min(1.0, $this->nullIstOffen($g) ? $v / $max : 1 - $v / $max)) : null;
         $lam = null;
         if ($g['Lamelle'] > 0 && IPS_VariableExists($g['Lamelle'])) {
@@ -1849,6 +1914,7 @@ class Verschattung extends IPSModule
 
     private function formular(): array
     {
+        $this->automatCache = null;
         $fassaden = $this->listeWerte($this->ReadPropertyString('Fassaden'));
         $optFassade = array_map(function ($f) {
             return ['caption' => $f['Kennung'] . ' · ' . $f['Name'], 'value' => $f['Kennung']];
